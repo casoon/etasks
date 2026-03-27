@@ -1,0 +1,135 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release-macos:
+    name: macOS (arm64 + x64)
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target:
+          - aarch64-apple-darwin
+          - x86_64-apple-darwin
+
+    steps:
+      - name: Checkout etasks
+        uses: actions/checkout@v4
+        with:
+          path: etasks
+
+      - name: Checkout renderreport
+        uses: actions/checkout@v4
+        with:
+          repository: casoon/renderreport
+          path: renderreport
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: etasks/src-tauri
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: etasks/ui/package-lock.json
+
+      - name: Install UI dependencies
+        run: npm ci --legacy-peer-deps
+        working-directory: etasks/ui
+
+      - name: Build UI
+        run: npm run build
+        working-directory: etasks/ui
+
+      - name: Build Tauri app
+        run: cargo tauri build --target ${{ matrix.target }}
+        working-directory: etasks
+        env:
+          # Ad-hoc signing — no Apple Developer account required.
+          # Users must right-click → Open on first launch.
+          APPLE_SIGNING_IDENTITY: '-'
+
+      - name: Ad-hoc sign DMG
+        run: |
+          DMG=$(find etasks/src-tauri/target/${{ matrix.target }}/release/bundle/dmg -name '*.dmg' | head -1)
+          if [ -n "$DMG" ]; then
+            codesign --force --deep --sign - "$DMG" || true
+            echo "DMG=$DMG" >> $GITHUB_ENV
+          fi
+
+      - name: Upload DMG
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.DMG }}
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+
+  release-windows:
+    name: Windows (x64)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout etasks
+        uses: actions/checkout@v4
+        with:
+          path: etasks
+
+      - name: Checkout renderreport
+        uses: actions/checkout@v4
+        with:
+          repository: casoon/renderreport
+          path: renderreport
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: etasks/src-tauri
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: etasks/ui/package-lock.json
+
+      - name: Install UI dependencies
+        run: npm ci --legacy-peer-deps
+        working-directory: etasks/ui
+
+      - name: Build UI
+        run: npm run build
+        working-directory: etasks/ui
+
+      - name: Build Tauri app
+        run: cargo tauri build
+        working-directory: etasks
+
+      - name: Upload installer
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            etasks/src-tauri/target/release/bundle/msi/*.msi
+            etasks/src-tauri/target/release/bundle/nsis/*.exe
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true

@@ -120,12 +120,34 @@ etasks/
     └── icon.svg
 ```
 
-## CI
+## CI / Release
 
-GitHub Actions runs on every push to `main`:
+**CI** runs on every push to `main`:
+- Tests (vitest) + Astro build
+- `cargo check` for the full Tauri + renderreport dependency tree
 
-- **Test & Build UI** — installs deps, runs vitest, builds Astro
-- **Rust Check** — `cargo check` against the full Tauri + renderreport dependency tree
+**Release builds** trigger automatically on version tags:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+This builds and uploads to GitHub Releases:
+- `eTasks_1.0.0_aarch64.dmg` — macOS Apple Silicon
+- `eTasks_1.0.0_x64.dmg` — macOS Intel
+- `eTasks_1.0.0_x64_en-US.msi` — Windows installer
+- `eTasks_1.0.0_x64-setup.exe` — Windows NSIS
+
+### macOS: App ohne Apple-Zertifikat öffnen
+
+Releases are ad-hoc signed (no paid Apple Developer account). macOS will warn on first launch:
+
+1. Right-click the app → **Open** → confirm
+2. Or: System Settings → Privacy & Security → **Open Anyway**
+3. Or via Terminal: `xattr -cr /Applications/eTasks.app`
+
+After the first launch, the app opens normally.
 
 ## License
 
