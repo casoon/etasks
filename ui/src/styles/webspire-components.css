@@ -1,0 +1,17 @@
+/* Webspire Component Tokens */
+
+.ws-badge {
+  --ws-badge-bg: var(--ws-color-surface-alt);
+  --ws-badge-text: var(--ws-color-text-soft);
+  --ws-badge-border: var(--ws-color-border);
+}
+
+.ws-modal {
+  --ws-modal-bg: var(--ws-color-surface);
+  --ws-modal-text: var(--ws-color-text);
+  --ws-modal-text-soft: var(--ws-color-text-soft);
+  --ws-modal-border: var(--ws-color-border);
+  --ws-modal-overlay: rgba(0, 0, 0, 0.5);
+  --ws-modal-action-bg: var(--ws-color-primary);
+  --ws-modal-action-text: var(--ws-color-primary-text);
+}
