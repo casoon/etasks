@@ -14,9 +14,6 @@ pub struct GenerateInvoiceInput {
     pub invoice: InvoiceData,
     /// User profile from AppConfig — used to build CompanyData
     pub profile: UserProfile,
-    /// Optional path to a fonts directory (e.g. bundled `fonts/` in the app)
-    #[serde(default)]
-    pub fonts_dir: Option<String>,
 }
 
 /// Result returned to the frontend
@@ -33,12 +30,7 @@ pub fn generate_invoice(
 ) -> Result<GenerateInvoiceResult, String> {
     let company = profile_to_company(&input.profile);
 
-    let mut compiler = DocgenCompiler::new();
-    if let Some(fonts) = &input.fonts_dir {
-        compiler = compiler.with_fonts_dir(fonts);
-    }
-
-    let pdf_bytes = compiler
+    let pdf_bytes = DocgenCompiler::new()
         .compile_invoice(&input.invoice, &company)
         .map_err(|e| e.to_string())?;
 

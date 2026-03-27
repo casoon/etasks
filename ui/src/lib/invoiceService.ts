@@ -69,6 +69,7 @@ export async function generateInvoice(
   return result.path;
 }
 
+
 /**
  * Build a minimal InvoiceData from time entries and project info.
  * Caller fills in recipient + invoice metadata.
