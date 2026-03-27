@@ -40,12 +40,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout renderreport
-        uses: actions/checkout@v4
-        with:
-          repository: casoon/renderreport
-          path: renderreport
-
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 

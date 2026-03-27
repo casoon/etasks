@@ -24,12 +24,6 @@ jobs:
         with:
           path: etasks
 
-      - name: Checkout renderreport
-        uses: actions/checkout@v4
-        with:
-          repository: casoon/renderreport
-          path: renderreport
-
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -89,12 +83,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: etasks
-
-      - name: Checkout renderreport
-        uses: actions/checkout@v4
-        with:
-          repository: casoon/renderreport
-          path: renderreport
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
