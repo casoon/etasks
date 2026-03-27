@@ -20,7 +20,7 @@
   $: otherTasks = tasks.filter(t => !mitIds.includes(t.id));
   $: doneCount  = tasks.filter(t => t.status === 'done').length;
   $: todoCount  = tasks.filter(t => t.status === 'todo').length;
-  $: totalMinutes = tasks.reduce((s, t) => s + (t.duration ?? 0), 0);
+  $: totalMinutes = tasks.reduce((s, t) => s + (t.estimatedMinutes ?? 0), 0);
   $: totalLabel = totalMinutes >= 60
     ? `${Math.floor(totalMinutes / 60)}h${totalMinutes % 60 > 0 ? '\u202f' + totalMinutes % 60 + 'min' : ''}`
     : totalMinutes > 0 ? `${totalMinutes}\u202fmin` : null;
@@ -159,8 +159,8 @@
                   {/if}
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0 mt-[2px]">
-                  {#if task.duration}
-                    <span class="text-[12px] text-muted">{task.duration < 60 ? task.duration + 'min' : (task.duration / 60) + 'h'}</span>
+                  {#if task.estimatedMinutes}
+                    <span class="text-[12px] text-muted">{task.estimatedMinutes < 60 ? task.estimatedMinutes + 'min' : (task.estimatedMinutes / 60) + 'h'}</span>
                   {/if}
                   {#if task.status !== 'done'}
                     <button
@@ -203,8 +203,8 @@
               <span class="flex-1 text-[13px] min-w-0 truncate {task.status === 'done' ? 'line-through text-muted' : 'text-primary'}">
                 {task.title}
               </span>
-              {#if task.duration}
-                <span class="text-[11px] text-muted flex-shrink-0">{task.duration < 60 ? task.duration + 'min' : (task.duration / 60) + 'h'}</span>
+              {#if task.estimatedMinutes}
+                <span class="text-[11px] text-muted flex-shrink-0">{task.estimatedMinutes < 60 ? task.estimatedMinutes + 'min' : (task.estimatedMinutes / 60) + 'h'}</span>
               {/if}
               {#if task.status !== 'done'}
                 <button

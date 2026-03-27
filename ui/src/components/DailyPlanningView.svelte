@@ -25,17 +25,17 @@
   $: activeProjects = projects.filter(p => p.status === 'active');
 
   $: todayTasks = tasks
-    .filter(t => t.date === activeDate && t.status === 'todo')
-    .sort((a, b) => a.order - b.order);
+    .filter(t => t.plannedDate === activeDate && t.status === 'todo')
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
   $: poolTasks = tasks
-    .filter(t => t.status === 'todo' && t.date !== activeDate)
-    .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+    .filter(t => t.status === 'todo' && t.plannedDate !== activeDate)
+    .sort((a, b) => (b.plannedDate ?? '').localeCompare(a.plannedDate ?? ''));
 
   $: hasAnyTodoTasks = tasks.some(t => t.status === 'todo');
 
-  $: doneTodayCount = tasks.filter(t => t.date === activeDate && t.status === 'done').length;
-  $: totalMinutes = todayTasks.reduce((s, t) => s + (t.duration ?? 0), 0);
+  $: doneTodayCount = tasks.filter(t => t.plannedDate === activeDate && t.status === 'done').length;
+  $: totalMinutes = todayTasks.reduce((s, t) => s + (t.estimatedMinutes ?? 0), 0);
   $: totalLabel = totalMinutes >= 60
     ? `${Math.floor(totalMinutes / 60)}h${totalMinutes % 60 > 0 ? ' ' + totalMinutes % 60 + 'min' : ''}`
     : totalMinutes > 0 ? `${totalMinutes} min` : '';
@@ -56,20 +56,20 @@
     e.preventDefault();
     if (!newTitle.trim()) return;
     const task = addTask(newTitle.trim(), newDuration, [], newProjectId || undefined);
-    if (!addToToday) updateTask(task.id, { date: undefined });
+    if (!addToToday) updateTask(task.id, { plannedDate: null });
     newTitle = '';
     newDuration = 30;
     inputEl?.focus();
   }
 
-  function assignToToday(task: Task) { updateTask(task.id, { date: activeDate }); }
-  function removeFromToday(task: Task) { updateTask(task.id, { date: undefined }); }
+  function assignToToday(task: Task) { updateTask(task.id, { plannedDate: activeDate }); }
+  function removeFromToday(task: Task) { updateTask(task.id, { plannedDate: null }); }
 
   // ── Duration inline edit ──────────────────────────────────────────────────
   let editDurationId: string | null = null;
   function commitDuration(task: Task, val: string) {
     const n = parseInt(val, 10);
-    if (!isNaN(n) && n > 0) updateTask(task.id, { duration: n });
+    if (!isNaN(n) && n > 0) updateTask(task.id, { estimatedMinutes: n });
     editDurationId = null;
   }
 
@@ -200,7 +200,7 @@
               <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:{col}" />
             {/if}
             <span class="text-[12px] text-secondary flex-1 min-w-0 truncate">{task.title}</span>
-            <span class="text-[10px] text-muted flex-shrink-0">{task.duration < 60 ? task.duration + 'min' : (task.duration / 60) + 'h'}</span>
+            <span class="text-[10px] text-muted flex-shrink-0">{(task.estimatedMinutes ?? 0) < 60 ? (task.estimatedMinutes ?? 0) + 'min' : ((task.estimatedMinutes ?? 0) / 60) + 'h'}</span>
             <button
               on:click={() => assignToToday(task)}
               class="text-[11px] text-accent flex-shrink-0 whitespace-nowrap hover:underline font-medium"
@@ -289,7 +289,7 @@
               <input
                 type="number"
                 class="w-12 px-1 py-0.5 border border-accent rounded text-[11px] text-center outline-none bg-surface"
-                value={task.duration}
+                value={task.estimatedMinutes ?? 30}
                 min="5" step="5" autofocus
                 on:blur={e => commitDuration(task, e.currentTarget.value)}
                 on:keydown={e => { if (e.key === 'Enter') commitDuration(task, e.currentTarget.value); if (e.key === 'Escape') editDurationId = null; }}
@@ -300,7 +300,7 @@
                 class="text-[11px] text-muted hover:text-accent flex-shrink-0 tabular-nums min-w-[32px] text-right"
                 on:click={() => editDurationId = task.id}
                 title="Dauer ändern"
-              >{task.duration < 60 ? task.duration + 'm' : (task.duration / 60) + 'h'}</button>
+              >{(task.estimatedMinutes ?? 0) < 60 ? (task.estimatedMinutes ?? 0) + 'm' : ((task.estimatedMinutes ?? 0) / 60) + 'h'}</button>
             {/if}
 
             <!-- Remove -->

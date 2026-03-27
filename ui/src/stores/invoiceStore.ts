@@ -1,34 +1,46 @@
 import { atom } from 'nanostores';
 import type { Invoice } from '../domain/types';
+import { storageGet, storageSet, KEYS } from '../lib/storage';
+import { isTauriAvailable } from '../lib/platform';
+import { invoke } from '@tauri-apps/api/core';
 
-const STORAGE_KEY = 'etasks_invoices';
+function dbInvoke(cmd: string, args?: Record<string, unknown>): void {
+  if (isTauriAvailable()) invoke(cmd, args).catch(console.error);
+}
 
 function load(): Invoice[] {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]'); }
-  catch { return []; }
+  return storageGet<Invoice[]>(KEYS.invoices) ?? [];
 }
-function save(list: Invoice[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+
+function persist(list: Invoice[]): Invoice[] {
+  storageSet(KEYS.invoices, list);
+  return list;
 }
 
 export const $invoices = atom<Invoice[]>(load());
 
+export function initInvoices(): void {
+  $invoices.set(load());
+}
+
 export function addInvoice(draft: Omit<Invoice, 'id' | 'createdAt'>): Invoice {
   const inv: Invoice = { ...draft, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
-  const next = [...$invoices.get(), inv];
+  const next = persist([...$invoices.get(), inv]);
   $invoices.set(next);
-  save(next);
+  dbInvoke('upsert_invoice', { invoice: inv });
   return inv;
 }
 
 export function updateInvoice(id: string, patch: Partial<Omit<Invoice, 'id' | 'createdAt'>>): void {
   const next = $invoices.get().map(i => i.id === id ? { ...i, ...patch } : i);
+  persist(next);
   $invoices.set(next);
-  save(next);
+  const updated = next.find(i => i.id === id);
+  if (updated) dbInvoke('upsert_invoice', { invoice: updated });
 }
 
 export function removeInvoice(id: string): void {
-  const next = $invoices.get().filter(i => i.id !== id);
+  const next = persist($invoices.get().filter(i => i.id !== id));
   $invoices.set(next);
-  save(next);
+  dbInvoke('delete_invoice', { id });
 }

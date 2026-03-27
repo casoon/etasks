@@ -10,14 +10,14 @@
   $: projects = $projectsStore;
   $: activeEntry = $activeEntryStore;
 
-  $: finished = entries.filter(e => e.stoppedAt).sort(
-    (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
+  $: finished = entries.filter(e => e.endAt).sort(
+    (a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime()
   );
 
   $: byDate = (() => {
     const map: Record<string, typeof finished> = {};
     for (const entry of finished) {
-      const d = toDateKey(new Date(entry.startedAt));
+      const d = toDateKey(new Date(entry.startAt));
       map[d] = map[d] ?? [];
       map[d].push(entry);
     }
@@ -26,8 +26,8 @@
 
   const weekMs = 7 * 24 * 60 * 60 * 1000;
   $: weekSeconds = finished
-    .filter(e => new Date(e.startedAt).getTime() > Date.now() - weekMs)
-    .reduce((s, e) => s + e.durationSeconds, 0);
+    .filter(e => new Date(e.startAt).getTime() > Date.now() - weekMs)
+    .reduce((s, e) => s + (e.durationMinutes ?? 0) * 60, 0);
 
   function getTask(id: string) { return tasks.find(t => t.id === id); }
   function getProject(id?: string) { return id ? projects.find(p => p.id === id) : null; }
@@ -71,7 +71,7 @@
     {/if}
 
     {#each Object.entries(byDate) as [date, dateEntries] (date)}
-      {@const dayTotal = dateEntries.reduce((s, e) => s + e.durationSeconds, 0)}
+      {@const dayTotal = dateEntries.reduce((s, e) => s + (e.durationMinutes ?? 0) * 60, 0)}
       <div class="flex flex-col gap-2">
         <div class="flex items-center justify-between pb-2 border-b border-border-subtle">
           <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-muted">{dateLabel(date)}</span>
@@ -84,8 +84,8 @@
             {#if project}<span class="w-2 h-2 rounded-full flex-shrink-0" style="background:{project.color}" />{/if}
             <span class="flex-1 text-[13px] text-primary overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{task?.title ?? '—'}</span>
             {#if project}<span class="text-[11px] text-muted whitespace-nowrap">{project.name}</span>{/if}
-            <span class="text-[11px] text-muted whitespace-nowrap">{formatTime(entry.startedAt)} – {entry.stoppedAt ? formatTime(entry.stoppedAt) : '…'}</span>
-            <span class="text-[12px] font-semibold text-secondary tabular-nums whitespace-nowrap">{formatTrackedTime(entry.durationSeconds)}</span>
+            <span class="text-[11px] text-muted whitespace-nowrap">{formatTime(entry.startAt)} – {entry.endAt ? formatTime(entry.endAt) : '…'}</span>
+            <span class="text-[12px] font-semibold text-secondary tabular-nums whitespace-nowrap">{formatTrackedTime((entry.durationMinutes ?? 0) * 60)}</span>
           </div>
         {/each}
       </div>

@@ -61,13 +61,13 @@
               {#each preview.tasks as t, i (i)}
                 <li class="flex items-center gap-2 px-2 py-2 rounded-lg bg-bg text-[13px]">
                   <span class="flex-1 text-primary min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{t.title}</span>
-                  <span class="text-[11px] text-muted whitespace-nowrap">{formatDuration(t.duration)}</span>
+                  <span class="text-[11px] text-muted whitespace-nowrap">{formatDuration(t.estimatedMinutes)}</span>
                 </li>
               {/each}
             </ul>
             <div class="flex items-center justify-between pt-3 border-t border-border-subtle mt-2">
               <span class="text-[12px] text-muted">
-                Gesamt: {formatDuration(preview.tasks.reduce((s, t) => s + t.duration, 0))}
+                Gesamt: {formatDuration(preview.tasks.reduce((s, t) => s + t.estimatedMinutes, 0))}
               </span>
               <button
                 class="px-3 py-1.5 bg-accent text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"

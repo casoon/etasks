@@ -13,7 +13,7 @@
   function handlePostpone(id: string) {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    updateTask(id, { date: tomorrow.toISOString().slice(0, 10), scheduledAt: undefined });
+    updateTask(id, { plannedDate: tomorrow.toISOString().slice(0, 10), scheduledStart: null });
   }
 
   function handleClose() {

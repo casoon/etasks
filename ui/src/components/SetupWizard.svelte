@@ -1,12 +1,13 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/core';
-  import { $appConfig as appConfigStore, saveAppConfig, openTenant } from '../stores/configStore';
+  import { $appConfig as appConfigStore, saveAppConfig, openTenant, writeTenantMeta, tenantNameFromPath } from '../stores/configStore';
   import type { AppConfig } from '../stores/configStore';
 
   export let onDone: () => void = () => {};
 
   let step = 1;
   let pickedPath = '';
+  let tenantName = '';
   let saving = false;
   let errorMsg = '';
 
@@ -36,7 +37,8 @@
         profile,
       };
       await saveAppConfig(updated);
-      await openTenant(pickedPath);
+      await openTenant(pickedPath, tenantName.trim() || undefined);
+      await writeTenantMeta(tenantName.trim() || tenantNameFromPath(pickedPath));
       onDone();
     } catch (e) {
       errorMsg = String(e);
@@ -55,6 +57,11 @@
       </div>
 
       <div class="flex flex-col gap-3">
+        <label class="flex flex-col gap-1">
+          <span class="text-xs text-muted font-medium">Name des Arbeitsbereichs</span>
+          <input class="input" bind:value={tenantName} placeholder="z. B. Jörn Freelance" />
+        </label>
+
         <button
           class="flex items-center gap-3 px-4 py-3 rounded-lg border border-border bg-bg hover:bg-surface-raised text-primary text-sm font-medium transition-colors"
           on:click={pickFolder}
@@ -71,7 +78,7 @@
       <div class="flex justify-end">
         <button
           class="px-5 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
-          disabled={!pickedPath}
+          disabled={!pickedPath || !tenantName.trim()}
           on:click={() => { step = 2; errorMsg = ''; }}
         >
           Weiter →

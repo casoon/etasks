@@ -1,19 +1,19 @@
 import { atom } from 'nanostores';
 import type { ServiceItem } from '../domain/types';
+import { storageGet, storageSet, KEYS } from '../lib/storage';
+import { isTauriAvailable } from '../lib/platform';
+import { invoke } from '@tauri-apps/api/core';
 
-const STORAGE_KEY = 'etasks_service_catalog';
+function dbInvoke(cmd: string, args?: Record<string, unknown>): void {
+  if (isTauriAvailable()) invoke(cmd, args).catch(console.error);
+}
 
 function loadServices(): ServiceItem[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as ServiceItem[]) : [];
-  } catch {
-    return [];
-  }
+  return storageGet<ServiceItem[]>(KEYS.services) ?? [];
 }
 
 function persist(items: ServiceItem[]): ServiceItem[] {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch {}
+  storageSet(KEYS.services, items);
   return items;
 }
 
@@ -30,14 +30,18 @@ export function addService(draft: Omit<ServiceItem, 'id' | 'createdAt'>): Servic
     createdAt: new Date().toISOString(),
   };
   $services.set(persist([...$services.get(), item]));
+  dbInvoke('upsert_service', { service: item });
   return item;
 }
 
 export function updateService(id: string, patch: Partial<Omit<ServiceItem, 'id' | 'createdAt'>>): void {
   const updated = $services.get().map((s) => (s.id === id ? { ...s, ...patch } : s));
   $services.set(persist(updated));
+  const item = updated.find(s => s.id === id);
+  if (item) dbInvoke('upsert_service', { service: item });
 }
 
 export function removeService(id: string): void {
   $services.set(persist($services.get().filter((s) => s.id !== id)));
+  dbInvoke('delete_service', { id });
 }

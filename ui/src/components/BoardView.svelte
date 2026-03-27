@@ -110,7 +110,7 @@
               >{task.title}</p>
             {/if}
             <div class="flex items-center justify-between gap-2">
-              <span class="text-[11px] text-muted whitespace-nowrap">{formatDuration(task.duration)}</span>
+              <span class="text-[11px] text-muted whitespace-nowrap">{formatDuration(task.estimatedMinutes ?? 0)}</span>
               {#if project}<span class="text-[11px] text-muted overflow-hidden text-ellipsis whitespace-nowrap max-w-[80px]">{project.name}</span>{/if}
               <button
                 class="text-[13px] text-muted px-1 py-0.5 rounded transition-colors hover:bg-bg hover:text-accent"

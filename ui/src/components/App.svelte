@@ -1,13 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { $navItem as navItemStore, $quickAddOpen as quickAddOpenStore } from '../stores/uiStore';
-  import { initTasks } from '../stores/taskStore';
-  import { initBlocks } from '../stores/calendarStore';
-  import { initGoals } from '../stores/weeklyGoalStore';
-  import { initProjects } from '../stores/projectStore';
-  import { initTimeEntries } from '../stores/timerStore';
-  import { initTemplates } from '../stores/templateStore';
-  import { initRecurringTasks } from '../lib/recurrenceService';
+  import { reinitStores } from '../lib/storeInit';
   import { scheduleDailySnapshot } from '../lib/exportService';
   import { loadAppConfig, openTenant } from '../stores/configStore';
   import { syncFromDatabase } from '../lib/storage';
@@ -34,13 +28,7 @@
   let showSetup = false;
 
   function initStores() {
-    initTasks();
-    initBlocks();
-    initGoals();
-    initProjects();
-    initTimeEntries();
-    initTemplates();
-    initRecurringTasks();
+    reinitStores();
     scheduleDailySnapshot();
   }
 

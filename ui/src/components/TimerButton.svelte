@@ -15,8 +15,8 @@
   $: {
     if (interval) { clearInterval(interval); interval = null; }
     if (isActive && activeEntry) {
-      elapsed = formatElapsed(activeEntry.startedAt);
-      interval = setInterval(() => { elapsed = formatElapsed(activeEntry!.startedAt); }, 1000);
+      elapsed = formatElapsed(activeEntry.startAt);
+      interval = setInterval(() => { elapsed = formatElapsed(activeEntry!.startAt); }, 1000);
     } else {
       elapsed = '';
     }
@@ -25,7 +25,7 @@
   onDestroy(() => { if (interval) clearInterval(interval); });
 
   function getTaskTrackedSeconds(id: string): number {
-    return $timeEntriesStore.filter(e => e.taskId === id && e.stoppedAt).reduce((s, e) => s + e.durationSeconds, 0);
+    return $timeEntriesStore.filter(e => e.taskId === id && e.endAt).reduce((s, e) => s + (e.durationMinutes ?? 0) * 60, 0);
   }
 
   $: trackedSeconds = getTaskTrackedSeconds(taskId);

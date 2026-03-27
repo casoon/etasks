@@ -12,3 +12,4 @@ release/
 bin/
 .env
 playwright/
+todo.md

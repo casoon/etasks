@@ -7,14 +7,14 @@
 
   $: recent = (() => {
     const weekStart = getWeekStart(new Date());
-    return tasks.filter(t => t.date >= weekStart);
+    return tasks.filter(t => (t.plannedDate ?? '') >= weekStart);
   })();
 
   $: tagMinutes = (() => {
     const m: Record<string, number> = {};
     for (const task of recent) {
       const tag = task.tags[0] ?? 'sonstige';
-      m[tag] = (m[tag] ?? 0) + task.duration;
+      m[tag] = (m[tag] ?? 0) + (task.estimatedMinutes ?? 0);
     }
     return m;
   })();

@@ -7,7 +7,7 @@ import { $tasks } from './taskStore';
 export const $timeEntries = atom<TimeEntry[]>([]);
 
 export const $activeEntry = computed($timeEntries, (entries) =>
-  entries.find(e => !e.stoppedAt) ?? null
+  entries.find(e => !e.endAt) ?? null
 );
 
 export const $activeTaskId = computed($activeEntry, (entry) => entry?.taskId ?? null);
@@ -33,6 +33,6 @@ export function stopActiveTimer(): void {
 
 export function getTaskTrackedSeconds(taskId: string): number {
   return $timeEntries.get()
-    .filter(e => e.taskId === taskId && e.stoppedAt)
-    .reduce((sum, e) => sum + e.durationSeconds, 0);
+    .filter(e => e.taskId === taskId && e.endAt)
+    .reduce((sum, e) => sum + (e.durationMinutes ?? 0) * 60, 0);
 }

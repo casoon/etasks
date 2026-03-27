@@ -13,12 +13,13 @@ function makeRecurringTemplate(overrides: Partial<Task> = {}): Task {
   return {
     id: 'tmpl-1',
     title: 'Daily standup',
-    duration: 15,
+    estimatedMinutes: 15,
     status: 'todo',
     tags: [],
-    date: '2026-03-20',
+    plannedDate: '2026-03-20',
     createdAt: new Date().toISOString(),
-    order: 1,
+    updatedAt: new Date().toISOString(),
+    sortOrder: 1,
     recurrence: { frequency: 'daily' },
     ...overrides,
   };
@@ -90,21 +91,21 @@ describe('isDue', () => {
 
 describe('generateDueInstances', () => {
   it('generates an instance for a due daily task', () => {
-    const template = makeRecurringTemplate({ date: '2026-03-26' });
+    const template = makeRecurringTemplate({ plannedDate: '2026-03-26' });
     const instances = generateDueInstances([template], '2026-03-27');
     expect(instances).toHaveLength(1);
     expect(instances[0].title).toBe(template.title);
-    expect(instances[0].date).toBe('2026-03-27');
+    expect(instances[0].plannedDate).toBe('2026-03-27');
     expect(instances[0].sourceTaskId).toBe(template.id);
   });
 
   it('does not generate a duplicate if instance already exists', () => {
-    const template = makeRecurringTemplate({ id: 'tmpl-1', date: '2026-03-26' });
+    const template = makeRecurringTemplate({ id: 'tmpl-1', plannedDate: '2026-03-26' });
     const existingInstance: Task = {
       ...makeRecurringTemplate(),
       id: 'inst-1',
       sourceTaskId: 'tmpl-1',
-      date: '2026-03-27',
+      plannedDate: '2026-03-27',
       recurrence: undefined,
     };
     const instances = generateDueInstances([template, existingInstance], '2026-03-27');
@@ -114,7 +115,7 @@ describe('generateDueInstances', () => {
   it('does not generate an instance for a task that is not due', () => {
     // Monday template, target is a Friday
     const template = makeRecurringTemplate({
-      date: '2026-03-23',
+      plannedDate: '2026-03-23',
       recurrence: { frequency: 'weekly', dayOfWeek: 1 },
     });
     // 2026-03-27 is a Friday
@@ -127,28 +128,28 @@ describe('generateDueInstances', () => {
       ...makeRecurringTemplate(),
       id: 'inst-1',
       sourceTaskId: 'tmpl-1',
-      date: '2026-03-26',
+      plannedDate: '2026-03-26',
     };
     const instances = generateDueInstances([instance], '2026-03-27');
     expect(instances).toHaveLength(0);
   });
 
   it('generates instances for multiple due templates', () => {
-    const t1 = makeRecurringTemplate({ id: 'tmpl-1', date: '2026-03-26' });
-    const t2 = makeRecurringTemplate({ id: 'tmpl-2', title: 'Code review', date: '2026-03-26' });
+    const t1 = makeRecurringTemplate({ id: 'tmpl-1', plannedDate: '2026-03-26' });
+    const t2 = makeRecurringTemplate({ id: 'tmpl-2', title: 'Code review', plannedDate: '2026-03-26' });
     const instances = generateDueInstances([t1, t2], '2026-03-27');
     expect(instances).toHaveLength(2);
   });
 
   it('copies relevant fields from template to instance', () => {
     const template = makeRecurringTemplate({
-      duration: 45,
+      estimatedMinutes: 45,
       tags: ['work'],
       projectId: 'proj-1',
-      date: '2026-03-26',
+      plannedDate: '2026-03-26',
     });
     const [instance] = generateDueInstances([template], '2026-03-27');
-    expect(instance.duration).toBe(45);
+    expect(instance.estimatedMinutes).toBe(45);
     expect(instance.tags).toEqual(['work']);
     expect(instance.projectId).toBe('proj-1');
   });

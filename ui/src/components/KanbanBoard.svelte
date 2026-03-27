@@ -11,7 +11,7 @@
   $: tasks = allTasks.filter(t => t.projectId === projectId);
 
   function tasksByColumn(col: KanbanStatus) {
-    return tasks.filter(t => (t.kanbanStatus ?? 'backlog') === col).sort((a, b) => a.order - b.order);
+    return tasks.filter(t => (t.kanbanStatus ?? 'backlog') === col).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   }
 
   function handleStatusChange(task: Task, newStatus: KanbanStatus) {
@@ -30,13 +30,13 @@
   function startEdit(task: Task) {
     editingId = task.id;
     editTitle = task.title;
-    editDuration = task.duration;
+    editDuration = task.estimatedMinutes ?? 30;
   }
 
   function saveEdit() {
     if (!editingId) return;
     const t = editTitle.trim();
-    if (t) updateTask(editingId, { title: t, duration: editDuration });
+    if (t) updateTask(editingId, { title: t, estimatedMinutes: editDuration });
     editingId = null;
   }
 
@@ -114,13 +114,13 @@
               {/if}
             </div>
             <div class="flex items-center justify-between gap-2">
-              <span class="text-[11px] text-muted whitespace-nowrap">{formatDuration(task.duration)}</span>
+              <span class="text-[11px] text-muted whitespace-nowrap">{formatDuration(task.estimatedMinutes ?? 0)}</span>
               <div class="flex gap-1">
                 {#if task.kanbanStatus !== 'done'}
                   <button
                     class="text-[13px] text-muted px-1 py-0.5 rounded transition-colors hover:bg-bg hover:text-accent"
                     title="Heute einplanen"
-                    on:click={() => updateTask(task.id, { date: today(), scheduledAt: undefined })}
+                    on:click={() => updateTask(task.id, { plannedDate: today(), scheduledStart: null })}
                   >☀</button>
                 {/if}
                 <button

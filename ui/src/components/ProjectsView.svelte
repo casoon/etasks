@@ -11,6 +11,13 @@
   import { $projectsView as projectsViewStore } from '../stores/uiStore';
   import { PROJECT_COLORS } from '../domain/types';
   import type { ServiceItem, Client } from '../domain/types';
+  import {
+    $billingItems as billingItemsStore,
+    $billingItemTasks as billingItemTasksStore,
+    $unlockedBillingItemIds as unlockedBillingItemIdsStore,
+    addBillingItem, updateBillingItem, removeBillingItem,
+    linkTaskToBillingItem, unlinkTaskFromBillingItem,
+  } from '../stores/billingStore';
   import { isTauriAvailable } from '../lib/platform';
   import { buildProjectReportInput, generateProjectReport } from '../lib/reportService';
   import KanbanBoard from './KanbanBoard.svelte';
@@ -24,6 +31,12 @@
   $: allTasks = $tasksStore;
   $: allTimeEntries = $timeEntriesStore;
   $: services = $servicesStore;
+  $: billingItems = $billingItemsStore;
+  $: billingItemTasks = $billingItemTasksStore;
+  $: unlockedIds = $unlockedBillingItemIdsStore;
+  $: projectBillingItems = selectedId
+    ? billingItems.filter(i => i.projectId === selectedId).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    : [];
 
   let reportGenerating = false;
   let reportMessage = '';
@@ -207,6 +220,50 @@
       category: editDraft.category.trim() || undefined,
     });
     editingServiceId = null;
+  }
+
+  // ── Rechnungspositionen ────────────────────────────────────────────────────────
+
+  let addingBillingItem = false;
+  let expandedBillingItemId: string | null = null;
+
+  interface BillingItemDraft {
+    title: string;
+    billingType: 'fixed' | 'hourly' | 'unit';
+    unitPriceEuro: string;
+  }
+
+  const emptyBillingDraft = (): BillingItemDraft => ({ title: '', billingType: 'hourly', unitPriceEuro: '' });
+  let billingDraft: BillingItemDraft = emptyBillingDraft();
+
+  function saveBillingItem() {
+    if (!billingDraft.title.trim() || !selectedId) return;
+    const unitPriceCents = billingDraft.unitPriceEuro
+      ? Math.round(parseFloat(billingDraft.unitPriceEuro) * 100)
+      : null;
+    addBillingItem(selectedId, {
+      title: billingDraft.title.trim(),
+      billingType: billingDraft.billingType,
+      unitPriceCents: isNaN(unitPriceCents ?? NaN) ? null : unitPriceCents,
+    });
+    billingDraft = emptyBillingDraft();
+    addingBillingItem = false;
+  }
+
+  function toggleBillingItemExpand(id: string) {
+    expandedBillingItemId = expandedBillingItemId === id ? null : id;
+  }
+
+  function isTaskLinked(billingItemId: string, taskId: string): boolean {
+    return billingItemTasks.some(l => l.billingItemId === billingItemId && l.taskId === taskId);
+  }
+
+  function toggleTaskLink(billingItemId: string, taskId: string) {
+    if (isTaskLinked(billingItemId, taskId)) {
+      unlinkTaskFromBillingItem(billingItemId, taskId);
+    } else {
+      linkTaskToBillingItem(billingItemId, taskId);
+    }
   }
 
   // Group services by category
@@ -679,6 +736,122 @@
               rows={4}
             />
           {/key}
+        </div>
+
+        <!-- ── Rechnungspositionen ── -->
+        <div class="px-6 py-4 border-b border-border-subtle flex-shrink-0 flex flex-col gap-2">
+          <div class="flex items-center justify-between">
+            <label class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted">Rechnungspositionen</label>
+            {#if !addingBillingItem}
+              <button
+                class="px-2 py-0.5 text-[11px] font-medium rounded-lg border border-border text-secondary hover:bg-bg hover:text-primary transition-colors"
+                on:click={() => { addingBillingItem = true; billingDraft = emptyBillingDraft(); }}
+              >+ Hinzufügen</button>
+            {/if}
+          </div>
+
+          {#if addingBillingItem}
+            <div class="flex flex-col gap-2 p-3 rounded-lg border border-accent bg-accent/5">
+              <div class="flex gap-2">
+                <!-- svelte-ignore a11y-autofocus -->
+                <input
+                  class="flex-1 px-2 py-1 border border-border rounded-md text-[13px] outline-none bg-surface focus:border-accent"
+                  bind:value={billingDraft.title}
+                  placeholder="Bezeichnung..."
+                  autofocus
+                  on:keydown={(e) => { if (e.key === 'Escape') { addingBillingItem = false; } if (e.key === 'Enter') saveBillingItem(); }}
+                />
+                <select
+                  class="border border-border rounded-md px-2 py-1 text-[12px] bg-bg outline-none text-secondary"
+                  bind:value={billingDraft.billingType}
+                >
+                  <option value="hourly">Stunden</option>
+                  <option value="fixed">Pauschal</option>
+                  <option value="unit">Einheit</option>
+                </select>
+                <input
+                  class="w-24 px-2 py-1 border border-border rounded-md text-[13px] outline-none bg-surface focus:border-accent"
+                  bind:value={billingDraft.unitPriceEuro}
+                  placeholder="€ 0.00"
+                  type="number"
+                  step="0.01"
+                />
+              </div>
+              <div class="flex gap-2">
+                <button
+                  class="px-3 py-1 rounded-lg bg-accent text-white text-[12px] font-medium hover:opacity-90 transition-opacity"
+                  on:click={saveBillingItem}
+                >Hinzufügen</button>
+                <button
+                  class="px-3 py-1 rounded-lg border border-border text-secondary text-[12px] hover:bg-bg transition-colors"
+                  on:click={() => { addingBillingItem = false; billingDraft = emptyBillingDraft(); }}
+                >Abbrechen</button>
+              </div>
+            </div>
+          {/if}
+
+          {#if projectBillingItems.length === 0 && !addingBillingItem}
+            <p class="text-[12px] text-muted italic">Keine Rechnungspositionen für dieses Projekt.</p>
+          {/if}
+
+          {#each projectBillingItems as item (item.id)}
+            {@const isUnlocked = unlockedIds.includes(item.id)}
+            {@const linkedTaskIds = billingItemTasks.filter(l => l.billingItemId === item.id).map(l => l.taskId)}
+            {@const projectTasks = allTasks.filter(t => t.projectId === selectedId)}
+            <div class="rounded-lg border {isUnlocked ? 'border-green-300 bg-green-50/30' : 'border-border bg-bg'} overflow-hidden">
+              <button
+                class="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface transition-colors"
+                on:click={() => toggleBillingItemExpand(item.id)}
+              >
+                <span class="flex-1 text-[13px] font-medium text-primary truncate">{item.title}</span>
+                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border {item.billingType === 'hourly' ? 'border-blue-200 text-blue-600 bg-blue-50' : item.billingType === 'fixed' ? 'border-purple-200 text-purple-600 bg-purple-50' : 'border-orange-200 text-orange-600 bg-orange-50'}">
+                  {item.billingType === 'hourly' ? 'Std.' : item.billingType === 'fixed' ? 'Pauschal' : 'Einheit'}
+                </span>
+                {#if item.unitPriceCents != null}
+                  <span class="text-[12px] text-secondary font-mono">{(item.unitPriceCents / 100).toFixed(2)} €</span>
+                {/if}
+                {#if isUnlocked}
+                  <span class="text-[11px] text-green-600 font-medium">✓ Abrechenbar</span>
+                {:else if linkedTaskIds.length > 0}
+                  <span class="text-[11px] text-muted">{linkedTaskIds.filter(id => allTasks.find(t => t.id === id)?.status === 'done').length}/{linkedTaskIds.length} erledigt</span>
+                {/if}
+                <span class="text-muted text-[11px]">{expandedBillingItemId === item.id ? '▲' : '▼'}</span>
+              </button>
+
+              {#if expandedBillingItemId === item.id}
+                <div class="px-3 pb-3 flex flex-col gap-2 border-t border-border">
+                  <p class="text-[11px] text-muted pt-2 font-medium">Verknüpfte Tasks:</p>
+                  {#if projectTasks.length === 0}
+                    <p class="text-[12px] text-muted italic">Keine Tasks in diesem Projekt.</p>
+                  {:else}
+                    <div class="flex flex-col gap-1 max-h-40 overflow-y-auto">
+                      {#each projectTasks as task (task.id)}
+                        {@const linked = isTaskLinked(item.id, task.id)}
+                        <label class="flex items-center gap-2 py-1 px-2 rounded-md hover:bg-surface cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={linked}
+                            on:change={() => toggleTaskLink(item.id, task.id)}
+                            class="accent-accent"
+                          />
+                          <span class="flex-1 text-[12px] text-primary truncate {task.status === 'done' ? 'line-through text-muted' : ''}">{task.title}</span>
+                          {#if task.status === 'done'}
+                            <span class="text-[10px] text-green-600 font-medium">✓</span>
+                          {/if}
+                        </label>
+                      {/each}
+                    </div>
+                  {/if}
+                  <div class="flex justify-end pt-1">
+                    <button
+                      class="px-2 py-0.5 text-[11px] text-red-500 border border-red-200 rounded-md hover:bg-red-50 transition-colors"
+                      on:click={() => { removeBillingItem(item.id); if (expandedBillingItemId === item.id) expandedBillingItemId = null; }}
+                    >Position löschen</button>
+                  </div>
+                </div>
+              {/if}
+            </div>
+          {/each}
         </div>
 
         <div class="flex-1 overflow-hidden flex flex-col">

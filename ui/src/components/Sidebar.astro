@@ -7,6 +7,7 @@ const navItems = [
   { id: 'time-tracking', label: 'Zeiterfassung', icon: '⏲' },
   { id: 'clients', label: 'Abrechnung', icon: '€' },
   { id: 'focus', label: 'Fokus', icon: '⏱' },
+  { id: 'settings', label: 'Einstellungen', icon: '⚙' },
 ];
 ---
 
@@ -14,6 +15,30 @@ const navItems = [
   <div class="flex items-baseline gap-0.5 px-2 py-2 select-none">
     <span class="text-xl font-bold text-accent leading-none">e</span>
     <span class="text-base font-semibold text-primary">tasks</span>
+  </div>
+
+  <div class="relative px-2" id="tenant-switcher-container">
+    <button
+      id="tenant-name-btn"
+      class="flex items-center gap-1.5 w-full px-2 py-1.5 rounded-lg text-[12px] font-medium text-secondary hover:bg-bg hover:text-primary transition-colors text-left"
+    >
+      <span id="tenant-name-text" class="flex-1 truncate">–</span>
+      <span class="text-[10px] text-muted flex-shrink-0">▾</span>
+    </button>
+    <div
+      id="tenant-dropdown"
+      class="hidden absolute left-0 right-0 top-full mt-1 z-50 bg-surface border border-border rounded-lg shadow-lg overflow-hidden"
+    >
+      <div id="tenant-list" class="flex flex-col"></div>
+      <div class="border-t border-border">
+        <button
+          id="tenant-add-btn"
+          class="flex items-center gap-2 w-full px-3 py-2 text-[12px] text-secondary hover:bg-bg hover:text-primary transition-colors text-left"
+        >
+          <span>+</span> Neuen anlegen
+        </button>
+      </div>
+    </div>
   </div>
 
   <ul class="list-none flex flex-col gap-0.5 flex-1" role="list">
@@ -53,7 +78,54 @@ const navItems = [
 
 <script>
   import { $navItem, $showShutdown } from '../stores/uiStore';
+  import { $appConfig } from '../stores/configStore';
   import { exportToFile } from '../lib/exportService';
+
+  function updateTenantSwitcher(config: any) {
+    const nameEl = document.getElementById('tenant-name-text');
+    if (!nameEl || !config) return;
+    const active = config.tenants?.find((t: any) => t.path === config.active_tenant);
+    nameEl.textContent = active?.displayName ?? active?.name ?? '–';
+
+    const list = document.getElementById('tenant-list');
+    if (!list) return;
+    list.innerHTML = '';
+    (config.tenants ?? []).forEach((t: any) => {
+      const btn = document.createElement('button');
+      btn.className = `flex items-center gap-2 w-full px-3 py-2 text-[12px] transition-colors text-left ${t.path === config.active_tenant ? 'text-accent font-semibold bg-accent/5' : 'text-secondary hover:bg-bg hover:text-primary'}`;
+      btn.textContent = t.displayName ?? t.name ?? t.path.split('/').pop();
+      if (t.path !== config.active_tenant) {
+        btn.addEventListener('click', () => {
+          closeDropdown();
+          $navItem.set('settings' as any);
+        });
+      }
+      list.appendChild(btn);
+    });
+  }
+
+  $appConfig.subscribe(updateTenantSwitcher);
+
+  const tenantBtn = document.getElementById('tenant-name-btn');
+  const dropdown = document.getElementById('tenant-dropdown');
+
+  function closeDropdown() {
+    dropdown?.classList.add('hidden');
+  }
+
+  tenantBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdown?.classList.toggle('hidden');
+  });
+
+  document.addEventListener('click', closeDropdown);
+
+  document.getElementById('tenant-add-btn')?.addEventListener('click', () => {
+    closeDropdown();
+    $navItem.set('settings' as any);
+    document.querySelectorAll('[data-nav]').forEach(b => b.classList.remove('is-active'));
+    document.querySelector('[data-nav="settings"]')?.classList.add('is-active');
+  });
 
   document.querySelectorAll('[data-nav]').forEach((btn) => {
     btn.addEventListener('click', () => {

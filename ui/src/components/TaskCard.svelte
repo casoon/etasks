@@ -23,14 +23,14 @@
 
   function startEdit() {
     editTitle = task.title;
-    editDuration = task.duration;
+    editDuration = task.estimatedMinutes ?? 30;
     editing = true;
   }
 
   function saveEdit() {
     const t = editTitle.trim();
-    if (t && (t !== task.title || editDuration !== task.duration)) {
-      updateTask(task.id, { title: t, duration: editDuration });
+    if (t && (t !== task.title || editDuration !== (task.estimatedMinutes ?? 30))) {
+      updateTask(task.id, { title: t, estimatedMinutes: editDuration });
     }
     editing = false;
   }
@@ -123,8 +123,8 @@
 
   <div class="flex items-center gap-[2px] flex-shrink-0">
     {#if task.recurrence}<RecurringBadge recurrence={task.recurrence} />{/if}
-    {#if task.scheduledAt}<span class="w-[5px] h-[5px] rounded-full bg-accent flex-shrink-0" title="Eingeplant" />{/if}
-    <span class="text-[11px] text-muted whitespace-nowrap">{formatDuration(task.duration)}</span>
+    {#if task.scheduledStart}<span class="w-[5px] h-[5px] rounded-full bg-accent flex-shrink-0" title="Eingeplant" />{/if}
+    <span class="text-[11px] text-muted whitespace-nowrap">{formatDuration(task.estimatedMinutes ?? 0)}</span>
     <TimerButton taskId={task.id} />
     <button
       class="opacity-0 group-hover:opacity-100 text-[12px] text-muted px-[2px] transition-opacity hover:text-accent leading-none"

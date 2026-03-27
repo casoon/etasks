@@ -29,7 +29,7 @@
 
     addTask(title.trim(), duration, [], projectId || undefined);
     const all = tasksStore.get();
-    const last = [...all].sort((a, b) => b.order - a.order)[0];
+    const last = [...all].sort((a, b) => (b.sortOrder ?? 0) - (a.sortOrder ?? 0))[0];
     if (last) updateTask(last.id, { recurrence: rule });
 
     title = ''; adding = false;

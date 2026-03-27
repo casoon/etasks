@@ -28,20 +28,20 @@ export function isDue(rule: RecurrenceRule, lastDate: string, targetDate: string
 
 export function generateDueInstances(allTasks: Task[], targetDate: string): Task[] {
   const recurringTemplates = allTasks.filter(t => t.recurrence && !t.sourceTaskId);
-  const existingInstances = allTasks.filter(t => t.sourceTaskId && t.date === targetDate);
+  const existingInstances = allTasks.filter(t => t.sourceTaskId && t.plannedDate === targetDate);
   const existingSourceIds = new Set(existingInstances.map(t => t.sourceTaskId!));
 
   const newTasks: Task[] = [];
 
   for (const template of recurringTemplates) {
     if (existingSourceIds.has(template.id)) continue;
-    if (!isDue(template.recurrence!, template.date, targetDate)) continue;
+    if (!isDue(template.recurrence!, template.plannedDate ?? '', targetDate)) continue;
 
     const instance = createTask({
       title: template.title,
-      duration: template.duration,
+      estimatedMinutes: template.estimatedMinutes,
       tags: template.tags,
-      date: targetDate,
+      plannedDate: targetDate,
       projectId: template.projectId,
       sourceTaskId: template.id,
     });

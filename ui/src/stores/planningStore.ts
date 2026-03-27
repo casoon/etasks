@@ -1,37 +1,48 @@
-import { atom } from 'nanostores';
-import { $activeDate } from './taskStore';
+import { atom, computed } from 'nanostores';
+import { $activeDate, $tasks, updateTask } from './taskStore';
+import { upsertDayPlan, getDayPlanByDate, loadDayPlans } from '../lib/db';
 
-const dateKey = $activeDate.get();
+// ── Daily Intention via DayPlan ──────────────────────────────────────────────
 
-export const $dailyIntention = atom<string>(
-  localStorage.getItem(`intention_${dateKey}`) ?? ''
+export const $dayPlans = atom(loadDayPlans());
+
+export const $dailyIntention = computed([$dayPlans, $activeDate], (plans, date) =>
+  plans.find(p => p.date === date)?.intention ?? ''
 );
 
 export function setIntention(text: string): void {
-  $dailyIntention.set(text);
-  localStorage.setItem(`intention_${$activeDate.get()}`, text);
+  const date = $activeDate.get();
+  const existing = getDayPlanByDate(date);
+  const now = new Date().toISOString();
+  const plan = existing
+    ? { ...existing, intention: text, updatedAt: now }
+    : { id: crypto.randomUUID(), date, intention: text, createdAt: now, updatedAt: now };
+  $dayPlans.set(upsertDayPlan(plan));
 }
 
-function loadMit(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(`mit_${dateKey}`) ?? '[]');
-  } catch {
-    return [];
-  }
-}
+// ── MIT (Most Important Tasks) via priorityRank ─────────────────────────────
 
-export const $mitTaskIds = atom<string[]>(loadMit());
+export const $mitTaskIds = computed([$tasks, $activeDate], (tasks, date) =>
+  tasks
+    .filter(t => t.plannedDate === date && t.priorityRank != null)
+    .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
+    .map(t => t.id)
+);
 
 export function toggleMit(taskId: string): void {
-  const current = $mitTaskIds.get();
-  let next: string[];
-  if (current.includes(taskId)) {
-    next = current.filter(id => id !== taskId);
-  } else if (current.length < 3) {
-    next = [...current, taskId];
+  const tasks = $tasks.get();
+  const date = $activeDate.get();
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  if (task.priorityRank != null) {
+    updateTask(taskId, { priorityRank: null });
   } else {
-    return;
+    const usedRanks = tasks
+      .filter(t => t.plannedDate === date && t.priorityRank != null && t.id !== taskId)
+      .map(t => t.priorityRank as number);
+    if (usedRanks.length >= 3) return;
+    const rank = ([1, 2, 3] as const).find(r => !usedRanks.includes(r)) ?? null;
+    if (rank) updateTask(taskId, { priorityRank: rank });
   }
-  $mitTaskIds.set(next);
-  localStorage.setItem(`mit_${$activeDate.get()}`, JSON.stringify(next));
 }

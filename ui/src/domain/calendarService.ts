@@ -1,14 +1,14 @@
 import type { CalendarBlock, Task } from './types';
 
 export function createBlockFromTask(task: Task, start: Date): CalendarBlock {
-  const end = new Date(start.getTime() + task.duration * 60 * 1000);
+  const end = new Date(start.getTime() + (task.estimatedMinutes ?? 30) * 60 * 1000);
   return {
     id: crypto.randomUUID(),
     taskId: task.id,
     title: task.title,
     start: start.toISOString(),
     end: end.toISOString(),
-    date: task.date,
+    date: task.plannedDate ?? '',
   };
 }
 

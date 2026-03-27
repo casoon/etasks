@@ -1,6 +1,8 @@
 <script lang="ts">
-  import { $appConfig as appConfigStore, saveAppConfig, openTenant } from '../stores/configStore';
+  import { invoke } from '@tauri-apps/api/core';
+  import { $appConfig as appConfigStore, saveAppConfig, openTenant, writeTenantMeta, removeTenant } from '../stores/configStore';
   import { syncFromDatabase } from '../lib/storage';
+  import { reinitStores } from '../lib/storeInit';
   import type { AppConfig, UserProfile } from '../stores/configStore';
 
   let config = appConfigStore.get()!;
@@ -34,11 +36,16 @@
   async function addTenant() {
     errorMsg = '';
     try {
+      const name = window.prompt('Name des neuen Arbeitsbereichs:');
+      if (!name?.trim()) return;
       const dir = await invoke<string | null>('pick_directory');
       if (!dir) return;
-      const path = dir + '/etasks-data.db';
-      await openTenant(path);
+      const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const path = dir + '/' + slug + '.db';
+      await openTenant(path, name.trim());
+      await writeTenantMeta(name.trim());
       await syncFromDatabase();
+      reinitStores();
       config = appConfigStore.get()!;
     } catch (e) {
       errorMsg = String(e);
@@ -51,6 +58,7 @@
     try {
       await openTenant(path);
       await syncFromDatabase();
+      reinitStores();
       config = appConfigStore.get()!;
     } catch (e) {
       errorMsg = String(e);
@@ -188,12 +196,19 @@
           {#if tenant.path === config.active_tenant}
             <span class="text-xs text-accent font-medium flex-shrink-0">Aktiv</span>
           {:else}
-            <button
-              class="text-xs text-secondary hover:text-primary px-3 py-1 rounded border border-border hover:bg-surface-raised transition-colors flex-shrink-0"
-              on:click={() => switchTenant(tenant.path)}
-            >
-              Wechseln
-            </button>
+            <div class="flex items-center gap-1 flex-shrink-0">
+              <button
+                class="text-xs text-secondary hover:text-primary px-3 py-1 rounded border border-border hover:bg-surface-raised transition-colors"
+                on:click={() => switchTenant(tenant.path)}
+              >
+                Wechseln
+              </button>
+              <button
+                class="text-xs text-muted hover:text-red-500 px-2 py-1 transition-colors"
+                title="Aus Liste entfernen"
+                on:click={() => removeTenant(tenant.path)}
+              >×</button>
+            </div>
           {/if}
         </li>
       {/each}

@@ -11,9 +11,11 @@ export function startTimer(taskId: string, projectId?: string): TimeEntry {
     id: crypto.randomUUID(),
     taskId,
     projectId,
-    startedAt: new Date().toISOString(),
-    stoppedAt: undefined,
-    durationSeconds: 0,
+    startAt: new Date().toISOString(),
+    endAt: null,
+    durationMinutes: null,
+    isRunning: true,
+    updatedAt: new Date().toISOString(),
   };
   upsertTimeEntry(entry);
   return entry;
@@ -22,13 +24,19 @@ export function startTimer(taskId: string, projectId?: string): TimeEntry {
 export function stopTimer(entryId: string): TimeEntry | null {
   const entries = loadTimeEntries();
   const entry = entries.find(e => e.id === entryId);
-  if (!entry || entry.stoppedAt) return null;
+  if (!entry || entry.endAt) return null;
 
   const stopped = new Date().toISOString();
-  const durationSeconds = Math.round(
-    (new Date(stopped).getTime() - new Date(entry.startedAt).getTime()) / 1000
+  const durationMinutes = Math.round(
+    (new Date(stopped).getTime() - new Date(entry.startAt).getTime()) / 60000
   );
-  const updated: TimeEntry = { ...entry, stoppedAt: stopped, durationSeconds };
+  const updated: TimeEntry = {
+    ...entry,
+    endAt: stopped,
+    durationMinutes,
+    isRunning: false,
+    updatedAt: new Date().toISOString(),
+  };
   upsertTimeEntry(updated);
 
   // trackedSeconds auf Task aktualisieren
@@ -38,19 +46,19 @@ export function stopTimer(entryId: string): TimeEntry | null {
 }
 
 export function getActiveEntry(): TimeEntry | null {
-  return loadTimeEntries().find(e => !e.stoppedAt) ?? null;
+  return loadTimeEntries().find(e => !e.endAt) ?? null;
 }
 
-export function sumTrackedSeconds(taskId: string): number {
+export function sumTrackedMinutes(taskId: string): number {
   return loadTimeEntries()
-    .filter(e => e.taskId === taskId && e.stoppedAt)
-    .reduce((sum, e) => sum + e.durationSeconds, 0);
+    .filter(e => e.taskId === taskId && e.endAt)
+    .reduce((sum, e) => sum + (e.durationMinutes ?? 0), 0);
 }
 
 function updateTaskTrackedSeconds(taskId: string): void {
   const tasks = loadTasks();
   const task = tasks.find(t => t.id === taskId);
   if (!task) return;
-  upsertTask({ ...task, trackedSeconds: sumTrackedSeconds(taskId) });
+  const minutes = sumTrackedMinutes(taskId);
+  upsertTask({ ...task, trackedSeconds: minutes * 60, updatedAt: new Date().toISOString() });
 }
-

@@ -8,7 +8,7 @@ export const $tasks = atom<Task[]>([]);
 export const $activeDate = atom<string>(today());
 
 export const $todayTasks = computed([$tasks, $activeDate], (tasks, date) =>
-  tasks.filter((t) => t.date === date).sort((a, b) => a.order - b.order)
+  tasks.filter((t) => t.plannedDate === date).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
 );
 
 export const $doneTasks = computed($todayTasks, (tasks) => tasks.filter((t) => t.status === 'done'));
@@ -23,37 +23,47 @@ export function initTasks(): void {
 
 export function addTask(
   title: string,
-  duration = 30,
+  estimatedMinutes = 30,
   tags: string[] = [],
   projectId?: string,
   kanbanStatus?: KanbanStatus,
-): void {
+): Task {
   const task = createTask({
     title,
-    duration,
+    estimatedMinutes,
     tags,
-    date: $activeDate.get(),
+    plannedDate: $activeDate.get(),
     projectId,
     kanbanStatus: kanbanStatus ?? (projectId ? 'backlog' : undefined),
   });
   $tasks.set(upsertTask(task));
+  return task;
 }
 
 export function toggleTask(id: string): void {
   const task = $tasks.get().find((t) => t.id === id);
   if (!task) return;
   const isDone = task.status !== 'done';
+  const now = new Date().toISOString();
   $tasks.set(upsertTask({
     ...task,
     status: isDone ? 'done' : 'todo',
     kanbanStatus: isDone ? 'done' : (task.kanbanStatus === 'done' ? 'backlog' : task.kanbanStatus),
+    completedAt: isDone ? now : null,
+    updatedAt: now,
   }));
 }
 
 export function updateTask(id: string, patch: Partial<Task>): void {
   const task = $tasks.get().find((t) => t.id === id);
   if (!task) return;
-  $tasks.set(upsertTask({ ...task, ...patch }));
+  const now = new Date().toISOString();
+  // Auto-derive plannedDate from scheduledStart if not explicitly set
+  const resolved: Partial<Task> =
+    patch.scheduledStart && !patch.plannedDate
+      ? { ...patch, plannedDate: patch.scheduledStart.slice(0, 10) }
+      : patch;
+  $tasks.set(upsertTask({ ...task, ...resolved, updatedAt: now }));
 }
 
 export function removeTask(id: string): void {
@@ -65,7 +75,7 @@ export function reorderTasks(orderedIds: string[]): void {
   const updated = orderedIds
     .map((id, i) => {
       const t = tasks.find((x) => x.id === id);
-      return t ? { ...t, order: i } : null;
+      return t ? { ...t, sortOrder: i } : null;
     })
     .filter(Boolean) as Task[];
 

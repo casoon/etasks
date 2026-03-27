@@ -1,16 +1,19 @@
 import { type Task, type TaskStatus, type KanbanStatus } from './types';
 
-export function createTask(partial: Partial<Task> & { title: string; date: string }): Task {
+export function createTask(partial: Partial<Task> & { title: string }): Task {
   return {
     id: crypto.randomUUID(),
     title: partial.title,
-    duration: partial.duration ?? 30,
+    estimatedMinutes: partial.estimatedMinutes ?? null,
     status: 'todo',
     tags: partial.tags ?? [],
-    scheduledAt: partial.scheduledAt,
-    date: partial.date,
+    scheduledStart: partial.scheduledStart ?? null,
+    scheduledEnd: partial.scheduledEnd ?? null,
+    plannedDate: partial.plannedDate ?? null,
     createdAt: new Date().toISOString(),
-    order: partial.order ?? Date.now(),
+    updatedAt: new Date().toISOString(),
+    sortOrder: partial.sortOrder ?? Date.now(),
+    priorityRank: partial.priorityRank ?? null,
     projectId: partial.projectId,
     kanbanStatus: partial.kanbanStatus,
     notes: partial.notes,
@@ -31,7 +34,7 @@ export function autoScheduleTasks(
   dayStart = 9,
   dayEnd = 18,
 ): Task[] {
-  const unscheduled = tasks.filter((t) => t.status === 'todo' && !t.scheduledAt);
+  const unscheduled = tasks.filter((t) => t.status === 'todo' && !t.scheduledStart);
   const busySlots = blocks.map((b) => ({ start: b.start.getTime(), end: b.end.getTime() }));
 
   let cursor = new Date();
@@ -40,7 +43,7 @@ export function autoScheduleTasks(
   const result: Task[] = [];
 
   for (const task of unscheduled) {
-    const durationMs = task.duration * 60 * 1000;
+    const durationMs = (task.estimatedMinutes ?? 30) * 60 * 1000;
     let placed = false;
 
     while (cursor.getHours() < dayEnd) {
@@ -48,7 +51,7 @@ export function autoScheduleTasks(
       const overlaps = busySlots.some((s) => cursor.getTime() < s.end && slotEnd > s.start);
 
       if (!overlaps) {
-        result.push({ ...task, scheduledAt: cursor.toISOString() });
+        result.push({ ...task, scheduledStart: cursor.toISOString() });
         busySlots.push({ start: cursor.getTime(), end: slotEnd });
         cursor = new Date(slotEnd);
         placed = true;

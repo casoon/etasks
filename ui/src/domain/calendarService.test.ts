@@ -13,19 +13,20 @@ function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: 'task-1',
     title: 'Test task',
-    duration: 60,
+    estimatedMinutes: 60,
     status: 'todo',
     tags: [],
-    date: '2026-03-27',
+    plannedDate: '2026-03-27',
     createdAt: new Date().toISOString(),
-    order: 1,
+    updatedAt: new Date().toISOString(),
+    sortOrder: 1,
     ...overrides,
   };
 }
 
 describe('createBlockFromTask', () => {
-  it('creates a block spanning task.duration minutes', () => {
-    const task = makeTask({ duration: 90 });
+  it('creates a block spanning task.estimatedMinutes minutes', () => {
+    const task = makeTask({ estimatedMinutes: 90 });
     const start = new Date('2026-03-27T09:00:00Z');
     const block = createBlockFromTask(task, start);
 

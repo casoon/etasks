@@ -24,11 +24,11 @@ export function buildProjectReportInput(
   const trackedSeconds = timeEntries
     .filter((e) => {
       const task = tasks.find((t) => t.id === e.taskId);
-      return task?.projectId === project.id && e.stoppedAt;
+      return task?.projectId === project.id && e.endAt;
     })
-    .reduce((s, e) => s + e.durationSeconds, 0);
+    .reduce((s, e) => s + (e.durationMinutes ?? 0) * 60, 0);
 
-  const plannedMinutes = projectTasks.reduce((s, t) => s + t.duration, 0);
+  const plannedMinutes = projectTasks.reduce((s, t) => s + (t.estimatedMinutes ?? 0), 0);
   const completionRate =
     projectTasks.length > 0
       ? Math.round((doneTasks.length / projectTasks.length) * 100)
@@ -46,7 +46,7 @@ export function buildProjectReportInput(
     tasks: projectTasks.map((t) => ({
       title: t.title,
       status: t.status,
-      duration_minutes: t.duration,
+      duration_minutes: t.estimatedMinutes ?? 0,
     })),
   };
 }

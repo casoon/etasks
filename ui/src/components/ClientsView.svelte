@@ -538,7 +538,7 @@
                         >
                           <span class="flex-1 text-[12px] text-primary">{t.title}</span>
                           <span class="text-[11px] text-muted">{getProjectName(t.projectId)}</span>
-                          <span class="text-[11px] text-muted tabular-nums">{t.duration}m</span>
+                          <span class="text-[11px] text-muted tabular-nums">{t.estimatedMinutes ?? 0}m</span>
                         </button>
                       {/each}
                     {/if}
