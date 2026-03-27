@@ -9,6 +9,9 @@
   import { initTemplates } from '../stores/templateStore';
   import { initRecurringTasks } from '../lib/recurrenceService';
   import { scheduleDailySnapshot } from '../lib/exportService';
+  import { loadAppConfig, openTenant } from '../stores/configStore';
+  import { syncFromDatabase } from '../lib/storage';
+  import { isTauriAvailable } from '../lib/platform';
   import TaskColumn from './TaskColumn.svelte';
   import CalendarView from './CalendarView.svelte';
   import WeeklyObjectives from './WeeklyObjectives.svelte';
@@ -20,12 +23,16 @@
   import TimeTrackingView from './TimeTrackingView.svelte';
   import ClientsView from './ClientsView.svelte';
   import QuickAddModal from './QuickAddModal.svelte';
+  import SetupWizard from './SetupWizard.svelte';
+  import SettingsView from './SettingsView.svelte';
 
   $: nav = $navItemStore;
   $: viewMode = $viewModeStore;
   $: isToday = nav === 'today' || nav === 'planning-daily';
 
-  onMount(() => {
+  let showSetup = false;
+
+  function initStores() {
     initTasks();
     initBlocks();
     initGoals();
@@ -34,6 +41,21 @@
     initTemplates();
     initRecurringTasks();
     scheduleDailySnapshot();
+  }
+
+  onMount(async () => {
+    if (isTauriAvailable()) {
+      const config = await loadAppConfig();
+      if (!config.setup_done || !config.active_tenant) {
+        showSetup = true;
+      } else {
+        await openTenant(config.active_tenant);
+        await syncFromDatabase();
+        initStores();
+      }
+    } else {
+      initStores();
+    }
 
     function onKey(e: KeyboardEvent) {
       if (e.metaKey && e.key === 'k') { e.preventDefault(); quickAddOpenStore.set(true); }
@@ -41,6 +63,12 @@
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   });
+
+  async function onSetupDone() {
+    showSetup = false;
+    await syncFromDatabase();
+    initStores();
+  }
 </script>
 
 <div class="flex-1 overflow-hidden flex flex-col">
@@ -77,7 +105,12 @@
   {#if nav === 'projects'}<ProjectsView />{/if}
   {#if nav === 'time-tracking'}<TimeTrackingView />{/if}
   {#if nav === 'clients'}<ClientsView />{/if}
+  {#if nav === 'settings'}<SettingsView />{/if}
 
   <QuickAddModal />
   <ShutdownModal />
 </div>
+
+{#if showSetup}
+  <SetupWizard onDone={onSetupDone} />
+{/if}
