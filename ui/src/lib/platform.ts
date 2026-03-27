@@ -1,6 +1,9 @@
 /**
- * Platform detection — single source of truth for Neutralino availability.
+ * Platform detection — single source of truth for Tauri availability.
  */
-export function isNeutralinoAvailable(): boolean {
-  return typeof window !== 'undefined' && typeof (window as any).Neutralino !== 'undefined';
+export function isTauriAvailable(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof (window as any).__TAURI_INTERNALS__ !== 'undefined'
+  );
 }

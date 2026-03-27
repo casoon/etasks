@@ -1,9 +1,8 @@
 import { loadTasks, loadBlocks, loadGoals, loadNotes, loadClients, loadProjects, loadTimeEntries } from './db';
 import { storageGet, storageSet, KEYS } from './storage';
 import { today } from '../domain/dateUtils';
-import { isNeutralinoAvailable } from './platform';
-
-declare const Neutralino: any;
+import { isTauriAvailable } from './platform';
+import { invoke } from '@tauri-apps/api/core';
 
 export function buildSnapshot() {
   return {
@@ -26,17 +25,15 @@ export async function exportToFile(): Promise<void> {
   const json = JSON.stringify(snapshot, null, 2);
   const filename = `etasks-export-${today()}.json`;
 
-  if (isNeutralinoAvailable()) {
+  if (isTauriAvailable()) {
     try {
-      const downloadsPath = await Neutralino.os.getPath('downloads');
-      await Neutralino.filesystem.writeFile(`${downloadsPath}/${filename}`, json);
+      await invoke('export_to_file', { json, filename });
       return;
     } catch {
       // Fallback auf Browser-Download
     }
   }
 
-  // Browser-Fallback: Blob-Download
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -47,16 +44,14 @@ export async function exportToFile(): Promise<void> {
 }
 
 export async function saveToICloud(): Promise<void> {
-  if (!isNeutralinoAvailable()) return;
+  if (!isTauriAvailable()) return;
 
   const snapshot = buildSnapshot();
   const json = JSON.stringify(snapshot, null, 2);
   const filename = `snapshot-${today()}.json`;
 
   try {
-    const icloudBase = `${await Neutralino.os.getPath('home')}/Library/Mobile Documents/iCloud~js~neutralino~etasks/Documents`;
-    try { await Neutralino.filesystem.createDirectory(icloudBase); } catch { /* already exists */ }
-    await Neutralino.filesystem.writeFile(`${icloudBase}/${filename}`, json);
+    await invoke('save_to_icloud', { json, filename });
     storageSet(KEYS.exportMeta, { lastSnapshotDate: today() });
   } catch (e) {
     console.warn('iCloud sync fehlgeschlagen:', e);

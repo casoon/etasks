@@ -3,7 +3,7 @@ import svelte from '@astrojs/svelte';
 
 export default defineConfig({
   integrations: [svelte()],
-  outDir: '../resources',
+  outDir: './dist',
   output: 'static',
   base: '/',
 });

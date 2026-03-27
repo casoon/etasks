@@ -1,11 +1,5 @@
-/**
- * Notification service — tries browser Notification API,
- * with NeutralinoJS os.showNotification as optional enhancement.
- */
-
-import { isNeutralinoAvailable } from './platform';
-
-declare const Neutralino: any;
+import { isTauriAvailable } from './platform';
+import { invoke } from '@tauri-apps/api/core';
 
 export async function requestPermission(): Promise<void> {
   if (typeof window === 'undefined') return;
@@ -17,17 +11,11 @@ export async function requestPermission(): Promise<void> {
 export function notify(title: string, body: string, icon?: string): void {
   if (typeof window === 'undefined') return;
 
-  // NeutralinoJS runtime available (production desktop)
-  if (isNeutralinoAvailable()) {
-    try {
-      Neutralino.os.showNotification({ summary: title, body });
-      return;
-    } catch {
-      // fall through to browser API
-    }
+  if (isTauriAvailable()) {
+    invoke('show_notification', { title, body }).catch(console.warn);
+    return;
   }
 
-  // Browser Notification API (dev mode / fallback)
   if (!('Notification' in window)) return;
 
   if (Notification.permission === 'granted') {

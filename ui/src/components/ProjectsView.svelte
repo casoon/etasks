@@ -6,7 +6,10 @@
   } from '../stores/projectStore';
   import { $tasks as tasksStore } from '../stores/taskStore';
   import { $templates as templatesStore, applyProjectTemplate } from '../stores/templateStore';
+  import { $timeEntries as timeEntriesStore } from '../stores/timerStore';
   import { PROJECT_COLORS } from '../domain/types';
+  import { isTauriAvailable } from '../lib/platform';
+  import { buildProjectReportInput, generateProjectReport } from '../lib/reportService';
   import KanbanBoard from './KanbanBoard.svelte';
   import TemplatePickerModal from './TemplatePickerModal.svelte';
   import RecurringTasksPanel from './RecurringTasksPanel.svelte';
@@ -16,6 +19,26 @@
   $: selectedId = $selectedProjectIdStore;
   $: selectedProject = $selectedProjectStore;
   $: allTasks = $tasksStore;
+  $: allTimeEntries = $timeEntriesStore;
+
+  let reportGenerating = false;
+  let reportMessage = '';
+
+  async function handleGenerateReport() {
+    if (!selectedProject) return;
+    reportGenerating = true;
+    reportMessage = '';
+    try {
+      const input = buildProjectReportInput(selectedProject, allTasks, allTimeEntries);
+      const path = await generateProjectReport(input);
+      reportMessage = `PDF gespeichert: ${path}`;
+    } catch (e) {
+      reportMessage = `Fehler: ${e}`;
+    } finally {
+      reportGenerating = false;
+      setTimeout(() => { reportMessage = ''; }, 5000);
+    }
+  }
 
   // Tabs
   type Tab = 'projects' | 'recurring';
@@ -203,6 +226,11 @@
             <option value="done">Abgeschlossen</option>
           </select>
           <button class="btn-ghost" on:click={() => showTemplatePicker = true}>Template anwenden</button>
+          {#if isTauriAvailable()}
+            <button class="btn-ghost" on:click={handleGenerateReport} disabled={reportGenerating}>
+              {reportGenerating ? '...' : '↓ PDF-Bericht'}
+            </button>
+          {/if}
           <button class="btn-ghost" on:click={startEditProjectName} title="Name bearbeiten">✎</button>
         </div>
 
@@ -217,6 +245,10 @@
           {/each}
         </div>
       </div>
+
+      {#if reportMessage}
+        <div class="report-message">{reportMessage}</div>
+      {/if}
 
       <div class="project-notes-section">
         <label class="project-notes-label">Notizen & Fähigkeiten</label>

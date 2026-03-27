@@ -1,10 +1,13 @@
 node_modules/
 ui/node_modules/
+ui/dist/
+ui/.astro/
 resources/
 dist/
-.neutralino/
-*.log
+src-tauri/target/
+src-tauri/gen/
 .DS_Store
+*.log
 release/
 bin/
 .env

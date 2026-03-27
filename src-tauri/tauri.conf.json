@@ -1,0 +1,37 @@
+{
+  "productName": "eTasks",
+  "version": "1.0.0",
+  "identifier": "dev.jseidel.etasks",
+  "build": {
+    "frontendDist": "../ui/dist",
+    "devUrl": "http://localhost:4321",
+    "beforeDevCommand": "npm run ui:dev",
+    "beforeBuildCommand": "npm run ui:build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "eTasks",
+        "width": 1400,
+        "height": 900,
+        "minWidth": 1000,
+        "minHeight": 700,
+        "maximizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}
