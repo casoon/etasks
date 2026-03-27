@@ -1,13 +1,13 @@
 <script lang="ts">
   import { $tasks as tasksStore } from '../stores/taskStore';
   import { TAG_COLORS } from '../domain/types';
+  import { getWeekStart } from '../domain/dateUtils';
 
   $: tasks = $tasksStore;
 
   $: recent = (() => {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    return tasks.filter(t => new Date(t.createdAt) >= sevenDaysAgo);
+    const weekStart = getWeekStart(new Date());
+    return tasks.filter(t => t.date >= weekStart);
   })();
 
   $: tagMinutes = (() => {
@@ -30,8 +30,8 @@
 
   <div class="flex flex-col gap-4">
     <div class="bg-surface rounded-2xl shadow-card border border-border p-5 flex flex-col gap-3">
-      <span class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted">Erledigungsrate (7 Tage)</span>
-      <span class="text-[32px] font-bold text-primary">{completion}%</span>
+      <span class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted">Erledigungsrate diese Woche</span>
+      <span class="text-[32px] font-bold text-primary">{recent.length === 0 ? '–' : completion + '%'}</span>
       <div class="h-[6px] bg-border rounded-[3px] overflow-hidden">
         <div class="h-full bg-success rounded-[3px] transition-[width] duration-[600ms]" style="width:{completion}%" />
       </div>

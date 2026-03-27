@@ -5,6 +5,8 @@
   import { getBlockTop, getBlockHeight, snapToGrid } from '../domain/calendarService';
   import type { CalendarBlock } from '../domain/types';
 
+  export let planningMode = false;
+
   const DAY_START = 6;
   const DAY_END = 20;
   const HOUR_HEIGHT = 64;
@@ -67,7 +69,7 @@
           <div class="flex-1 h-px bg-border-subtle mt-[10px]" />
           {#each [0, 15, 30, 45] as min (min)}
             {@const d = new Date()}
-            {d.setHours(hour, min, 0, 0)}
+            {@const _ = d.setHours(hour, min, 0, 0)}
             <div
               class="absolute left-10 right-0 z-[1]"
               data-time-slot={d.toISOString()}
@@ -77,7 +79,7 @@
         </div>
       {/each}
 
-      {#if showNowLine}
+      {#if showNowLine && !planningMode}
         <div class="absolute left-10 right-0 h-[2px] bg-red-500 z-[3] pointer-events-none" style="top:{nowTop}px">
           <div class="absolute -left-1 -top-1 w-[10px] h-[10px] rounded-full bg-red-500" />
         </div>

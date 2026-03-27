@@ -67,6 +67,23 @@ export interface Client {
   createdAt: string;
   hourlyRate?: number; // EUR
   currency?: string; // default 'EUR'
+  // Contact details
+  contactPerson?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
+}
+
+export interface ServiceItem {
+  id: string;
+  name: string;           // Kurzbezeichnung z. B. "Webentwicklung"
+  description: string;    // Rechnungstext (Langtext)
+  unit: string;           // z. B. "Stunde", "Tag", "Pauschal"
+  unitPrice: number;      // EUR
+  vatRate: number;        // Prozent, z. B. 19
+  category?: string;
+  createdAt: string;
 }
 
 export interface Project {
@@ -92,6 +109,32 @@ export interface ProjectTemplate {
   name: string;
   isBuiltIn: boolean;
   tasks: TemplateTask[];
+}
+
+export type InvoiceStatus = 'draft' | 'sent' | 'paid';
+
+export interface InvoiceLineItem {
+  id: string;
+  serviceItemId?: string; // Katalog-Referenz – unveränderlich sobald gesetzt
+  name: string;
+  description: string;
+  unit: string;
+  unitPrice: number;
+  quantity: number;
+  vatRate: number;
+  taskIds: string[];
+}
+
+export interface Invoice {
+  id: string;
+  clientId: string;
+  invoiceNumber: string;
+  date: string;    // YYYY-MM-DD
+  dueDate: string; // YYYY-MM-DD
+  status: InvoiceStatus;
+  lineItems: InvoiceLineItem[];
+  notes?: string;
+  createdAt: string;
 }
 
 export type ViewMode = 'day' | 'board';

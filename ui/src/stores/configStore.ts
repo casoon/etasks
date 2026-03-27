@@ -13,6 +13,14 @@ export interface UserProfile {
   tax_id: string;
   iban: string;
   hourly_rate: number;
+  // Rechnungsgrunddaten
+  invoice_number_prefix?: string; // z. B. "RE-2026-"
+  invoice_number_counter?: number; // aktueller Zähler
+  payment_days?: number;           // Zahlungsziel in Tagen, z. B. 14
+  default_vat_rate?: number;       // Standard-MwSt. in %, z. B. 19
+  bank_name?: string;
+  bic?: string;
+  invoice_footer_text?: string;    // z. B. "Vielen Dank für Ihren Auftrag."
 }
 
 export interface TenantInfo {

@@ -6,6 +6,7 @@
   import { dropTaskOnCalendar } from '../stores/calendarStore';
   import { snapToGrid } from '../domain/calendarService';
   import TaskCard from './TaskCard.svelte';
+  import EmptyState from './EmptyState.svelte';
 
   $: tasks = $todayTasksStore;
   $: completionRate = $completionRateStore;
@@ -64,9 +65,15 @@
     <div class="h-full bg-success rounded-sm transition-[width] duration-[400ms]" style="width:{completionRate}%" />
   </div>
 
-  <div class="flex-1 overflow-y-auto px-2 flex flex-col gap-[1px]">
+  <div class="flex-1 overflow-y-auto px-2 flex flex-col gap-[1px] stagger-children">
     {#if tasks.length === 0}
-      <p class="py-6 px-3 text-muted text-[13px] text-center leading-relaxed">Keine Aufgaben für heute. Füge eine hinzu!</p>
+      <EmptyState
+        icon="◻"
+        title="Noch nichts für heute"
+        description="Füge eine Aufgabe hinzu oder ziehe sie aus dem Backlog"
+        actionLabel="Aufgabe hinzufügen"
+        onAction={() => showInput = true}
+      />
     {/if}
     {#each tasks as task (task.id)}
       <TaskCard {task} onDragStart={handleDragStart} />
@@ -74,7 +81,7 @@
   </div>
 
   {#if showInput}
-    <form class="px-3 py-3 flex flex-col gap-2 flex-shrink-0 border-t border-border-subtle" on:submit={handleAdd}>
+    <form class="px-3 py-3 flex flex-col gap-2 flex-shrink-0 border-t border-border-subtle focus-within-panel rounded-b-none" on:submit={handleAdd}>
       <input
         bind:this={inputEl}
         class="w-full px-3 py-2 border border-border rounded-lg text-[13px] outline-none bg-bg focus:border-accent focus:bg-surface"

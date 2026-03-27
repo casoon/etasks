@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { $navItem as navItemStore, $viewMode as viewModeStore, $quickAddOpen as quickAddOpenStore } from '../stores/uiStore';
+  import { onMount, onDestroy } from 'svelte';
+  import { $navItem as navItemStore, $quickAddOpen as quickAddOpenStore } from '../stores/uiStore';
   import { initTasks } from '../stores/taskStore';
   import { initBlocks } from '../stores/calendarStore';
   import { initGoals } from '../stores/weeklyGoalStore';
@@ -12,23 +12,24 @@
   import { loadAppConfig, openTenant } from '../stores/configStore';
   import { syncFromDatabase } from '../lib/storage';
   import { isTauriAvailable } from '../lib/platform';
-  import TaskColumn from './TaskColumn.svelte';
-  import CalendarView from './CalendarView.svelte';
+  import TodayView from './TodayView.svelte';
   import WeeklyObjectives from './WeeklyObjectives.svelte';
   import PomodoroWidget from './PomodoroWidget.svelte';
+  import TaskColumn from './TaskColumn.svelte';
   import ShutdownModal from './ShutdownModal.svelte';
   import AnalyticsView from './AnalyticsView.svelte';
   import ProjectsView from './ProjectsView.svelte';
-  import BoardView from './BoardView.svelte';
   import TimeTrackingView from './TimeTrackingView.svelte';
   import ClientsView from './ClientsView.svelte';
   import QuickAddModal from './QuickAddModal.svelte';
   import SetupWizard from './SetupWizard.svelte';
   import SettingsView from './SettingsView.svelte';
+  import DailyPlanningView from './DailyPlanningView.svelte';
+  import ToastContainer from './ToastContainer.svelte';
 
-  $: nav = $navItemStore;
-  $: viewMode = $viewModeStore;
-  $: isToday = nav === 'today' || nav === 'planning-daily';
+  let nav: string = navItemStore.get();
+
+  onDestroy(navItemStore.subscribe(v => { nav = v; }));
 
   let showSetup = false;
 
@@ -72,44 +73,35 @@
 </script>
 
 <div class="flex-1 overflow-hidden flex flex-col">
-  {#if isToday && viewMode === 'day'}
-    <div class="flex-1 grid overflow-hidden min-w-0" style="grid-template-columns: 200px minmax(260px, 320px) 1fr">
-      <aside class="flex flex-col gap-4 p-4 border-r border-border overflow-y-auto min-w-0">
-        <WeeklyObjectives />
-      </aside>
-      <TaskColumn />
-      <CalendarView />
-    </div>
-  {/if}
-
-  {#if isToday && viewMode === 'board'}
-    <div class="flex-1 overflow-hidden flex flex-col">
-      <BoardView />
-    </div>
+  {#if nav === 'today'}
+    <div class="flex-1 overflow-hidden flex flex-col animate-fade-in"><TodayView /></div>
   {/if}
 
   {#if nav === 'focus'}
-    <div class="flex-1 grid overflow-hidden overflow-y-auto p-6 gap-6 items-start" style="grid-template-columns: 280px 1fr">
+    <div class="flex-1 grid overflow-hidden overflow-y-auto p-6 gap-6 items-start animate-fade-in" style="grid-template-columns: 280px 1fr">
       <PomodoroWidget />
       <TaskColumn />
     </div>
   {/if}
 
   {#if nav === 'planning-weekly'}
-    <div class="flex-1 grid overflow-hidden" style="grid-template-columns: minmax(260px, 320px) 1fr">
+    <div class="flex-1 grid overflow-hidden animate-fade-in" style="grid-template-columns: minmax(260px, 320px) 1fr">
       <WeeklyObjectives />
       <AnalyticsView />
     </div>
   {/if}
 
-  {#if nav === 'projects'}<ProjectsView />{/if}
-  {#if nav === 'time-tracking'}<TimeTrackingView />{/if}
-  {#if nav === 'clients'}<ClientsView />{/if}
-  {#if nav === 'settings'}<SettingsView />{/if}
+  {#if nav === 'planning-daily'}<div class="flex-1 overflow-hidden animate-fade-in"><DailyPlanningView /></div>{/if}
+  {#if nav === 'projects'}<div class="flex-1 overflow-hidden animate-fade-in"><ProjectsView /></div>{/if}
+  {#if nav === 'time-tracking'}<div class="flex-1 overflow-hidden animate-fade-in"><TimeTrackingView /></div>{/if}
+  {#if nav === 'clients'}<div class="flex-1 overflow-hidden animate-fade-in"><ClientsView /></div>{/if}
+  {#if nav === 'settings'}<div class="flex-1 overflow-hidden animate-fade-in"><SettingsView /></div>{/if}
 
   <QuickAddModal />
   <ShutdownModal />
 </div>
+
+<ToastContainer />
 
 {#if showSetup}
   <SetupWizard onDone={onSetupDone} />

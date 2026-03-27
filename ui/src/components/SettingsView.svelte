@@ -125,6 +125,55 @@
     </div>
   </section>
 
+  <!-- Rechnungsgrunddaten section -->
+  <section class="flex flex-col gap-4">
+    <h2 class="text-base font-semibold text-primary border-b border-border pb-2">Rechnungsgrunddaten</h2>
+
+    <div class="grid grid-cols-2 gap-3">
+      <label class="flex flex-col gap-1">
+        <span class="text-xs text-muted font-medium">Nummernkreis-Präfix</span>
+        <input class="input font-mono" bind:value={profile.invoice_number_prefix} placeholder="RE-2026-" />
+      </label>
+      <label class="flex flex-col gap-1">
+        <span class="text-xs text-muted font-medium">Aktueller Zähler</span>
+        <input class="input font-mono" type="number" bind:value={profile.invoice_number_counter} placeholder="1" />
+      </label>
+      <label class="flex flex-col gap-1">
+        <span class="text-xs text-muted font-medium">Zahlungsziel (Tage)</span>
+        <input class="input" type="number" bind:value={profile.payment_days} placeholder="14" />
+      </label>
+      <label class="flex flex-col gap-1">
+        <span class="text-xs text-muted font-medium">Standard-MwSt. (%)</span>
+        <input class="input" type="number" bind:value={profile.default_vat_rate} placeholder="19" />
+      </label>
+      <label class="flex flex-col gap-1">
+        <span class="text-xs text-muted font-medium">Bankname</span>
+        <input class="input" bind:value={profile.bank_name} placeholder="Sparkasse Berlin" />
+      </label>
+      <label class="flex flex-col gap-1">
+        <span class="text-xs text-muted font-medium">BIC</span>
+        <input class="input font-mono" bind:value={profile.bic} placeholder="BELADEBEXXX" />
+      </label>
+      <label class="flex flex-col gap-1 col-span-2">
+        <span class="text-xs text-muted font-medium">Fußzeile / Dankestext</span>
+        <input class="input" bind:value={profile.invoice_footer_text} placeholder="Vielen Dank für Ihren Auftrag." />
+      </label>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button
+        class="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
+        disabled={saving}
+        on:click={saveProfile}
+      >
+        {saving ? 'Speichern…' : 'Speichern'}
+      </button>
+      {#if saved}
+        <span class="text-xs text-green-500">Gespeichert ✓</span>
+      {/if}
+    </div>
+  </section>
+
   <!-- Tenants section -->
   <section class="flex flex-col gap-4">
     <h2 class="text-base font-semibold text-primary border-b border-border pb-2">Arbeitsbereiche</h2>

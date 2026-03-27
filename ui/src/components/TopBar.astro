@@ -5,21 +5,26 @@
   <div id="topbar-date" class="text-[15px] font-semibold text-primary"></div>
 
   <div class="flex items-center gap-3">
-    <div class="flex bg-bg rounded-lg p-0.5 gap-0.5" role="group" aria-label="Ansicht">
+    <!-- Projekte/Kunden/Leistungen switch (nur bei Projekte) -->
+    <div id="projects-switch" class="flex bg-bg rounded-lg p-0.5 gap-0.5" role="group" aria-label="Projektansicht" style="display:none">
       <button
         class="view-btn px-3 py-1 rounded-md text-[13px] font-medium text-secondary transition-colors hover:text-primary is-active"
-        data-view="day"
-      >Tag</button>
+        data-pview="project"
+      >Projekte</button>
       <button
         class="view-btn px-3 py-1 rounded-md text-[13px] font-medium text-secondary transition-colors hover:text-primary"
-        data-view="board"
-      >Board</button>
+        data-pview="clients"
+      >Kunden</button>
+      <button
+        class="view-btn px-3 py-1 rounded-md text-[13px] font-medium text-secondary transition-colors hover:text-primary"
+        data-pview="services"
+      >Leistungen</button>
     </div>
   </div>
 </header>
 
 <script>
-  import { $viewMode } from '../stores/uiStore';
+  import { $navItem, $projectsView } from '../stores/uiStore';
   import { formatDate } from '../domain/dateUtils';
   import { $activeDate } from '../stores/taskStore';
 
@@ -31,13 +36,28 @@
   updateDate();
   $activeDate.subscribe(updateDate);
 
-  // View switch
-  document.querySelectorAll('[data-view]').forEach((btn) => {
+  // Show/hide projects switch
+  const projectsSwitch = document.getElementById('projects-switch') as HTMLElement;
+  function updateSwitches(nav: string) {
+    projectsSwitch.style.display = nav === 'projects' ? '' : 'none';
+  }
+  updateSwitches($navItem.get());
+  $navItem.subscribe(updateSwitches);
+
+  // Projects view switch
+  document.querySelectorAll('[data-pview]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const view = (btn as HTMLElement).dataset.view as 'day' | 'board';
-      $viewMode.set(view);
-      document.querySelectorAll('[data-view]').forEach((b) => b.classList.remove('is-active'));
+      const view = (btn as HTMLElement).dataset.pview as 'project' | 'clients' | 'services';
+      $projectsView.set(view);
+      document.querySelectorAll('[data-pview]').forEach((b) => b.classList.remove('is-active'));
       btn.classList.add('is-active');
+    });
+  });
+
+  // Sync active state when store changes externally
+  $projectsView.subscribe((view) => {
+    document.querySelectorAll('[data-pview]').forEach((btn) => {
+      btn.classList.toggle('is-active', (btn as HTMLElement).dataset.pview === view);
     });
   });
 </script>

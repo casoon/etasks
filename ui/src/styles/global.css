@@ -118,3 +118,82 @@ input, textarea, select {
   font-family: inherit;
   font-size: inherit;
 }
+
+/* ── WebSpire: animations/stagger ─────────────────────────────────────────── */
+.stagger-children > * {
+  --stagger-delay: 35ms;
+  --stagger-duration: 0.4s;
+  opacity: 0;
+  animation: stagger-fade-in var(--stagger-duration) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.stagger-children > *:nth-child(1)  { animation-delay: calc(var(--stagger-delay) * 0); }
+.stagger-children > *:nth-child(2)  { animation-delay: calc(var(--stagger-delay) * 1); }
+.stagger-children > *:nth-child(3)  { animation-delay: calc(var(--stagger-delay) * 2); }
+.stagger-children > *:nth-child(4)  { animation-delay: calc(var(--stagger-delay) * 3); }
+.stagger-children > *:nth-child(5)  { animation-delay: calc(var(--stagger-delay) * 4); }
+.stagger-children > *:nth-child(6)  { animation-delay: calc(var(--stagger-delay) * 5); }
+.stagger-children > *:nth-child(7)  { animation-delay: calc(var(--stagger-delay) * 6); }
+.stagger-children > *:nth-child(8)  { animation-delay: calc(var(--stagger-delay) * 7); }
+.stagger-children > *:nth-child(n+9){ animation-delay: calc(var(--stagger-delay) * 8); }
+@keyframes stagger-fade-in {
+  from { opacity: 0; transform: translateY(0.35rem); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── WebSpire: animations/fade-in ─────────────────────────────────────────── */
+.animate-fade-in {
+  --anim-duration: 0.5s;
+  animation: fade-in var(--anim-duration) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.animate-fade-in-up {
+  --anim-duration: 0.4s;
+  animation: fade-in-up var(--anim-duration) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.animate-fade-in-down {
+  --anim-duration: 0.4s;
+  animation: fade-in-down var(--anim-duration) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes fade-in     { from { opacity: 0; } }
+@keyframes fade-in-up  { from { opacity: 0; transform: translateY(0.75rem); } }
+@keyframes fade-in-down{ from { opacity: 0; transform: translateY(-0.75rem); } }
+
+/* ── WebSpire: animations/pulse-subtle ────────────────────────────────────── */
+.animate-pulse-subtle {
+  --pulse-duration: 2s;
+  --pulse-min-opacity: 0.5;
+  animation: subtle-pulse var(--pulse-duration) ease-in-out infinite;
+}
+@keyframes subtle-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: var(--pulse-min-opacity, 0.5); }
+}
+
+/* ── WebSpire: interactions/table-row-highlight ───────────────────────────── */
+.row-highlight {
+  --row-highlight-bg: color-mix(in srgb, currentColor 5%, transparent);
+  --row-highlight-border: color-mix(in srgb, currentColor 10%, transparent);
+  transition: background-color 150ms ease, box-shadow 150ms ease;
+}
+.row-highlight:hover,
+.row-highlight:focus-within,
+.row-highlight[data-active="true"] {
+  background-color: var(--row-highlight-bg);
+  box-shadow: inset 0 0 0 1px var(--row-highlight-border);
+}
+
+/* ── WebSpire: interactions/focus-within-panel ────────────────────────────── */
+.focus-within-panel {
+  --focus-within-accent: color-mix(in srgb, var(--color-accent, #3b82f6) 20%, transparent);
+  transition: box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.focus-within-panel:focus-within {
+  box-shadow: 0 0 0 2px var(--focus-within-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger-children > * { animation: none; opacity: 1; }
+  .animate-fade-in, .animate-fade-in-up, .animate-fade-in-down { animation: none; }
+  .animate-pulse-subtle { animation: none; }
+  .row-highlight { transition-duration: 1ms; }
+  .focus-within-panel { transition: none; }
+}

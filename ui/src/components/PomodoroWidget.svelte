@@ -44,7 +44,12 @@
 
 <div class="bg-surface rounded-2xl shadow-card border border-border p-6 flex flex-col items-center gap-4">
   <div class="text-center flex flex-col gap-1 max-w-full">
-    <h3 class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted">Fokus</h3>
+    <div class="flex items-center justify-center gap-1.5">
+      <h3 class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted">Fokus</h3>
+      {#if running}
+        <span class="w-1.5 h-1.5 rounded-full bg-success animate-pulse-subtle" aria-label="läuft"></span>
+      {/if}
+    </div>
     {#if focusTask}
       <span class="text-[13px] text-secondary overflow-hidden text-ellipsis whitespace-nowrap max-w-[220px]" title={focusTask.title}>{focusTask.title}</span>
     {:else}
