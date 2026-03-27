@@ -1,0 +1,16 @@
+{
+  "name": "etasks",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run ui:dev\" \"neu run --frontend-lib-dev\"",
+    "build": "npm run ui:build && neu build",
+    "ui:dev": "npm run dev --prefix ui",
+    "ui:build": "npm run build --prefix ui",
+    "neu:update": "neu update",
+    "dist:mac": "bash scripts/build-mac.sh"
+  },
+  "devDependencies": {
+    "@neutralinojs/neu": "^11.5.0",
+    "concurrently": "^9.1.2"
+  }
+}

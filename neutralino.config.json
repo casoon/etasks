@@ -1,0 +1,42 @@
+{
+  "applicationId": "js.neutralino.etasks",
+  "version": "1.0.0",
+  "defaultWindowMode": "window",
+  "logging": {
+    "enabled": true,
+    "writeToLogFile": false
+  },
+  "nativeAllowList": [
+    "app.*",
+    "os.*",
+    "filesystem.*",
+    "window.*",
+    "events.*",
+    "computer.*"
+  ],
+  "globalVariables": {},
+  "modes": {
+    "window": {
+      "title": "eTasks",
+      "width": 1400,
+      "height": 900,
+      "minWidth": 1000,
+      "minHeight": 700,
+      "maximizable": true,
+      "hidden": false,
+      "enableInspector": false
+    }
+  },
+  "cli": {
+    "binaryName": "etasks",
+    "resourcesPath": "/resources/",
+    "extensionsPath": "/extensions/",
+    "clientLibrary": "/resources/neutralino.js",
+    "frontendLibrary": {
+      "patchFile": "/ui/package.json",
+      "devUrl": "http://localhost:4321"
+    },
+    "binaryVersion": "6.5.0",
+    "clientVersion": "6.5.0"
+  }
+}

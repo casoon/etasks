@@ -1,0 +1,10 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import TopBar from '../components/TopBar.astro';
+import App from '../components/App.svelte';
+---
+
+<AppLayout>
+  <TopBar />
+  <App client:only="svelte" />
+</AppLayout>

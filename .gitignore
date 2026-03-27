@@ -1,0 +1,10 @@
+node_modules/
+ui/node_modules/
+resources/
+dist/
+.neutralino/
+*.log
+.DS_Store
+release/
+bin/
+.env

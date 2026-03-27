@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="115" fill="#1a1a2e"/>
+  <rect x="64" y="64" width="384" height="384" rx="80" fill="#16213e"/>
+  <!-- Checkmark circle -->
+  <circle cx="256" cy="220" r="90" fill="none" stroke="#6366f1" stroke-width="28"/>
+  <polyline points="210,220 245,255 305,190" fill="none" stroke="#6366f1" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- e letter hint -->
+  <text x="256" y="380" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="700" fill="#6366f1" text-anchor="middle">etasks</text>
+</svg>

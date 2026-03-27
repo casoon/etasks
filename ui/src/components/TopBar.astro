@@ -1,0 +1,89 @@
+---
+---
+
+<header class="topbar">
+  <div class="topbar-date" id="topbar-date"></div>
+
+  <div class="topbar-actions">
+    <div class="view-switch" role="group" aria-label="Ansicht">
+      <button class="view-btn is-active" data-view="day">Tag</button>
+      <button class="view-btn" data-view="board">Board</button>
+    </div>
+  </div>
+</header>
+
+<script>
+  import { $viewMode } from '../stores/uiStore';
+  import { formatDate } from '../domain/dateUtils';
+  import { $activeDate } from '../stores/taskStore';
+
+  // Update date display
+  function updateDate() {
+    const el = document.getElementById('topbar-date');
+    if (el) el.textContent = formatDate($activeDate.get());
+  }
+  updateDate();
+  $activeDate.subscribe(updateDate);
+
+  // View switch
+  document.querySelectorAll('[data-view]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const view = (btn as HTMLElement).dataset.view as 'day' | 'board';
+      $viewMode.set(view);
+      document.querySelectorAll('[data-view]').forEach((b) => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+    });
+  });
+</script>
+
+<style>
+  .topbar {
+    height: var(--topbar-height);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--space-6);
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface);
+    flex-shrink: 0;
+  }
+
+  .topbar-date {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+
+  .topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .view-switch {
+    display: flex;
+    background: var(--color-bg);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+    gap: 2px;
+  }
+
+  .view-btn {
+    padding: var(--space-1) var(--space-3);
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    transition: background var(--transition), color var(--transition);
+  }
+
+  .view-btn:hover {
+    color: var(--color-text-primary);
+  }
+
+  .view-btn.is-active {
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    box-shadow: var(--shadow-card);
+  }
+</style>
