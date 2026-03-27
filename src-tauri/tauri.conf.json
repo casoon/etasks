@@ -1,6 +1,6 @@
 {
   "productName": "eTasks",
-  "version": "1.0.0",
+  "version": "0.1.0-alpha.1",
   "identifier": "dev.jseidel.etasks",
   "build": {
     "frontendDist": "../ui/dist",

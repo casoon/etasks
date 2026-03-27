@@ -129,15 +129,15 @@ etasks/
 **Release builds** trigger automatically on version tags:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v0.1.0-alpha.1
+git push origin v0.1.0-alpha.1
 ```
 
 This builds and uploads to GitHub Releases:
-- `eTasks_1.0.0_aarch64.dmg` — macOS Apple Silicon
-- `eTasks_1.0.0_x64.dmg` — macOS Intel
-- `eTasks_1.0.0_x64_en-US.msi` — Windows installer
-- `eTasks_1.0.0_x64-setup.exe` — Windows NSIS
+- `eTasks_0.1.0-alpha.1_aarch64.dmg` — macOS Apple Silicon
+- `eTasks_0.1.0-alpha.1_x64.dmg` — macOS Intel
+- `eTasks_0.1.0-alpha.1_x64_en-US.msi` — Windows installer
+- `eTasks_0.1.0-alpha.1_x64-setup.exe` — Windows NSIS
 
 ### macOS: App ohne Apple-Zertifikat öffnen
 
