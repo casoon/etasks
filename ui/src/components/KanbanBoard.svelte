@@ -59,44 +59,44 @@
     const taskId = (e as any).dataTransfer.getData('taskId');
     const task = tasksStore.get().find(t => t.id === taskId);
     if (task) handleStatusChange(task, col);
-    (e.currentTarget as HTMLElement).classList.remove('kanban-col--drag-over');
+    (e.currentTarget as HTMLElement).classList.remove('!bg-accent-subtle');
   }
 </script>
 
-<div class="kanban-board">
+<div class="grid flex-1 overflow-hidden gap-px bg-border" style="grid-template-columns: repeat(4, 1fr)">
   {#each KANBAN_COLUMNS as col (col.id)}
     {@const colTasks = tasksByColumn(col.id)}
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div
-      class="kanban-col"
-      on:dragover={(e) => { e.preventDefault(); e.currentTarget.classList.add('kanban-col--drag-over'); }}
-      on:dragleave={(e) => e.currentTarget.classList.remove('kanban-col--drag-over')}
+      class="bg-bg flex flex-col overflow-hidden transition-colors min-w-0"
+      on:dragover={(e) => { e.preventDefault(); e.currentTarget.classList.add('!bg-accent-subtle'); }}
+      on:dragleave={(e) => e.currentTarget.classList.remove('!bg-accent-subtle')}
       on:drop={(e) => handleDrop(e, col.id)}
     >
-      <div class="kanban-col-header">
-        <span class="kanban-col-title">{col.label}</span>
-        <span class="kanban-col-count">{colTasks.length}</span>
+      <div class="flex items-center gap-2 px-4 py-3 bg-surface flex-shrink-0 border-b border-border">
+        <span class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{col.label}</span>
+        <span class="text-[11px] text-muted bg-bg px-[6px] py-[1px] rounded-lg flex-shrink-0">{colTasks.length}</span>
       </div>
 
-      <div class="kanban-task-list">
+      <div class="flex-1 overflow-y-auto p-2 flex flex-col gap-2">
         {#each colTasks as task (task.id)}
           <div
-            class="kanban-card {task.kanbanStatus === 'done' ? 'kanban-card--done' : ''}"
+            class="bg-surface rounded-lg p-3 border-l-[3px] shadow-card cursor-grab select-none flex flex-col gap-2 transition-shadow hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)] active:scale-[0.98] min-w-0 {task.kanbanStatus === 'done' ? 'opacity-55' : ''}"
             draggable="true"
             style="border-left-color:{projectColor}"
             on:dragstart={(e) => e.dataTransfer?.setData('taskId', task.id)}
           >
-            <div class="kanban-card-body">
+            <div class="flex flex-col gap-1 min-w-0">
               {#if editingId === task.id}
                 <!-- svelte-ignore a11y-autofocus -->
                 <input
-                  class="kanban-add-input"
+                  class="w-full px-2 py-2 border border-accent rounded-lg text-[13px] outline-none bg-surface"
                   bind:value={editTitle}
                   on:blur={saveEdit}
                   on:keydown={handleEditKey}
                   autofocus
                 />
-                <select class="duration-select" bind:value={editDuration} on:change={saveEdit} style="margin-top:4px;font-size:11px;">
+                <select class="border border-border rounded-md px-2 py-[2px] text-[11px] bg-bg outline-none mt-1" bind:value={editDuration} on:change={saveEdit}>
                   <option value={15}>15 min</option>
                   <option value={30}>30 min</option>
                   <option value={60}>1 h</option>
@@ -105,19 +105,34 @@
                 </select>
               {:else}
                 <!-- svelte-ignore a11y-no-static-element-interactions -->
-                <p class="kanban-card-title" on:dblclick={() => startEdit(task)}>{task.title}</p>
-                {#if task.notes}<p class="kanban-card-notes">{task.notes}</p>{/if}
+                <p
+                  class="text-[13px] text-primary leading-[1.4] overflow-hidden {task.kanbanStatus === 'done' ? 'line-through' : ''}"
+                  style="-webkit-line-clamp:3;display:-webkit-box;-webkit-box-orient:vertical;"
+                  on:dblclick={() => startEdit(task)}
+                >{task.title}</p>
+                {#if task.notes}<p class="text-[12px] text-secondary overflow-hidden text-ellipsis whitespace-nowrap">{task.notes}</p>{/if}
               {/if}
             </div>
-            <div class="kanban-card-footer">
-              <span class="kanban-card-duration">{formatDuration(task.duration)}</span>
-              <div class="kanban-card-actions">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[11px] text-muted whitespace-nowrap">{formatDuration(task.duration)}</span>
+              <div class="flex gap-1">
                 {#if task.kanbanStatus !== 'done'}
-                  <button class="kanban-action-btn" title="Heute einplanen"
-                    on:click={() => updateTask(task.id, { date: today(), scheduledAt: undefined })}>☀</button>
+                  <button
+                    class="text-[13px] text-muted px-1 py-0.5 rounded transition-colors hover:bg-bg hover:text-accent"
+                    title="Heute einplanen"
+                    on:click={() => updateTask(task.id, { date: today(), scheduledAt: undefined })}
+                  >☀</button>
                 {/if}
-                <button class="kanban-action-btn" title="Bearbeiten" on:click={() => startEdit(task)}>✎</button>
-                <button class="kanban-action-btn" title="Löschen" on:click={() => removeTask(task.id)}>×</button>
+                <button
+                  class="text-[13px] text-muted px-1 py-0.5 rounded transition-colors hover:bg-bg hover:text-accent"
+                  title="Bearbeiten"
+                  on:click={() => startEdit(task)}
+                >✎</button>
+                <button
+                  class="text-[13px] text-muted px-1 py-0.5 rounded transition-colors hover:bg-bg hover:text-accent"
+                  title="Löschen"
+                  on:click={() => removeTask(task.id)}
+                >×</button>
               </div>
             </div>
           </div>
@@ -125,17 +140,25 @@
       </div>
 
       {#if addingCol === col.id}
-        <form class="kanban-add-form" on:submit={(e) => handleAddTask(e, col.id)}>
+        <form class="p-2 flex flex-col gap-2 flex-shrink-0" on:submit={(e) => handleAddTask(e, col.id)}>
           <!-- svelte-ignore a11y-autofocus -->
-          <input class="kanban-add-input" bind:value={addInput} placeholder="Aufgabe..."
-            autofocus on:keydown={(e) => { if (e.key === 'Escape') addingCol = null; }} />
-          <div class="kanban-add-buttons">
-            <button type="button" class="btn-ghost" on:click={() => addingCol = null}>Abbrechen</button>
-            <button type="submit" class="btn-primary">Hinzufügen</button>
+          <input
+            class="w-full px-2 py-2 border border-accent rounded-lg text-[13px] outline-none bg-surface"
+            bind:value={addInput}
+            placeholder="Aufgabe..."
+            autofocus
+            on:keydown={(e) => { if (e.key === 'Escape') addingCol = null; }}
+          />
+          <div class="flex gap-2 justify-end">
+            <button type="button" class="px-3 py-1 text-secondary rounded-lg text-[13px] hover:bg-gray-100 transition-colors whitespace-nowrap" on:click={() => addingCol = null}>Abbrechen</button>
+            <button type="submit" class="px-3 py-1 bg-accent text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors whitespace-nowrap">Hinzufügen</button>
           </div>
         </form>
       {:else}
-        <button class="kanban-add-trigger" on:click={() => addingCol = col.id}>+ Aufgabe</button>
+        <button
+          class="px-3 py-2 text-muted text-[12px] text-left transition-colors hover:text-primary flex-shrink-0"
+          on:click={() => addingCol = col.id}
+        >+ Aufgabe</button>
       {/if}
     </div>
   {/each}

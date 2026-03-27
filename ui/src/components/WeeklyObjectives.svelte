@@ -15,42 +15,54 @@
   }
 </script>
 
-<div class="weekly-objectives card">
-  <div class="wo-header">
-    <h3 class="wo-title">Wochenziele</h3>
+<div class="bg-surface rounded-2xl shadow-card border border-border p-4 min-w-0">
+  <div class="flex items-center justify-between mb-3 gap-2">
+    <h3 class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted whitespace-nowrap overflow-hidden text-ellipsis">Wochenziele</h3>
     {#if goals.length < 5}
-      <button class="wo-add-btn" on:click={() => adding = true} aria-label="Ziel hinzufügen">+</button>
+      <button
+        class="w-5 h-5 rounded-full bg-bg text-secondary text-base flex items-center justify-center leading-none transition-colors hover:bg-border flex-shrink-0"
+        on:click={() => adding = true}
+        aria-label="Ziel hinzufügen"
+      >+</button>
     {/if}
   </div>
 
-  <ul class="wo-list">
+  <ul class="list-none flex flex-col gap-[2px]">
     {#each goals as goal (goal.id)}
-      <li class="wo-item {goal.done ? 'wo-item--done' : ''}">
-        <button class="wo-check" on:click={() => toggleGoal(goal.id)} aria-label="Ziel abhaken">
+      <li class="group flex items-center gap-2 py-[5px] min-w-0">
+        <button
+          class="text-[13px] w-4 text-center flex-shrink-0 transition-colors {goal.done ? 'text-success' : 'text-muted'}"
+          on:click={() => toggleGoal(goal.id)}
+          aria-label="Ziel abhaken"
+        >
           {goal.done ? '✓' : '○'}
         </button>
-        <span class="wo-label">{goal.title}</span>
-        <button class="wo-remove" on:click={() => removeGoal(goal.id)} aria-label="Ziel entfernen">×</button>
+        <span class="flex-1 text-[13px] text-primary overflow-hidden text-ellipsis whitespace-nowrap min-w-0 {goal.done ? 'line-through text-muted' : ''}">{goal.title}</span>
+        <button
+          class="opacity-0 group-hover:opacity-100 text-sm text-muted transition-opacity flex-shrink-0"
+          on:click={() => removeGoal(goal.id)}
+          aria-label="Ziel entfernen"
+        >×</button>
       </li>
     {/each}
     {#if goals.length === 0 && !adding}
-      <li class="wo-empty">Noch keine Ziele für diese Woche.</li>
+      <li class="text-[12px] text-muted py-2 leading-relaxed">Noch keine Ziele für diese Woche.</li>
     {/if}
   </ul>
 
   {#if adding}
-    <form class="wo-form" on:submit={handleAdd}>
+    <form class="flex flex-col gap-2 mt-2" on:submit={handleAdd}>
       <!-- svelte-ignore a11y-autofocus -->
       <input
-        class="wo-input"
+        class="w-full px-3 py-2 border border-border rounded-lg text-[13px] bg-bg outline-none focus:border-accent"
         bind:value={inputValue}
         placeholder="Wochenziel..."
         autofocus
         on:keydown={(e) => { if (e.key === 'Escape') adding = false; }}
       />
-      <div class="wo-form-buttons">
-        <button type="button" class="btn-ghost" on:click={() => adding = false}>Abbrechen</button>
-        <button type="submit" class="btn-primary">Speichern</button>
+      <div class="flex gap-2 justify-end">
+        <button type="button" class="px-3 py-1 text-secondary rounded-lg text-[13px] hover:bg-gray-100 transition-colors" on:click={() => adding = false}>Abbrechen</button>
+        <button type="submit" class="px-3 py-1 bg-accent text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors">Speichern</button>
       </div>
     </form>
   {/if}

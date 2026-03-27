@@ -1,6 +1,5 @@
 ---
 import '../styles/global.css';
-import '../styles/components.css';
 import Sidebar from '../components/Sidebar.astro';
 ---
 <!doctype html>
@@ -12,27 +11,11 @@ import Sidebar from '../components/Sidebar.astro';
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
   <body>
-    <div class="app-shell">
+    <div class="flex h-screen overflow-hidden">
       <Sidebar />
-      <main class="app-main">
+      <main class="flex-1 flex flex-col overflow-hidden min-w-0">
         <slot />
       </main>
     </div>
   </body>
 </html>
-
-<style>
-  .app-shell {
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
-  }
-
-  .app-main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    min-width: 0;
-  }
-</style>

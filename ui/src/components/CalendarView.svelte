@@ -53,23 +53,23 @@
   $: showNowLine = now.getHours() >= DAY_START && now.getHours() < DAY_END;
 </script>
 
-<div class="calendar-view">
-  <div class="calendar-header">
-    <h2 class="column-title">Kalender</h2>
+<div class="flex flex-col overflow-hidden min-w-0">
+  <div class="flex items-center gap-2 px-4 pt-4 pb-3 flex-shrink-0">
+    <h2 class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted whitespace-nowrap overflow-hidden text-ellipsis flex-1">Kalender</h2>
     <ICSImportButton />
   </div>
 
-  <div class="calendar-scroll">
-    <div class="time-grid" bind:this={gridEl}>
+  <div class="flex-1 overflow-y-auto px-3 pb-6">
+    <div class="relative w-full min-h-full" bind:this={gridEl}>
       {#each HOURS as hour (hour)}
-        <div class="hour-row" style="height:{HOUR_HEIGHT}px">
-          <span class="hour-label">{String(hour).padStart(2, '0')}:00</span>
-          <div class="hour-line" />
+        <div class="relative flex items-start border-t border-border-subtle" style="height:{HOUR_HEIGHT}px">
+          <span class="text-[11px] text-muted w-10 pt-1 flex-shrink-0 select-none">{String(hour).padStart(2, '0')}:00</span>
+          <div class="flex-1 h-px bg-border-subtle mt-[10px]" />
           {#each [0, 15, 30, 45] as min (min)}
             {@const d = new Date()}
             {d.setHours(hour, min, 0, 0)}
             <div
-              class="time-slot"
+              class="absolute left-10 right-0 z-[1]"
               data-time-slot={d.toISOString()}
               style="top:{(min / 60) * HOUR_HEIGHT}px; height:{HOUR_HEIGHT / 4}px"
             />
@@ -78,8 +78,8 @@
       {/each}
 
       {#if showNowLine}
-        <div class="now-line" style="top:{nowTop}px">
-          <div class="now-dot" />
+        <div class="absolute left-10 right-0 h-[2px] bg-red-500 z-[3] pointer-events-none" style="top:{nowTop}px">
+          <div class="absolute -left-1 -top-1 w-[10px] h-[10px] rounded-full bg-red-500" />
         </div>
       {/if}
 

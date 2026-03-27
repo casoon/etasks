@@ -66,27 +66,26 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-  class="task-card {isDone ? 'task-card--done' : ''}"
+  class="task-card group flex items-center gap-2 px-2 py-[7px] rounded-lg cursor-grab transition-colors hover:bg-bg select-none min-w-0 {isDone ? 'task-card--done' : ''}"
   on:pointerdown={handlePointerDown}
   data-task-id={task.id}
 >
   {#if project}
-    <span class="task-project-dot" style="background:{project.color}" title={project.name} />
+    <span class="w-[5px] h-[5px] rounded-full flex-shrink-0" style="background:{project.color}" title={project.name} />
   {/if}
 
   <button
-    class="task-check"
+    class="w-[18px] h-[18px] border-2 border-border rounded-full flex-shrink-0 flex items-center justify-center text-[10px] transition-colors hover:border-success {isDone ? 'border-success bg-success-subtle' : ''}"
     on:click={handleToggle}
     aria-label={isDone ? 'Als offen markieren' : 'Als erledigt markieren'}
   >
-    <span class="check-icon {isDone ? 'check-icon--done' : ''}">{isDone ? '✓' : ''}</span>
+    <span class="{isDone ? 'text-success' : ''}">{isDone ? '✓' : ''}</span>
   </button>
 
-  <div class="task-body">
+  <div class="flex-1 min-w-0 flex flex-col gap-[3px]">
     {#if editing}
       <!-- svelte-ignore a11y-autofocus -->
       <input
-        class="task-edit-input"
         bind:value={editTitle}
         on:blur={saveEdit}
         on:keydown={handleEditKey}
@@ -94,7 +93,6 @@
         style="font-size:13px; border:1px solid var(--color-accent); border-radius:4px; padding:1px 4px; width:100%; outline:none;"
       />
       <select
-        class="duration-select"
         bind:value={editDuration}
         style="margin-top:3px; font-size:11px;"
         on:change={saveEdit}
@@ -108,24 +106,40 @@
       </select>
     {:else}
       <!-- svelte-ignore a11y-no-static-element-interactions -->
-      <span class="task-title" on:dblclick={startEdit} title="Doppelklick zum Bearbeiten">{task.title}</span>
+      <span
+        class="text-[13px] leading-[1.4] text-primary overflow-hidden text-ellipsis whitespace-nowrap max-w-full {isDone ? 'line-through text-muted' : ''}"
+        on:dblclick={startEdit}
+        title="Doppelklick zum Bearbeiten"
+      >{task.title}</span>
       {#if task.tags.length > 0}
-        <div class="task-tags">
+        <div class="flex flex-wrap gap-[3px]">
           {#each task.tags as tag (tag)}
-            <span class="tag" style="background:{TAG_COLORS[tag] ?? '#e5e7eb'}">{tag}</span>
+            <span class="text-[10px] px-[5px] py-[1px] rounded text-primary whitespace-nowrap max-w-[80px] overflow-hidden text-ellipsis" style="background:{TAG_COLORS[tag] ?? '#e5e7eb'}">{tag}</span>
           {/each}
         </div>
       {/if}
     {/if}
   </div>
 
-  <div class="task-meta">
+  <div class="flex items-center gap-[2px] flex-shrink-0">
     {#if task.recurrence}<RecurringBadge recurrence={task.recurrence} />{/if}
-    {#if task.scheduledAt}<span class="task-scheduled-dot" title="Eingeplant" />{/if}
-    <span class="task-duration">{formatDuration(task.duration)}</span>
+    {#if task.scheduledAt}<span class="w-[5px] h-[5px] rounded-full bg-accent flex-shrink-0" title="Eingeplant" />{/if}
+    <span class="text-[11px] text-muted whitespace-nowrap">{formatDuration(task.duration)}</span>
     <TimerButton taskId={task.id} />
-    <button class="task-focus-btn" on:click={handleFocus} title="Fokus starten">⏱</button>
-    <button class="task-edit-btn" on:click={startEdit} title="Bearbeiten">✎</button>
-    <button class="task-delete" on:click={handleDelete} aria-label="Task löschen">×</button>
+    <button
+      class="opacity-0 group-hover:opacity-100 text-[12px] text-muted px-[2px] transition-opacity hover:text-accent leading-none"
+      on:click={handleFocus}
+      title="Fokus starten"
+    >⏱</button>
+    <button
+      class="opacity-0 group-hover:opacity-100 text-[12px] text-muted px-[2px] transition-opacity hover:text-accent leading-none"
+      on:click={startEdit}
+      title="Bearbeiten"
+    >✎</button>
+    <button
+      class="opacity-0 group-hover:opacity-100 text-base text-muted px-[2px] transition-opacity hover:text-primary leading-none"
+      on:click={handleDelete}
+      aria-label="Task löschen"
+    >×</button>
   </div>
 </div>

@@ -38,11 +38,11 @@
 </script>
 
 <button
-  class="timer-btn {isActive ? 'timer-btn--active' : ''}"
+  class="timer-btn flex items-center gap-[3px] px-1 rounded text-[11px] text-muted transition-colors flex-shrink-0 whitespace-nowrap opacity-0 group-hover:opacity-100 hover:bg-bg hover:text-primary {isActive ? '!opacity-100 text-accent bg-accent-subtle' : ''}"
   on:click={handleClick}
   title={isActive ? 'Timer stoppen' : 'Timer starten'}
   aria-label={isActive ? 'Timer stoppen' : 'Timer starten'}
 >
-  <span class="timer-btn-icon">{isActive ? '⏹' : '▶'}</span>
-  {#if label}<span class="timer-btn-label">{label}</span>{/if}
+  <span class="text-[12px] leading-none {isActive ? 'animate-pulse' : ''}">{isActive ? '⏹' : '▶'}</span>
+  {#if label}<span class="tabular-nums">{label}</span>{/if}
 </button>

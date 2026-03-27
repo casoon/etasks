@@ -43,10 +43,10 @@
   });
 </script>
 
-<div class="app-content">
+<div class="flex-1 overflow-hidden flex flex-col">
   {#if isToday && viewMode === 'day'}
-    <div class="main-layout">
-      <aside class="sidebar-widgets">
+    <div class="flex-1 grid overflow-hidden min-w-0" style="grid-template-columns: 200px minmax(260px, 320px) 1fr">
+      <aside class="flex flex-col gap-4 p-4 border-r border-border overflow-y-auto min-w-0">
         <WeeklyObjectives />
       </aside>
       <TaskColumn />
@@ -55,20 +55,20 @@
   {/if}
 
   {#if isToday && viewMode === 'board'}
-    <div class="board-layout">
+    <div class="flex-1 overflow-hidden flex flex-col">
       <BoardView />
     </div>
   {/if}
 
   {#if nav === 'focus'}
-    <div class="focus-layout">
+    <div class="flex-1 grid overflow-hidden overflow-y-auto p-6 gap-6 items-start" style="grid-template-columns: 280px 1fr">
       <PomodoroWidget />
       <TaskColumn />
     </div>
   {/if}
 
   {#if nav === 'planning-weekly'}
-    <div class="weekly-layout">
+    <div class="flex-1 grid overflow-hidden" style="grid-template-columns: minmax(260px, 320px) 1fr">
       <WeeklyObjectives />
       <AnalyticsView />
     </div>

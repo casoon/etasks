@@ -25,32 +25,32 @@
   $: completion = recent.length > 0 ? Math.round((done / recent.length) * 100) : 0;
 </script>
 
-<div class="analytics-view">
-  <h2 class="column-title" style="padding: 0 0 16px">Analytics</h2>
+<div class="overflow-y-auto p-6">
+  <h2 class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted pb-4">Analytics</h2>
 
-  <div class="analytics-grid">
-    <div class="analytics-card card">
-      <span class="analytics-label">Erledigungsrate (7 Tage)</span>
-      <span class="analytics-value">{completion}%</span>
-      <div class="analytics-bar-bg">
-        <div class="analytics-bar-fill" style="width:{completion}%" />
+  <div class="flex flex-col gap-4">
+    <div class="bg-surface rounded-2xl shadow-card border border-border p-5 flex flex-col gap-3">
+      <span class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted">Erledigungsrate (7 Tage)</span>
+      <span class="text-[32px] font-bold text-primary">{completion}%</span>
+      <div class="h-[6px] bg-border rounded-[3px] overflow-hidden">
+        <div class="h-full bg-success rounded-[3px] transition-[width] duration-[600ms]" style="width:{completion}%" />
       </div>
     </div>
 
-    <div class="analytics-card card">
-      <span class="analytics-label">Zeit pro Kategorie</span>
+    <div class="bg-surface rounded-2xl shadow-card border border-border p-5 flex flex-col gap-3">
+      <span class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted">Zeit pro Kategorie</span>
       {#if sortedEntries.length === 0}
-        <p class="analytics-empty">Noch keine Daten.</p>
+        <p class="text-[13px] text-muted">Noch keine Daten.</p>
       {/if}
-      <ul class="tag-chart">
+      <ul class="list-none flex flex-col gap-2">
         {#each sortedEntries as [tag, minutes] (tag)}
           {@const pct = total > 0 ? (minutes / total) * 100 : 0}
-          <li class="tag-chart-row">
-            <span class="tag-chart-label">{tag}</span>
-            <div class="tag-chart-bar-bg">
-              <div class="tag-chart-bar-fill" style="width:{pct}%; background:{TAG_COLORS[tag] ?? '#e5e7eb'}" />
+          <li class="grid items-center gap-3" style="grid-template-columns: 70px 1fr 40px">
+            <span class="text-[12px] text-secondary text-right overflow-hidden text-ellipsis whitespace-nowrap">{tag}</span>
+            <div class="h-[10px] bg-border rounded-[5px] overflow-hidden">
+              <div class="h-full rounded-[5px] transition-[width] duration-[600ms]" style="width:{pct}%; background:{TAG_COLORS[tag] ?? '#e5e7eb'}" />
             </div>
-            <span class="tag-chart-value">{Math.round(minutes / 60 * 10) / 10}h</span>
+            <span class="text-[12px] text-muted text-right whitespace-nowrap">{Math.round(minutes / 60 * 10) / 10}h</span>
           </li>
         {/each}
       </ul>

@@ -43,18 +43,26 @@
 
 {#if open}
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-<div class="quick-add-overlay" on:click={handleOverlayClick}>
-  <div class="quick-add-modal" role="dialog" aria-modal="true" aria-label="Aufgabe hinzufügen">
-    <p class="quick-add-hint">⌘K — Neue Aufgabe</p>
+<div
+  class="fixed inset-0 bg-black/40 flex items-start justify-center pt-[20vh] z-[100] backdrop-blur-sm"
+  on:click={handleOverlayClick}
+>
+  <div
+    class="bg-surface border border-border rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-[520px] max-w-[calc(100vw-32px)] overflow-hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Aufgabe hinzufügen"
+  >
+    <p class="text-[11px] font-bold uppercase tracking-[0.06em] text-muted px-4 py-2 border-b border-border-subtle">⌘K — Neue Aufgabe</p>
     <form on:submit={handleSubmit}>
       <input
         bind:this={inputEl}
-        class="quick-add-input"
+        class="w-full px-4 py-4 text-base border-b border-border outline-none bg-transparent text-primary placeholder:text-muted"
         bind:value={title}
         placeholder="Was steht an?"
       />
-      <div class="quick-add-row">
-        <select class="duration-select" bind:value={duration}>
+      <div class="flex items-center gap-3 px-4 py-3 flex-wrap">
+        <select class="border border-border rounded-md px-2 py-[2px] text-[12px] bg-bg outline-none max-w-[120px]" bind:value={duration}>
           <option value={15}>15 min</option>
           <option value={30}>30 min</option>
           <option value={45}>45 min</option>
@@ -63,14 +71,18 @@
           <option value={120}>2 h</option>
         </select>
         {#if activeProjects.length > 0}
-          <select class="duration-select" bind:value={projectId}>
+          <select class="border border-border rounded-md px-2 py-[2px] text-[12px] bg-bg outline-none max-w-[120px]" bind:value={projectId}>
             <option value="">Kein Projekt</option>
             {#each activeProjects as p (p.id)}
               <option value={p.id}>{p.name}</option>
             {/each}
           </select>
         {/if}
-        <button type="submit" class="btn-primary" disabled={!title.trim()}>Hinzufügen ↵</button>
+        <button
+          type="submit"
+          class="ml-auto px-3 py-1.5 bg-accent text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
+          disabled={!title.trim()}
+        >Hinzufügen ↵</button>
       </div>
     </form>
   </div>

@@ -10,31 +10,43 @@ const navItems = [
 ];
 ---
 
-<nav class="sidebar">
-  <div class="sidebar-logo">
-    <span class="logo-mark">e</span>
-    <span class="logo-text">tasks</span>
+<nav class="w-[200px] bg-surface border-r border-border flex flex-col py-4 px-3 gap-4 flex-shrink-0">
+  <div class="flex items-baseline gap-0.5 px-2 py-2 select-none">
+    <span class="text-xl font-bold text-accent leading-none">e</span>
+    <span class="text-base font-semibold text-primary">tasks</span>
   </div>
 
-  <ul class="nav-list" role="list">
+  <ul class="list-none flex flex-col gap-0.5 flex-1" role="list">
     {navItems.map((item) => (
       <li>
-        <button class="nav-item" data-nav={item.id} aria-label={item.label}>
-          <span class="nav-icon" aria-hidden="true">{item.icon}</span>
-          <span class="nav-label">{item.label}</span>
+        <button
+          class="nav-item flex items-center gap-3 w-full px-3 py-2 rounded-lg text-secondary text-[13px] font-medium transition-colors text-left whitespace-nowrap overflow-hidden hover:bg-bg hover:text-primary"
+          data-nav={item.id}
+          aria-label={item.label}
+        >
+          <span class="text-sm w-[18px] text-center flex-shrink-0" aria-hidden="true">{item.icon}</span>
+          <span class="flex-1 overflow-hidden text-ellipsis">{item.label}</span>
         </button>
       </li>
     ))}
   </ul>
 
-  <div class="sidebar-footer">
-    <button class="nav-item nav-item--action" data-action="export" aria-label="Daten exportieren">
-      <span class="nav-icon" aria-hidden="true">↓</span>
-      <span class="nav-label">Exportieren</span>
+  <div class="flex flex-col gap-0.5">
+    <button
+      class="nav-item flex items-center gap-3 w-full px-3 py-2 rounded-lg text-muted text-xs font-medium transition-colors text-left whitespace-nowrap overflow-hidden hover:bg-bg hover:text-primary"
+      data-action="export"
+      aria-label="Daten exportieren"
+    >
+      <span class="text-sm w-[18px] text-center flex-shrink-0" aria-hidden="true">↓</span>
+      <span class="flex-1 overflow-hidden text-ellipsis">Exportieren</span>
     </button>
-    <button class="nav-item nav-item--shutdown" data-action="shutdown" aria-label="Tagesabschluss">
-      <span class="nav-icon" aria-hidden="true">↙</span>
-      <span class="nav-label">Abschluss</span>
+    <button
+      class="nav-item flex items-center gap-3 w-full px-3 py-2 rounded-lg text-muted text-xs font-medium transition-colors text-left whitespace-nowrap overflow-hidden hover:bg-bg hover:text-primary"
+      data-action="shutdown"
+      aria-label="Tagesabschluss"
+    >
+      <span class="text-sm w-[18px] text-center flex-shrink-0" aria-hidden="true">↙</span>
+      <span class="flex-1 overflow-hidden text-ellipsis">Abschluss</span>
     </button>
   </div>
 </nav>
@@ -65,82 +77,8 @@ const navItems = [
 </script>
 
 <style>
-  .sidebar {
-    width: var(--sidebar-width);
-    background: var(--color-surface);
-    border-right: 1px solid var(--color-border);
-    display: flex;
-    flex-direction: column;
-    padding: var(--space-4) var(--space-3);
-    gap: var(--space-4);
-    flex-shrink: 0;
-  }
-
-  .sidebar-logo {
-    display: flex;
-    align-items: baseline;
-    gap: 2px;
-    padding: var(--space-2) var(--space-2);
-    user-select: none;
-  }
-
-  .logo-mark {
-    font-size: 20px;
-    font-weight: 700;
+  .nav-item.is-active {
+    background: var(--color-accent-subtle);
     color: var(--color-accent);
-    line-height: 1;
-  }
-
-  .logo-text {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--color-text-primary);
-  }
-
-  .nav-list {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    flex: 1;
-  }
-
-  .nav-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    width: 100%;
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-sm);
-    color: var(--color-text-secondary);
-    font-size: 13px;
-    font-weight: 500;
-    transition: background var(--transition), color var(--transition);
-    text-align: left;
-    white-space: nowrap;
-    overflow: hidden;
-  }
-
-  .nav-item:hover { background: var(--color-bg); color: var(--color-text-primary); }
-  .nav-item.is-active { background: var(--color-accent-subtle); color: var(--color-accent); }
-
-  .nav-icon {
-    font-size: 14px;
-    width: 18px;
-    text-align: center;
-    flex-shrink: 0;
-  }
-
-  .nav-label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
-
-  .sidebar-footer {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .nav-item--shutdown, .nav-item--action {
-    color: var(--color-text-muted);
-    font-size: 12px;
   }
 </style>

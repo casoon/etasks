@@ -32,7 +32,7 @@
 </script>
 
 <button
-  class="ics-import-btn"
+  class="flex items-center gap-1 text-[12px] text-muted px-2 py-1 rounded-lg border border-border transition-colors hover:bg-bg hover:text-primary whitespace-nowrap disabled:opacity-50"
   on:click={handleImport}
   disabled={status === 'loading'}
   title="ICS-Kalender importieren"

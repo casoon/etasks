@@ -41,48 +41,51 @@
   }
 </script>
 
-<div class="time-tracking-view">
+<div class="flex-1 flex flex-col overflow-hidden">
   {#if activeEntry}
     {@const activeTask = getTask(activeEntry.taskId)}
-    <div class="active-timer-banner">
-      <span class="active-timer-dot" />
-      <span class="active-timer-text">Läuft: {activeTask?.title ?? 'Unbekannte Aufgabe'}</span>
-      <button class="btn-ghost active-timer-stop" on:click={stopActiveTimer}>⏹ Stoppen</button>
+    <div class="flex items-center gap-3 px-6 py-2 bg-accent-subtle border-b border-border text-[13px] text-accent flex-shrink-0">
+      <span class="w-2 h-2 rounded-full bg-accent flex-shrink-0 animate-pulse" />
+      <span class="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">Läuft: {activeTask?.title ?? 'Unbekannte Aufgabe'}</span>
+      <button
+        class="px-3 py-1 text-secondary rounded-lg text-[13px] hover:bg-gray-100 transition-colors flex-shrink-0"
+        on:click={stopActiveTimer}
+      >⏹ Stoppen</button>
     </div>
   {/if}
 
-  <div class="time-tracking-kpis">
-    <div class="kpi-card card">
-      <span class="kpi-label">Diese Woche</span>
-      <span class="kpi-value">{formatTrackedTime(weekSeconds)}</span>
+  <div class="flex gap-3 flex-wrap px-6 py-4 border-b border-border flex-shrink-0">
+    <div class="bg-surface border border-border rounded-xl px-4 py-3 flex flex-col gap-1 min-w-[120px]">
+      <span class="text-[10px] font-bold uppercase tracking-[0.06em] text-muted">Diese Woche</span>
+      <span class="text-[22px] font-bold text-primary tabular-nums">{formatTrackedTime(weekSeconds)}</span>
     </div>
-    <div class="kpi-card card">
-      <span class="kpi-label">Einträge gesamt</span>
-      <span class="kpi-value">{finished.length}</span>
+    <div class="bg-surface border border-border rounded-xl px-4 py-3 flex flex-col gap-1 min-w-[120px]">
+      <span class="text-[10px] font-bold uppercase tracking-[0.06em] text-muted">Einträge gesamt</span>
+      <span class="text-[22px] font-bold text-primary tabular-nums">{finished.length}</span>
     </div>
   </div>
 
-  <div class="time-entry-groups">
+  <div class="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-6">
     {#if Object.keys(byDate).length === 0}
-      <p class="time-empty">Noch keine Zeiteinträge. Starte einen Timer über den ▶-Button auf einer Aufgabe.</p>
+      <p class="text-[13px] text-muted text-center py-8 px-4 leading-relaxed">Noch keine Zeiteinträge. Starte einen Timer über den ▶-Button auf einer Aufgabe.</p>
     {/if}
 
     {#each Object.entries(byDate) as [date, dateEntries] (date)}
       {@const dayTotal = dateEntries.reduce((s, e) => s + e.durationSeconds, 0)}
-      <div class="time-entry-group">
-        <div class="time-entry-group-header">
-          <span class="time-entry-group-date">{dateLabel(date)}</span>
-          <span class="time-entry-group-total">{formatTrackedTime(dayTotal)}</span>
+      <div class="flex flex-col gap-2">
+        <div class="flex items-center justify-between pb-2 border-b border-border-subtle">
+          <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-muted">{dateLabel(date)}</span>
+          <span class="text-[12px] font-semibold text-secondary tabular-nums">{formatTrackedTime(dayTotal)}</span>
         </div>
         {#each dateEntries as entry (entry.id)}
           {@const task = getTask(entry.taskId)}
           {@const project = getProject(entry.projectId ?? task?.projectId)}
-          <div class="time-entry-row">
-            {#if project}<span class="time-entry-dot" style="background:{project.color}" />{/if}
-            <span class="time-entry-title">{task?.title ?? '—'}</span>
-            {#if project}<span class="time-entry-project">{project.name}</span>{/if}
-            <span class="time-entry-time">{formatTime(entry.startedAt)} – {entry.stoppedAt ? formatTime(entry.stoppedAt) : '…'}</span>
-            <span class="time-entry-duration">{formatTrackedTime(entry.durationSeconds)}</span>
+          <div class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-bg">
+            {#if project}<span class="w-2 h-2 rounded-full flex-shrink-0" style="background:{project.color}" />{/if}
+            <span class="flex-1 text-[13px] text-primary overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{task?.title ?? '—'}</span>
+            {#if project}<span class="text-[11px] text-muted whitespace-nowrap">{project.name}</span>{/if}
+            <span class="text-[11px] text-muted whitespace-nowrap">{formatTime(entry.startedAt)} – {entry.stoppedAt ? formatTime(entry.stoppedAt) : '…'}</span>
+            <span class="text-[12px] font-semibold text-secondary tabular-nums whitespace-nowrap">{formatTrackedTime(entry.durationSeconds)}</span>
           </div>
         {/each}
       </div>

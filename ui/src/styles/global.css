@@ -1,63 +1,27 @@
-/* ── Reset & Base ──────────────────────────────────────────────────────────── */
+@import "tailwindcss";
 
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-:root {
+@theme {
   /* Colors */
   --color-bg: #f5f5f5;
   --color-surface: #ffffff;
   --color-surface-raised: #fafafa;
   --color-border: #e8e8e8;
   --color-border-subtle: #f0f0f0;
-
   --color-text-primary: #1a1a1a;
   --color-text-secondary: #6b6b6b;
   --color-text-muted: #a0a0a0;
   --color-text-placeholder: #c0c0c0;
-
   --color-accent: #3b82f6;
   --color-accent-subtle: #eff6ff;
   --color-success: #22c55e;
   --color-success-subtle: #f0fdf4;
 
-  /* Calendar tag colors */
-  --tag-work: #bfdbfe;
-  --tag-admin: #ddd6fe;
-  --tag-personal: #bbf7d0;
-  --tag-meeting: #fde68a;
-  --tag-deep: #fbcfe8;
-  --tag-review: #fed7aa;
-
-  /* Spacing */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-
-  /* Radius */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-
-  /* Shadow */
   --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.05);
   --shadow-overlay: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
 
-  /* Typography */
-  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'SF Mono', ui-monospace, monospace;
-
-  /* Transitions */
-  --transition: 150ms ease;
-
-  /* Layout */
+/* Layout CSS vars used in JS and calc() — keep in :root */
+:root {
   --sidebar-width: 200px;
   --topbar-height: 56px;
   --hour-height: 64px;
@@ -65,7 +29,7 @@
 
 html, body {
   height: 100%;
-  font-family: var(--font);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.5;
   color: var(--color-text-primary);
@@ -73,37 +37,10 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── Scrollbars ────────────────────────────────────────────────────────────── */
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 3px;
-}
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
-
-/* ── Utility classes ───────────────────────────────────────────────────────── */
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  border: 0;
-}
-
-.card {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-}
 
 button {
   font-family: inherit;
@@ -113,7 +50,7 @@ button {
   background: none;
 }
 
-input, textarea {
+input, textarea, select {
   font-family: inherit;
   font-size: inherit;
 }

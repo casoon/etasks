@@ -42,37 +42,59 @@
   function toggle() { runningStore.set(!running); }
 </script>
 
-<div class="pomodoro card">
-  <div class="pomo-header">
-    <h3 class="pomo-title">Fokus</h3>
+<div class="bg-surface rounded-2xl shadow-card border border-border p-6 flex flex-col items-center gap-4">
+  <div class="text-center flex flex-col gap-1 max-w-full">
+    <h3 class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted">Fokus</h3>
     {#if focusTask}
-      <span class="pomo-task" title={focusTask.title}>{focusTask.title}</span>
+      <span class="text-[13px] text-secondary overflow-hidden text-ellipsis whitespace-nowrap max-w-[220px]" title={focusTask.title}>{focusTask.title}</span>
     {:else}
-      <span class="pomo-task pomo-task--empty">Wähle eine Aufgabe</span>
+      <span class="text-[13px] text-muted italic">Wähle eine Aufgabe</span>
     {/if}
   </div>
 
-  <div class="pomo-timer-wrap">
-    <svg class="pomo-ring" viewBox="0 0 64 64" aria-hidden="true">
-      <circle class="pomo-ring-bg" cx="32" cy="32" r="28" />
+  <div class="relative w-[120px] h-[120px] flex items-center justify-center">
+    <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 64 64" aria-hidden="true">
+      <circle class="ring-bg" cx="32" cy="32" r="28" />
       <circle
-        class="pomo-ring-fill"
+        class="ring-fill"
         cx="32" cy="32" r="28"
         stroke-dasharray={circumference}
         stroke-dashoffset={circumference * (1 - progress)}
       />
     </svg>
-    <span class="pomo-time" aria-live="polite">
+    <span class="text-[28px] font-semibold tabular-nums text-primary relative" aria-live="polite">
       {String(minutes).padStart(2, '0')}:{String(secs).padStart(2, '0')}
     </span>
   </div>
 
-  <div class="pomo-controls">
-    <button class="btn-ghost pomo-reset" on:click={reset} aria-label="Zurücksetzen">↺</button>
-    <button class="btn-primary pomo-start" on:click={toggle}>{running ? 'Pause' : 'Start'}</button>
+  <div class="flex items-center gap-3">
+    <button
+      class="px-3 py-1 text-secondary rounded-lg text-[13px] hover:bg-gray-100 transition-colors text-lg"
+      on:click={reset}
+      aria-label="Zurücksetzen"
+    >↺</button>
+    <button
+      class="px-5 py-2 bg-accent text-white rounded-lg text-[13px] font-medium hover:bg-blue-600 transition-colors"
+      on:click={toggle}
+    >{running ? 'Pause' : 'Start'}</button>
   </div>
 
-  <p class="pomo-hint">
+  <p class="text-[12px] text-muted">
     {running ? 'Läuft — bleib fokussiert.' : seconds === WORK_DURATION ? '25-Min-Session' : 'Pausiert'}
   </p>
 </div>
+
+<style>
+  .ring-bg {
+    fill: none;
+    stroke: var(--color-border);
+    stroke-width: 4;
+  }
+  .ring-fill {
+    fill: none;
+    stroke: var(--color-accent);
+    stroke-width: 4;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear;
+  }
+</style>
