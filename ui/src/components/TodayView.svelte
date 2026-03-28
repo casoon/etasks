@@ -3,6 +3,7 @@
     $todayTasks as todayTasksStore,
     $completionRate as completionRateStore,
     toggleTask,
+    updateTask,
     $activeDate as activeDateStore,
   } from '../stores/taskStore';
   import { $mitTaskIds as mitTaskIdsStore } from '../stores/planningStore';
@@ -110,8 +111,49 @@
   onMount(() => {
     updateNow();
     nowInterval = setInterval(updateNow, 60_000);
+    document.addEventListener('mouseup', onDocumentMouseUp);
   });
-  onDestroy(() => clearInterval(nowInterval));
+  onDestroy(() => {
+    clearInterval(nowInterval);
+    document.removeEventListener('mouseup', onDocumentMouseUp);
+  });
+
+  // ── Drag & drop state ────────────────────────────────────────────────────────
+  let dragging: { taskId: string; offsetPx: number } | null = null;
+  let dragY = 0; // visual top offset in px for the ghost block
+  let calendarEl: HTMLElement;
+
+  function onTaskMouseDown(e: MouseEvent, task: Task) {
+    e.preventDefault();
+    const blockTop = (e.currentTarget as HTMLElement).getBoundingClientRect().top;
+    const offsetPx = e.clientY - blockTop;
+    dragging = { taskId: task.id, offsetPx };
+    // initialise dragY so ghost appears at current block position
+    const startMin = parseTimeToMinutes(task.scheduledStart!);
+    dragY = minutesToTop(startMin);
+  }
+
+  function onCalendarMouseMove(e: MouseEvent) {
+    if (!dragging) return;
+    const rawMin = CAL_START_H * 60 + Math.round(((e.offsetY - dragging.offsetPx) / HOUR_PX) * 60 / 15) * 15;
+    const clampedMin = Math.max(CAL_START_H * 60, Math.min((CAL_END_H - 0.25) * 60, rawMin));
+    dragY = minutesToTop(clampedMin);
+  }
+
+  function onCalendarMouseUp(e: MouseEvent) {
+    if (!dragging) return;
+    const rawMin = CAL_START_H * 60 + Math.round(((e.offsetY - dragging.offsetPx) / HOUR_PX) * 60 / 15) * 15;
+    const newMin = Math.max(CAL_START_H * 60, Math.min((CAL_END_H - 0.25) * 60, rawMin));
+    const newTimeStr =
+      String(Math.floor(newMin / 60)).padStart(2, '0') + ':' +
+      String(newMin % 60).padStart(2, '0');
+    updateTask(dragging.taskId, { scheduledStart: newTimeStr });
+    dragging = null;
+  }
+
+  function onDocumentMouseUp() {
+    if (dragging) dragging = null;
+  }
 
   // Actual time entries for today within calendar range
   $: todayEntries = allTimeEntries.filter(e => {
@@ -325,8 +367,11 @@
 
       <!-- Calendar grid -->
       <div
+        bind:this={calendarEl}
         class="relative"
         style="height:{TOTAL_PX}px;"
+        on:mousemove={onCalendarMouseMove}
+        on:mouseup={onCalendarMouseUp}
       >
         <!-- Hour rows -->
         {#each HOURS as hour}
@@ -350,10 +395,12 @@
           {@const durLabel = task.estimatedMinutes
             ? (task.estimatedMinutes < 60 ? task.estimatedMinutes + 'min' : Math.floor(task.estimatedMinutes / 60) + 'h' + (task.estimatedMinutes % 60 > 0 ? '\u202f' + task.estimatedMinutes % 60 + 'min' : ''))
             : null}
+          {@const isDragging = dragging?.taskId === task.id}
           <div
-            class="absolute rounded-lg px-2 py-1 overflow-hidden cursor-default select-none"
-            style="top:{top}px; height:{height}px; left:36px; right:calc(50% + 2px); background-color:{col}18; border-left: 3px solid {col}; border: 1px solid {col}44; border-left: 3px solid {col};"
+            class="absolute rounded-lg px-2 py-1 overflow-hidden select-none"
+            style="top:{top}px; height:{height}px; left:36px; right:calc(50% + 2px); background-color:{col}18; border-left: 3px solid {col}; border: 1px solid {col}44; border-left: 3px solid {col}; cursor:grab; opacity:{isDragging ? 0.35 : 1}; transition: opacity 0.1s;"
             title="{task.title} (geplant)"
+            on:mousedown={(e) => onTaskMouseDown(e, task)}
           >
             <p class="text-[11px] font-semibold truncate leading-tight" style="color:{col};">
               {task.title}
@@ -363,6 +410,23 @@
             {/if}
           </div>
         {/each}
+
+        <!-- Ghost block during drag -->
+        {#if dragging}
+          {@const dragTask = scheduledTasks.find(t => t.id === dragging!.taskId)}
+          {#if dragTask}
+            {@const col = projectColor(dragTask) ?? 'var(--color-accent)'}
+            {@const height = blockHeight(dragY, dragTask.estimatedMinutes)}
+            <div
+              class="absolute rounded-lg px-2 py-1 overflow-hidden select-none pointer-events-none"
+              style="top:{dragY}px; height:{height}px; left:36px; right:calc(50% + 2px); background-color:{col}30; border: 2px dashed {col}; opacity:0.7; z-index:20;"
+            >
+              <p class="text-[11px] font-semibold truncate leading-tight" style="color:{col};">
+                {dragTask.title}
+              </p>
+            </div>
+          {/if}
+        {/if}
 
         <!-- CalendarBlock items (left half, outlined) -->
         {#each visibleBlocks as block (block.id)}
