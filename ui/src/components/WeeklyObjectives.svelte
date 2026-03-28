@@ -20,6 +20,19 @@
 
   const weekDates = getWeekDates(weekStart);
 
+  function computeStreak(goal: { daysCompleted?: string[] }): number {
+    let streak = 0;
+    const base = new Date();
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() - i);
+      const dateStr = d.toISOString().slice(0, 10);
+      if (!(goal.daysCompleted ?? []).includes(dateStr)) break;
+      streak++;
+    }
+    return streak;
+  }
+
   function handleAdd(e: Event) {
     e.preventDefault();
     const title = inputValue.trim();
@@ -55,7 +68,10 @@
           </button>
           <span class="flex-1 text-[13px] text-primary overflow-hidden text-ellipsis whitespace-nowrap min-w-0 {goal.done ? 'line-through text-muted' : ''}">{goal.title}</span>
           {@const daysCount = (goal.daysCompleted ?? []).filter(d => weekDates.includes(d)).length}
-          {#if daysCount > 0}
+          {@const streak = computeStreak(goal)}
+          {#if streak >= 2}
+            <span class="text-[10px] text-orange-500 font-semibold flex-shrink-0" title="{streak} Tage in Folge">🔥{streak}</span>
+          {:else if daysCount > 0}
             <span class="text-[10px] text-accent font-semibold flex-shrink-0 tabular-nums">{daysCount}/7</span>
           {/if}
           <button

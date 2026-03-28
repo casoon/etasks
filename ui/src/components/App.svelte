@@ -25,6 +25,7 @@
     import SettingsView from "./SettingsView.svelte";
     import DailyPlanningView from "./DailyPlanningView.svelte";
     import ToastContainer from "./ToastContainer.svelte";
+    import EnergyCheck from "./EnergyCheck.svelte";
 
     let nav: string = navItemStore.get();
 
@@ -145,6 +146,7 @@
 {/if}
 
 <ToastContainer />
+<EnergyCheck />
 
 {#if showSetup}
     <SetupWizard onDone={onSetupDone} />

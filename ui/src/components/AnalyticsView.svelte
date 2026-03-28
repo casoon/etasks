@@ -3,7 +3,7 @@
     import { $timeEntries as timeEntriesStore } from "../stores/timerStore";
     import { $projects as projectsStore } from "../stores/projectStore";
     import { TAG_COLORS } from "../domain/types";
-    import { getWeekStart } from "../domain/dateUtils";
+    import { getWeekStart, today } from "../domain/dateUtils";
 
     $: tasks = $tasksStore;
     $: timeEntries = $timeEntriesStore;
@@ -62,6 +62,32 @@
     function weekStartIso(): string {
         return getWeekStart(new Date());
     }
+
+    // --- Ansichts-Toggle ---
+    let chartView: 'woche' | 'heute' = 'woche';
+
+    // Heute-Ansicht: Zeiterfassung heute nach Projekt
+    $: todayStr = today();
+    $: todayEntries = timeEntries.filter(
+        (e) => e.startAt.slice(0, 10) === todayStr && (e.durationMinutes ?? 0) > 0,
+    );
+    $: todayByProject = (() => {
+        const m: Record<string, number> = {};
+        for (const e of todayEntries) {
+            const pid = e.projectId ?? 'ohne-projekt';
+            m[pid] = (m[pid] ?? 0) + (e.durationMinutes ?? 0);
+        }
+        return Object.entries(m)
+            .map(([pid, minutes]) => ({
+                pid,
+                name: pid === 'ohne-projekt' ? 'Ohne Projekt' : (projects.find(p => p.id === pid)?.name ?? pid),
+                color: pid === 'ohne-projekt' ? '#d1d5db' : (projects.find(p => p.id === pid)?.color ?? '#e5e7eb'),
+                minutes,
+            }))
+            .sort((a, b) => b.minutes - a.minutes);
+    })();
+    $: todayTotalMinutes = todayByProject.reduce((s, p) => s + p.minutes, 0);
+    $: todayMaxMinutes = Math.max(...todayByProject.map(p => p.minutes), 60);
 
     // --- Weekly stacked bar chart ---
 
@@ -183,14 +209,25 @@
     </h2>
 
     <div class="flex flex-col gap-4">
-        <!-- Weekly stacked bar chart -->
+        <!-- Zeiterfassung: Woche / Heute -->
         <div
             class="bg-surface rounded-2xl shadow-card border border-border p-5 flex flex-col gap-3"
         >
-            <span
-                class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted"
-                >Was wurde erledigt</span
-            >
+            <div class="flex items-center justify-between gap-3">
+                <span class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted">Was wurde erledigt</span>
+                <div class="flex rounded-lg border border-border overflow-hidden text-[11px]">
+                    <button
+                        class="px-3 py-1 transition-colors {chartView === 'woche' ? 'bg-accent text-white font-semibold' : 'text-secondary hover:bg-bg'}"
+                        on:click={() => chartView = 'woche'}
+                    >Woche</button>
+                    <button
+                        class="px-3 py-1 transition-colors {chartView === 'heute' ? 'bg-accent text-white font-semibold' : 'text-secondary hover:bg-bg'}"
+                        on:click={() => chartView = 'heute'}
+                    >Heute</button>
+                </div>
+            </div>
+
+            {#if chartView === 'woche'}
             <span class="text-[22px] font-bold text-primary">
                 {Math.round((totalWeekMinutes / 60) * 10) / 10} Stunden erfasst diese Woche
             </span>
@@ -271,6 +308,38 @@
                         </span>
                     {/each}
                 </div>
+            {/if}
+            {/if}
+
+            {#if chartView === 'heute'}
+            <span class="text-[22px] font-bold text-primary">
+                {Math.round((todayTotalMinutes / 60) * 10) / 10} Stunden heute erfasst
+            </span>
+            {#if todayByProject.length === 0}
+                <p class="text-[13px] text-muted">Noch keine Zeiterfassung heute.</p>
+            {:else}
+                <ul class="flex flex-col gap-2">
+                    {#each todayByProject as proj (proj.pid)}
+                        {@const pct = todayMaxMinutes > 0 ? (proj.minutes / todayMaxMinutes) * 100 : 0}
+                        {@const label = proj.minutes < 60
+                            ? proj.minutes + ' min'
+                            : Math.floor(proj.minutes / 60) + 'h' + (proj.minutes % 60 > 0 ? '\u202f' + proj.minutes % 60 + 'min' : '')}
+                        <li class="flex flex-col gap-1">
+                            <div class="flex items-center justify-between text-[12px]">
+                                <span class="flex items-center gap-1.5">
+                                    <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:{proj.color}"></span>
+                                    <span class="text-primary">{proj.name}</span>
+                                </span>
+                                <span class="text-muted tabular-nums">{label}</span>
+                            </div>
+                            <div class="h-2 bg-border rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-[width] duration-500"
+                                    style="width:{pct}%; background:{proj.color}"></div>
+                            </div>
+                        </li>
+                    {/each}
+                </ul>
+            {/if}
             {/if}
         </div>
 

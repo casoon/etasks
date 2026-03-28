@@ -6,6 +6,7 @@
 
 import { notify } from "./notifications";
 import { $appConfig } from "../stores/configStore";
+import { $energyCheckPending } from "../stores/uiStore";
 
 let shutdownInterval: ReturnType<typeof setInterval> | null = null;
 let breakInterval: ReturnType<typeof setInterval> | null = null;
@@ -46,6 +47,7 @@ function checkBreak() {
       "Zeit für eine Pause ☕",
       `Du arbeitest schon ${intervalMinutes} Minuten. Kurze Pause einlegen?`
     );
+    $energyCheckPending.set(true);
   }
 }
 
