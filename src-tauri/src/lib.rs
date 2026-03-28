@@ -16,6 +16,8 @@ pub fn run() {
             commands::config::load_config,
             commands::config::save_config,
             commands::config::pick_directory,
+            commands::config::default_tenant_path,
+            commands::config::import_logo_file,
             commands::database::db_open,
             commands::database::db_get,
             commands::database::db_set,
@@ -66,7 +68,9 @@ pub fn run() {
             commands::export::export_to_file,
             commands::export::save_to_icloud,
             commands::export::open_ics_file,
+            commands::export::import_snapshot,
             commands::invoice::generate_invoice,
+            commands::invoice::generate_offer,
             commands::notification::show_notification,
             commands::report::generate_project_report,
         ])
