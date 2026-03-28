@@ -1,7 +1,6 @@
 <script lang="ts">
   import { $showShutdown as showStore } from '../stores/uiStore';
   import { $todayTasks as todayTasksStore, updateTask } from '../stores/taskStore';
-  import { $appConfig as appConfigStore } from '../stores/configStore';
   import { today } from '../domain/dateUtils';
   import { upsertNote, loadTimeEntries, loadProjects } from '../lib/db';
 
@@ -11,9 +10,53 @@
   $: doneTasks = tasks.filter(t => t.status === 'done');
 
   let highlight = '';
-  let aiSummary = '';
-  let aiLoading = false;
-  let aiError = '';
+  let showSummary = false;
+
+  interface ProjectTime { name: string; color: string; minutes: number }
+
+  function buildSummary(): { totalMinutes: number; completionRate: number; byProject: ProjectTime[] } {
+    const todayStr = today();
+    const entries = loadTimeEntries().filter(e => e.date === todayStr);
+    const projects = loadProjects();
+    const projectMap = Object.fromEntries(projects.map(p => [p.id, p]));
+
+    const byProject: Record<string, ProjectTime> = {};
+    let totalMinutes = 0;
+    for (const e of entries) {
+      const mins = e.durationMinutes ?? 0;
+      totalMinutes += mins;
+      const p = projectMap[e.projectId];
+      if (!p) continue;
+      if (!byProject[p.id]) byProject[p.id] = { name: p.name, color: p.color ?? '#6366f1', minutes: 0 };
+      byProject[p.id].minutes += mins;
+    }
+
+    const all = tasks.length;
+    const done = doneTasks.length;
+    const completionRate = all === 0 ? 0 : Math.round((done / all) * 100);
+
+    return {
+      totalMinutes,
+      completionRate,
+      byProject: Object.values(byProject).sort((a, b) => b.minutes - a.minutes),
+    };
+  }
+
+  function fmtDuration(minutes: number): string {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (h === 0) return `${m} min`;
+    if (m === 0) return `${h} h`;
+    return `${h} h ${m} min`;
+  }
+
+  function completionLabel(rate: number): string {
+    if (rate === 100) return 'Alle Aufgaben erledigt';
+    if (rate >= 75) return 'Sehr produktiver Tag';
+    if (rate >= 50) return 'Solider Fortschritt';
+    if (rate >= 25) return 'Ein paar Aufgaben erledigt';
+    return 'Tag mit Potenzial nach oben';
+  }
 
   function handlePostpone(id: string) {
     const tomorrow = new Date();
@@ -27,78 +70,10 @@
     }
     showStore.set(false);
     highlight = '';
-    aiSummary = '';
-    aiError = '';
+    showSummary = false;
   }
 
-  async function generateAISummary() {
-    const apiKey = appConfigStore.get()?.profile?.claude_api_key?.trim();
-    if (!apiKey) {
-      aiError = 'Kein API Key hinterlegt. Bitte in den Einstellungen unter "KI-Integration" eintragen.';
-      return;
-    }
-
-    aiLoading = true;
-    aiError = '';
-    aiSummary = '';
-
-    try {
-      const todayStr = today();
-      const allEntries = loadTimeEntries().filter(e => e.date === todayStr);
-      const projects = loadProjects();
-      const projectMap = Object.fromEntries(projects.map(p => [p.id, p.name]));
-
-      const totalMinutes = allEntries.reduce((sum, e) => sum + (e.durationMinutes ?? 0), 0);
-      const totalHours = (totalMinutes / 60).toFixed(1);
-
-      const doneList = doneTasks.map(t => `- ${t.title}${t.estimatedMinutes ? ` (${t.estimatedMinutes} min)` : ''}`).join('\n') || '(keine)';
-      const openList = openTasks.map(t => `- ${t.title}`).join('\n') || '(keine)';
-      const timeList = allEntries.length > 0
-        ? allEntries.map(e => `- ${projectMap[e.projectId] ?? 'Kein Projekt'}: ${e.durationMinutes ?? 0} min${e.description ? ` — ${e.description}` : ''}`).join('\n')
-        : '(keine Zeiterfassung)';
-
-      const prompt = `Du bist ein hilfreicher Arbeitsassistent. Erstelle eine kurze, motivierende Tages-Zusammenfassung auf Deutsch (3–5 Sätze).
-
-Heute erledigte Aufgaben:
-${doneList}
-
-Noch offene Aufgaben:
-${openList}
-
-Erfasste Zeit (${totalHours}h gesamt):
-${timeList}
-
-${highlight.trim() ? `Highlight des Tages: "${highlight.trim()}"` : ''}
-
-Schreibe eine persönliche, wertschätzende Zusammenfassung was heute gut gelaufen ist und gib einen kurzen Ausblick auf morgen.`;
-
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 300,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error((err as any)?.error?.message ?? `HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      aiSummary = data.content?.[0]?.text ?? '';
-    } catch (e: any) {
-      aiError = e?.message ?? 'Unbekannter Fehler';
-    } finally {
-      aiLoading = false;
-    }
-  }
+  $: summary = show ? buildSummary() : null;
 </script>
 
 {#if show}
@@ -112,6 +87,48 @@ Schreibe eine persönliche, wertschätzende Zusammenfassung was heute gut gelauf
       <h2 id="shutdown-title" class="text-lg font-semibold text-primary">Tagesabschluss</h2>
     </div>
 
+    {#if summary}
+      <!-- Tages-Zusammenfassung -->
+      <section class="flex flex-col gap-3">
+        <h3 class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted">Heute</h3>
+        <div class="flex gap-3">
+          <!-- Fortschrittsring -->
+          <div class="relative flex-shrink-0 w-16 h-16">
+            <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--color-border)" stroke-width="3" />
+              <circle
+                cx="18" cy="18" r="15.9"
+                fill="none"
+                stroke="var(--color-accent, #6366f1)"
+                stroke-width="3"
+                stroke-dasharray="{summary.completionRate} {100 - summary.completionRate}"
+                stroke-linecap="round"
+              />
+            </svg>
+            <span class="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-primary">{summary.completionRate}%</span>
+          </div>
+          <div class="flex flex-col justify-center gap-1">
+            <p class="text-[13px] font-semibold text-primary">{completionLabel(summary.completionRate)}</p>
+            <p class="text-[12px] text-secondary">
+              {doneTasks.length} von {tasks.length} Aufgaben · {fmtDuration(summary.totalMinutes)} erfasst
+            </p>
+          </div>
+        </div>
+
+        {#if summary.byProject.length > 0}
+          <div class="flex flex-col gap-1.5">
+            {#each summary.byProject as p}
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:{p.color}"></span>
+                <span class="text-[12px] text-secondary flex-1 truncate">{p.name}</span>
+                <span class="text-[12px] text-muted tabular-nums">{fmtDuration(p.minutes)}</span>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </section>
+    {/if}
+
     {#if openTasks.length > 0}
       <section class="flex flex-col gap-3">
         <h3 class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted">Offene Aufgaben</h3>
@@ -120,7 +137,7 @@ Schreibe eine persönliche, wertschätzende Zusammenfassung was heute gut gelauf
             <li class="flex items-center justify-between gap-3 py-2 border-b border-border-subtle min-w-0">
               <span class="text-[13px] text-primary overflow-hidden text-ellipsis whitespace-nowrap flex-1 min-w-0">{task.title}</span>
               <button
-                class="px-3 py-1 text-secondary rounded-lg text-[13px] hover:bg-gray-100 transition-colors whitespace-nowrap flex-shrink-0"
+                class="px-3 py-1 text-secondary rounded-lg text-[13px] hover:bg-bg transition-colors whitespace-nowrap flex-shrink-0"
                 on:click={() => handlePostpone(task.id)}
               >→ morgen</button>
             </li>
@@ -137,32 +154,6 @@ Schreibe eine persönliche, wertschätzende Zusammenfassung was heute gut gelauf
         placeholder="Was war heute besonders gut?"
         rows={3}
       />
-    </section>
-
-    <section class="flex flex-col gap-3">
-      <div class="flex items-center justify-between">
-        <h3 class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted">KI-Zusammenfassung</h3>
-        <button
-          class="px-3 py-1.5 text-[12px] rounded-lg border border-border text-secondary hover:bg-bg transition-colors disabled:opacity-50 flex items-center gap-1.5"
-          on:click={generateAISummary}
-          disabled={aiLoading}
-        >
-          {#if aiLoading}
-            <span class="inline-block w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin"></span>
-            Generiere…
-          {:else}
-            ✨ Zusammenfassung erstellen
-          {/if}
-        </button>
-      </div>
-      {#if aiSummary}
-        <div class="px-4 py-3 bg-bg rounded-xl border border-border text-[13px] text-primary leading-relaxed whitespace-pre-wrap">
-          {aiSummary}
-        </div>
-      {/if}
-      {#if aiError}
-        <p class="text-[12px] text-red-500">{aiError}</p>
-      {/if}
     </section>
 
     <div class="flex justify-end">

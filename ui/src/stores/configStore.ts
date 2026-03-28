@@ -36,8 +36,6 @@ export interface UserProfile {
   // Benachrichtigungen & Tagesrhythmus
   shutdown_time?: string; // "HH:MM", z. B. "17:00"
   break_interval_minutes?: number; // Pausen-Erinnerung alle N Minuten, 0 = deaktiviert
-  // KI-Integration
-  claude_api_key?: string; // Anthropic API Key für KI-Zusammenfassungen
 }
 
 export interface TenantInfo {
