@@ -57,6 +57,8 @@
 
   <ul class="list-none flex flex-col gap-[2px]">
     {#each goals as goal (goal.id)}
+      {@const daysCount = (goal.daysCompleted ?? []).filter(d => weekDates.includes(d)).length}
+      {@const streak = computeStreak(goal)}
       <li class="group flex flex-col gap-[2px] py-[5px] min-w-0">
         <div class="flex items-center gap-2 min-w-0">
           <button
@@ -67,8 +69,6 @@
             {goal.done ? '✓' : '○'}
           </button>
           <span class="flex-1 text-[13px] text-primary overflow-hidden text-ellipsis whitespace-nowrap min-w-0 {goal.done ? 'line-through text-muted' : ''}">{goal.title}</span>
-          {@const daysCount = (goal.daysCompleted ?? []).filter(d => weekDates.includes(d)).length}
-          {@const streak = computeStreak(goal)}
           {#if streak >= 2}
             <span class="text-[10px] text-orange-500 font-semibold flex-shrink-0" title="{streak} Tage in Folge">🔥{streak}</span>
           {:else if daysCount > 0}

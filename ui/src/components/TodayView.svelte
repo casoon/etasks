@@ -388,7 +388,7 @@
 
         <!-- Task blocks GEPLANT (left half) -->
         {#each scheduledTasks as task (task.id)}
-          {@const startMin = parseTimeToMinutes(task.scheduledStart!)}
+          {@const startMin = parseTimeToMinutes(task.scheduledStart ?? '')}
           {@const top = minutesToTop(startMin)}
           {@const height = blockHeight(top, task.estimatedMinutes)}
           {@const col = projectColor(task) ?? 'var(--color-accent)'}
