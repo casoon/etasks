@@ -174,6 +174,33 @@ pub fn default_tenant_path(app: tauri::AppHandle, tenant_name: String) -> Result
 }
 
 #[tauri::command]
+pub fn pick_tenant_path(app: tauri::AppHandle, tenant_name: String) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let slug = tenant_slug(&tenant_name);
+    let default_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let result = app
+        .dialog()
+        .file()
+        .set_file_name(&format!("{slug}.db"))
+        .set_directory(&default_dir)
+        .add_filter("SQLite Datenbank", &["db"])
+        .blocking_save_file();
+    match result {
+        Some(tauri_plugin_dialog::FilePath::Path(pb)) => {
+            let path = pb.to_string_lossy().to_string();
+            let path = if path.ends_with(".db") { path } else { format!("{path}.db") };
+            Ok(Some(path))
+        }
+        Some(tauri_plugin_dialog::FilePath::Url(url)) => {
+            let path = url.path().to_string();
+            let path = if path.ends_with(".db") { path } else { format!("{path}.db") };
+            Ok(Some(path))
+        }
+        None => Ok(None),
+    }
+}
+
+#[tauri::command]
 pub fn import_logo_file(app: tauri::AppHandle) -> Result<Option<String>, String> {
     use tauri_plugin_dialog::DialogExt;
 

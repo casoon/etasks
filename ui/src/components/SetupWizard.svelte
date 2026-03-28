@@ -20,6 +20,7 @@
     let company = "";
     let saving = false;
     let errorMsg = "";
+    let customPath: string | null = null; // null = default path
 
     const config = appConfigStore.get();
 
@@ -30,6 +31,12 @@
             return;
         }
         step += 1;
+    }
+
+    async function pickCustomPath() {
+        const displayName = tenantName.trim() || "Mein Arbeitsbereich";
+        const picked = await invoke<string | null>("pick_tenant_path", { tenantName: displayName });
+        if (picked) customPath = picked;
     }
 
     async function finish() {
@@ -43,7 +50,7 @@
                 return;
             }
             const displayName = tenantName.trim() || "Mein Arbeitsbereich";
-            const path = await invoke<string>("default_tenant_path", {
+            const path = customPath ?? await invoke<string>("default_tenant_path", {
                 tenantName: displayName,
             });
             const updated: AppConfig = {
@@ -151,9 +158,29 @@
                         <p class="text-xs text-red-500">{errorMsg}</p>
                     {/if}
 
-                    <div class="rounded-lg bg-accent/5 border border-accent/20 px-3 py-2.5 text-xs text-secondary">
-                        <span class="font-medium text-accent">Speicherort:</span>
-                        Deine Daten werden automatisch im App-Datenordner deines Macs gesichert.
+                    <div class="rounded-lg bg-accent/5 border border-accent/20 px-3 py-2.5 text-xs text-secondary flex flex-col gap-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <span>
+                                <span class="font-medium text-accent">Speicherort:</span>
+                                {#if customPath}
+                                    <span class="font-mono break-all">{customPath}</span>
+                                {:else}
+                                    Standard-App-Datenordner
+                                {/if}
+                            </span>
+                            {#if isTauriAvailable()}
+                                <button
+                                    class="btn-ghost text-[11px] whitespace-nowrap flex-shrink-0"
+                                    on:click={pickCustomPath}
+                                    disabled={!tenantName.trim()}
+                                >Anderen wählen</button>
+                            {/if}
+                        </div>
+                        {#if customPath}
+                            <button class="text-[11px] text-muted hover:text-secondary text-left" on:click={() => customPath = null}>
+                                ↺ Standard verwenden
+                            </button>
+                        {/if}
                     </div>
                 </div>
 

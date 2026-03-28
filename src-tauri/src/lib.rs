@@ -17,6 +17,7 @@ pub fn run() {
             commands::config::save_config,
             commands::config::pick_directory,
             commands::config::default_tenant_path,
+            commands::config::pick_tenant_path,
             commands::config::import_logo_file,
             commands::config::file_exists,
             commands::database::db_open,

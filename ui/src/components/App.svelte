@@ -27,13 +27,7 @@
     import ToastContainer from "./ToastContainer.svelte";
     import EnergyCheck from "./EnergyCheck.svelte";
 
-    let nav: string = navItemStore.get();
-
-    onDestroy(
-        navItemStore.subscribe((v) => {
-            nav = v;
-        }),
-    );
+    $: nav = $navItemStore;
 
     // Default: show setup overlay until we verify the app state
     let showSetup = true;
