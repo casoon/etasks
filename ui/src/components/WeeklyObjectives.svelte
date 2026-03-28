@@ -54,6 +54,10 @@
             {goal.done ? '✓' : '○'}
           </button>
           <span class="flex-1 text-[13px] text-primary overflow-hidden text-ellipsis whitespace-nowrap min-w-0 {goal.done ? 'line-through text-muted' : ''}">{goal.title}</span>
+          {@const daysCount = (goal.daysCompleted ?? []).filter(d => weekDates.includes(d)).length}
+          {#if daysCount > 0}
+            <span class="text-[10px] text-accent font-semibold flex-shrink-0 tabular-nums">{daysCount}/7</span>
+          {/if}
           <button
             class="opacity-0 group-hover:opacity-100 text-sm text-muted transition-opacity flex-shrink-0"
             on:click={() => removeGoal(goal.id)}

@@ -9,6 +9,7 @@
   import { $projects as projectsStore } from '../stores/projectStore';
   import { $focusTaskId as focusTaskIdStore } from '../stores/uiStore';
   import { $todayBlocks as todayBlocksStore } from '../stores/calendarStore';
+  import { $timeEntries as timeEntriesStore } from '../stores/timerStore';
   import type { Task } from '../domain/types';
   import { onMount, onDestroy } from 'svelte';
 
@@ -17,6 +18,8 @@
   $: mitIds = $mitTaskIdsStore;
   $: projects = $projectsStore;
   $: todayBlocks = $todayBlocksStore;
+  $: allTimeEntries = $timeEntriesStore;
+  $: activeDate = $activeDateStore;
 
   $: mitTasks = mitIds
     .map(id => tasks.find(t => t.id === id))
@@ -109,6 +112,14 @@
     nowInterval = setInterval(updateNow, 60_000);
   });
   onDestroy(() => clearInterval(nowInterval));
+
+  // Actual time entries for today within calendar range
+  $: todayEntries = allTimeEntries.filter(e => {
+    if (!e.startAt || !e.durationMinutes) return false;
+    const entryDate = e.startAt.slice(0, 10);
+    const m = parseTimeToMinutes(e.startAt);
+    return entryDate === activeDate && m >= CAL_START_H * 60 && m < CAL_END_H * 60;
+  });
 
   // Tasks with a scheduled start that falls within calendar range
   $: scheduledTasks = tasks.filter(t => {
@@ -304,7 +315,13 @@
   <!-- ── RIGHT: Day calendar ──────────────────────────────────────────────── -->
   <div class="flex-1 overflow-y-auto bg-bg">
     <div class="px-4 pt-6 pb-4">
-      <h2 class="text-[11px] font-bold uppercase tracking-[0.09em] text-muted mb-4">Tagesplan</h2>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-[11px] font-bold uppercase tracking-[0.09em] text-muted">Tagesplan</h2>
+        <div class="flex items-center gap-3 text-[10px] text-muted">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm border border-accent/60 bg-accent/15 inline-block"></span>Geplant</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-accent/50 inline-block"></span>Erfasst</span>
+        </div>
+      </div>
 
       <!-- Calendar grid -->
       <div
@@ -324,7 +341,7 @@
           </div>
         {/each}
 
-        <!-- Task blocks (tasks with scheduledStart) -->
+        <!-- Task blocks GEPLANT (left half) -->
         {#each scheduledTasks as task (task.id)}
           {@const startMin = parseTimeToMinutes(task.scheduledStart!)}
           {@const top = minutesToTop(startMin)}
@@ -334,22 +351,20 @@
             ? (task.estimatedMinutes < 60 ? task.estimatedMinutes + 'min' : Math.floor(task.estimatedMinutes / 60) + 'h' + (task.estimatedMinutes % 60 > 0 ? '\u202f' + task.estimatedMinutes % 60 + 'min' : ''))
             : null}
           <div
-            class="absolute left-10 right-2 rounded-lg px-2 py-1 overflow-hidden cursor-default select-none"
-            style="top:{top}px; height:{height}px; background-color:{col}22; border-left: 3px solid {col};"
-            title={task.title}
+            class="absolute rounded-lg px-2 py-1 overflow-hidden cursor-default select-none"
+            style="top:{top}px; height:{height}px; left:36px; right:calc(50% + 2px); background-color:{col}18; border-left: 3px solid {col}; border: 1px solid {col}44; border-left: 3px solid {col};"
+            title="{task.title} (geplant)"
           >
-            <p class="text-[12px] font-semibold truncate leading-tight" style="color:{col};">
+            <p class="text-[11px] font-semibold truncate leading-tight" style="color:{col};">
               {task.title}
             </p>
             {#if height >= 40 && durLabel}
-              <p class="text-[10px] leading-tight" style="color:{col}; opacity:0.75;">
-                {durLabel}
-              </p>
+              <p class="text-[10px] leading-tight" style="color:{col}; opacity:0.7;">{durLabel}</p>
             {/if}
           </div>
         {/each}
 
-        <!-- CalendarBlock items -->
+        <!-- CalendarBlock items (left half, outlined) -->
         {#each visibleBlocks as block (block.id)}
           {@const startMin = parseTimeToMinutes(block.start)}
           {@const endMin   = parseTimeToMinutes(block.end)}
@@ -358,14 +373,38 @@
           {@const height   = blockHeight(top, (rawH / HOUR_PX) * 60)}
           {@const col      = block.color ?? 'var(--color-accent)'}
           <div
-            class="absolute left-10 right-2 rounded-lg px-2 py-1 overflow-hidden cursor-default select-none"
-            style="top:{top}px; height:{height}px; background-color:{col}33; border-left: 3px solid {col};"
-            title={block.title ?? ''}
+            class="absolute rounded-lg px-2 py-1 overflow-hidden cursor-default select-none"
+            style="top:{top}px; height:{height}px; left:36px; right:calc(50% + 2px); background-color:{col}18; border: 1px solid {col}44; border-left: 3px solid {col};"
+            title="{block.title ?? ''} (geplant)"
           >
             {#if block.title}
-              <p class="text-[12px] font-semibold truncate leading-tight" style="color:{col};">
-                {block.title}
+              <p class="text-[11px] font-semibold truncate leading-tight" style="color:{col};">{block.title}</p>
+            {/if}
+          </div>
+        {/each}
+
+        <!-- Time entry blocks TATSÄCHLICH (right half, solid) -->
+        {#each todayEntries as entry (entry.id)}
+          {@const startMin = parseTimeToMinutes(entry.startAt)}
+          {@const top = minutesToTop(startMin)}
+          {@const height = blockHeight(top, entry.durationMinutes)}
+          {@const taskForEntry = tasks.find(t => t.id === entry.taskId)}
+          {@const col = (taskForEntry ? projectColor(taskForEntry) : null) ?? 'var(--color-accent)'}
+          {@const durLabel = entry.durationMinutes
+            ? (entry.durationMinutes < 60 ? entry.durationMinutes + 'min' : Math.floor(entry.durationMinutes / 60) + 'h' + (entry.durationMinutes % 60 > 0 ? '\u202f' + entry.durationMinutes % 60 + 'min' : ''))
+            : null}
+          <div
+            class="absolute rounded-lg px-2 py-1 overflow-hidden cursor-default select-none"
+            style="top:{top}px; height:{height}px; left:calc(50% + 2px); right:8px; background-color:{col}55; border-left: 3px solid {col};"
+            title="{taskForEntry?.title ?? 'Zeiterfassung'} (erfasst)"
+          >
+            {#if height >= 28}
+              <p class="text-[11px] font-semibold truncate leading-tight" style="color:{col};">
+                {taskForEntry?.title ?? '–'}
               </p>
+            {/if}
+            {#if height >= 44 && durLabel}
+              <p class="text-[10px] leading-tight" style="color:{col}; opacity:0.8;">{durLabel}</p>
             {/if}
           </div>
         {/each}
