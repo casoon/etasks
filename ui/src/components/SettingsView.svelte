@@ -756,6 +756,34 @@
                 {/if}
             </div>
         </section>
+
+        <section class="panel-section flex flex-col gap-4">
+            <h2 class="text-base font-semibold text-primary border-b border-border pb-2">
+                KI-Integration
+            </h2>
+            <label class="flex flex-col gap-1">
+                <span class="text-xs text-muted font-medium">Anthropic API Key</span>
+                <input
+                    class="input font-mono text-[12px]"
+                    type="password"
+                    bind:value={profile.claude_api_key}
+                    placeholder="sk-ant-..."
+                />
+                <span class="text-[11px] text-muted">Für KI-Zusammenfassungen im Tagesabschluss (claude-haiku-4-5)</span>
+            </label>
+            <div class="flex items-center gap-3">
+                <button
+                    class="primary-button"
+                    disabled={saving}
+                    on:click={saveProfile}
+                >
+                    {saving ? "Speichern…" : "Speichern"}
+                </button>
+                {#if saved}
+                    <span class="text-xs text-green-500">Gespeichert ✓</span>
+                {/if}
+            </div>
+        </section>
     {/if}
 
     {#if activeSection === "daten"}
