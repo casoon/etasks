@@ -24,11 +24,11 @@
     import InvoiceList from "./InvoiceList.svelte";
     import InvoiceEditor from "./InvoiceEditor.svelte";
 
-    $: clients = $clientsStore;
-    $: projects = $projectsStore;
-    $: tasks = $tasksStore;
-    $: services = $servicesStore;
-    $: invoices = $invoicesStore;
+    $: clients = [...$clientsStore];
+    $: projects = [...$projectsStore];
+    $: tasks = [...$tasksStore];
+    $: services = [...$servicesStore];
+    $: invoices = [...$invoicesStore];
     $: appConfig = $appConfigStore;
 
     type RightView = "invoice" | "clients" | "services";

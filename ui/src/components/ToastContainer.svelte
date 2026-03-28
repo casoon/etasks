@@ -4,7 +4,7 @@
   import type { Toast } from '../stores/toastStore';
 
   let toasts: Toast[] = toastsStore.get();
-  onDestroy(toastsStore.subscribe(v => { toasts = v; }));
+  onDestroy(toastsStore.subscribe(v => { toasts = [...v]; }));
 
   const icons = {
     success: '✓',

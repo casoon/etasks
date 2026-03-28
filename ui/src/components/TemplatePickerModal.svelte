@@ -71,7 +71,7 @@
               </span>
               <button
                 class="px-3 py-1.5 bg-accent text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
-                on:click={() => handleApply(preview)}
+                on:click={() => preview && handleApply(preview)}
               >Anwenden</button>
             </div>
           </div>

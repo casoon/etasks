@@ -47,34 +47,36 @@
         startNotificationScheduler();
     }
 
-    onMount(async () => {
-        const config = await loadAppConfig();
-        if (isTauriAvailable()) {
-            const hasConfig = config.setup_done && !!config.active_tenant;
-            const dbExists = hasConfig
-                ? await invoke<boolean>("file_exists", { path: config.active_tenant })
-                : false;
+    onMount(() => {
+        (async () => {
+            const config = await loadAppConfig();
+            if (isTauriAvailable()) {
+                const hasConfig = config.setup_done && !!config.active_tenant;
+                const dbExists = hasConfig
+                    ? await invoke<boolean>("file_exists", { path: config.active_tenant })
+                    : false;
 
-            if (!hasConfig || !dbExists) {
-                // Reset setup_done if DB is gone so wizard starts fresh
-                if (hasConfig && !dbExists) {
-                    // The config says done but the DB file is missing — re-run wizard
-                    const { saveAppConfig } = await import("../stores/configStore");
-                    await saveAppConfig({ ...config, setup_done: false, active_tenant: null });
+                if (!hasConfig || !dbExists) {
+                    // Reset setup_done if DB is gone so wizard starts fresh
+                    if (hasConfig && !dbExists) {
+                        // The config says done but the DB file is missing — re-run wizard
+                        const { saveAppConfig } = await import("../stores/configStore");
+                        await saveAppConfig({ ...config, setup_done: false, active_tenant: null });
+                    }
+                    showSetup = true;
+                    appReady = true;
+                } else {
+                    await activateTenant(config.active_tenant!);
+                    scheduleDailySnapshot();
+                    showSetup = false;
+                    appReady = true;
                 }
-                showSetup = true;
-                appReady = true;
             } else {
-                await activateTenant(config.active_tenant);
-                scheduleDailySnapshot();
+                initStores();
                 showSetup = false;
                 appReady = true;
             }
-        } else {
-            initStores();
-            showSetup = false;
-            appReady = true;
-        }
+        })();
 
         function onKey(e: KeyboardEvent) {
             if (e.metaKey && e.key === "k") {

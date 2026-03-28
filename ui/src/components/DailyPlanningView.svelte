@@ -19,10 +19,10 @@
   let intention: string = intentionStore.get();
   let mitIds: string[] = mitStore.get();
 
-  onDestroy(tasksStore.subscribe(v => { tasks = v; }));
+  onDestroy(tasksStore.subscribe(v => { tasks = [...v]; }));
   onDestroy(activeDateStore.subscribe(v => { activeDate = v; }));
   onDestroy(intentionStore.subscribe(v => { intention = v; }));
-  onDestroy(mitStore.subscribe(v => { mitIds = v; }));
+  onDestroy(mitStore.subscribe(v => { mitIds = [...v]; }));
 
   $: projects = $projectsStore;
   $: activeProjects = projects.filter(p => p.status === 'active');

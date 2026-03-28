@@ -18,7 +18,7 @@
         saveAppConfig,
     } from "../stores/configStore";
     import { toast } from "../stores/toastStore";
-    import { PROJECT_COLORS } from "../domain/types";
+    import { PROJECT_COLORS, type Task } from "../domain/types";
     import {
         $billingItems as billingItemsStore,
         $billingItemTasks as billingItemTasksStore,
@@ -46,7 +46,7 @@
     $: selectedId = $selectedProjectIdStore;
     $: selectedProject = $selectedProjectStore;
     $: allTasks = $tasksStore;
-    $: allTimeEntries = $timeEntriesStore;
+    $: allTimeEntries = [...$timeEntriesStore];
     $: appConfig = $appConfigStore;
     $: billingItems = $billingItemsStore;
     $: billingItemTasks = $billingItemTasksStore;
@@ -72,7 +72,7 @@
         try {
             const input = buildProjectReportInput(
                 selectedProject,
-                allTasks,
+                allTasks as Task[],
                 allTimeEntries,
             );
             const path = await generateProjectReport(input);

@@ -16,7 +16,7 @@
 
   function buildSummary(): { totalMinutes: number; completionRate: number; byProject: ProjectTime[] } {
     const todayStr = today();
-    const entries = loadTimeEntries().filter(e => e.date === todayStr);
+    const entries = loadTimeEntries().filter(e => e.startAt.startsWith(todayStr));
     const projects = loadProjects();
     const projectMap = Object.fromEntries(projects.map(p => [p.id, p]));
 
@@ -25,6 +25,7 @@
     for (const e of entries) {
       const mins = e.durationMinutes ?? 0;
       totalMinutes += mins;
+      if (!e.projectId) continue;
       const p = projectMap[e.projectId];
       if (!p) continue;
       if (!byProject[p.id]) byProject[p.id] = { name: p.name, color: p.color ?? '#6366f1', minutes: 0 };

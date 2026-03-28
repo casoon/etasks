@@ -413,7 +413,7 @@
 
         <!-- Ghost block during drag -->
         {#if dragging}
-          {@const dragTask = scheduledTasks.find(t => t.id === dragging.taskId)}
+          {@const dragTask = scheduledTasks.find(t => t.id === dragging?.taskId)}
           {#if dragTask}
             {@const col = projectColor(dragTask) ?? 'var(--color-accent)'}
             {@const height = blockHeight(dragY, dragTask.estimatedMinutes)}
