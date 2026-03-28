@@ -33,6 +33,9 @@ export interface UserProfile {
   bank_name?: string;
   bic?: string;
   invoice_footer_text?: string; // z. B. "Vielen Dank für Ihren Auftrag."
+  // Benachrichtigungen & Tagesrhythmus
+  shutdown_time?: string; // "HH:MM", z. B. "17:00"
+  break_interval_minutes?: number; // Pausen-Erinnerung alle N Minuten, 0 = deaktiviert
 }
 
 export interface TenantInfo {
@@ -83,6 +86,8 @@ export function createDefaultUserProfile(): UserProfile {
     bank_name: "",
     bic: "",
     invoice_footer_text: "",
+    shutdown_time: "17:00",
+    break_interval_minutes: 90,
   };
 }
 

@@ -32,6 +32,8 @@ pub struct UserProfile {
     pub bank_name: Option<String>,
     pub bic: Option<String>,
     pub invoice_footer_text: Option<String>,
+    pub shutdown_time: Option<String>,
+    pub break_interval_minutes: Option<u32>,
 }
 
 impl Default for UserProfile {
@@ -67,6 +69,8 @@ impl Default for UserProfile {
             bank_name: None,
             bic: None,
             invoice_footer_text: None,
+            shutdown_time: Some("17:00".into()),
+            break_interval_minutes: Some(90),
         }
     }
 }

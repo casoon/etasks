@@ -10,6 +10,7 @@
     import { activateTenant } from "../lib/appBootstrap";
     import { isTauriAvailable } from "../lib/platform";
     import { invoke } from "@tauri-apps/api/core";
+    import { startNotificationScheduler, stopNotificationScheduler } from "../lib/notificationScheduler";
     import TodayView from "./TodayView.svelte";
     import WeeklyObjectives from "./WeeklyObjectives.svelte";
     import PomodoroWidget from "./PomodoroWidget.svelte";
@@ -37,9 +38,12 @@
     let showSetup = true;
     let appReady = false;
 
+    onDestroy(stopNotificationScheduler);
+
     function initStores() {
         reinitStores();
         scheduleDailySnapshot();
+        startNotificationScheduler();
     }
 
     onMount(async () => {

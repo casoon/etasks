@@ -31,6 +31,16 @@ export function toggleGoal(id: string): void {
   $goals.set(upsertGoal({ ...goal, done: !goal.done }));
 }
 
+export function toggleGoalDay(id: string, date: string): void {
+  const goal = $goals.get().find((g) => g.id === id);
+  if (!goal) return;
+  const days = goal.daysCompleted ?? [];
+  const updated = days.includes(date)
+    ? days.filter((d) => d !== date)
+    : [...days, date];
+  $goals.set(upsertGoal({ ...goal, daysCompleted: updated }));
+}
+
 export function removeGoal(id: string): void {
   $goals.set(dbDeleteGoal(id));
 }

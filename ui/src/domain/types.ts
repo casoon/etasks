@@ -58,6 +58,7 @@ export interface WeeklyGoal {
   done: boolean;
   weekStart: string;
   taskIds: string[];
+  daysCompleted?: string[];
 }
 
 export interface DayPlan {

@@ -714,6 +714,48 @@
                 {/if}
             </div>
         </section>
+
+        <section class="panel-section flex flex-col gap-4">
+            <h2 class="text-base font-semibold text-primary border-b border-border pb-2">
+                Benachrichtigungen & Tagesrhythmus
+            </h2>
+            <div class="grid grid-cols-2 gap-3">
+                <label class="flex flex-col gap-1">
+                    <span class="text-xs text-muted font-medium">Tagesabschluss-Uhrzeit</span>
+                    <input
+                        class="input"
+                        type="time"
+                        bind:value={profile.shutdown_time}
+                        placeholder="17:00"
+                    />
+                    <span class="text-[11px] text-muted">Benachrichtigung zum Feierabend</span>
+                </label>
+                <label class="flex flex-col gap-1">
+                    <span class="text-xs text-muted font-medium">Pausenerinnerung (Minuten)</span>
+                    <input
+                        class="input"
+                        type="number"
+                        min="0"
+                        max="240"
+                        bind:value={profile.break_interval_minutes}
+                        placeholder="90"
+                    />
+                    <span class="text-[11px] text-muted">0 = deaktiviert</span>
+                </label>
+            </div>
+            <div class="flex items-center gap-3">
+                <button
+                    class="primary-button"
+                    disabled={saving}
+                    on:click={saveProfile}
+                >
+                    {saving ? "Speichern…" : "Speichern"}
+                </button>
+                {#if saved}
+                    <span class="text-xs text-green-500">Gespeichert ✓</span>
+                {/if}
+            </div>
+        </section>
     {/if}
 
     {#if activeSection === "daten"}

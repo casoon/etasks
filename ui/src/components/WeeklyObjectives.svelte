@@ -1,9 +1,24 @@
 <script lang="ts">
-  import { $currentWeekGoals as goalsStore, addGoal, toggleGoal, removeGoal } from '../stores/weeklyGoalStore';
+  import { $currentWeekGoals as goalsStore, addGoal, toggleGoal, removeGoal, toggleGoalDay } from '../stores/weeklyGoalStore';
+  import { getWeekStart, today } from '../domain/dateUtils';
 
   $: goals = $goalsStore;
   let inputValue = '';
   let adding = false;
+
+  const DAY_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+  const weekStart = getWeekStart(new Date());
+  const todayStr = today();
+
+  function getWeekDates(ws: string): string[] {
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(ws);
+      d.setDate(d.getDate() + i);
+      return d.toISOString().slice(0, 10);
+    });
+  }
+
+  const weekDates = getWeekDates(weekStart);
 
   function handleAdd(e: Event) {
     e.preventDefault();
@@ -29,20 +44,39 @@
 
   <ul class="list-none flex flex-col gap-[2px]">
     {#each goals as goal (goal.id)}
-      <li class="group flex items-center gap-2 py-[5px] min-w-0">
-        <button
-          class="text-[13px] w-4 text-center flex-shrink-0 transition-colors {goal.done ? 'text-success' : 'text-muted'}"
-          on:click={() => toggleGoal(goal.id)}
-          aria-label="Ziel abhaken"
-        >
-          {goal.done ? '✓' : '○'}
-        </button>
-        <span class="flex-1 text-[13px] text-primary overflow-hidden text-ellipsis whitespace-nowrap min-w-0 {goal.done ? 'line-through text-muted' : ''}">{goal.title}</span>
-        <button
-          class="opacity-0 group-hover:opacity-100 text-sm text-muted transition-opacity flex-shrink-0"
-          on:click={() => removeGoal(goal.id)}
-          aria-label="Ziel entfernen"
-        >×</button>
+      <li class="group flex flex-col gap-[2px] py-[5px] min-w-0">
+        <div class="flex items-center gap-2 min-w-0">
+          <button
+            class="text-[13px] w-4 text-center flex-shrink-0 transition-colors {goal.done ? 'text-success' : 'text-muted'}"
+            on:click={() => toggleGoal(goal.id)}
+            aria-label="Ziel abhaken"
+          >
+            {goal.done ? '✓' : '○'}
+          </button>
+          <span class="flex-1 text-[13px] text-primary overflow-hidden text-ellipsis whitespace-nowrap min-w-0 {goal.done ? 'line-through text-muted' : ''}">{goal.title}</span>
+          <button
+            class="opacity-0 group-hover:opacity-100 text-sm text-muted transition-opacity flex-shrink-0"
+            on:click={() => removeGoal(goal.id)}
+            aria-label="Ziel entfernen"
+          >×</button>
+        </div>
+        <div class="flex items-center gap-[5px] pl-6">
+          {#each weekDates as date, i}
+            {@const done = (goal.daysCompleted ?? []).includes(date)}
+            {@const isToday = date === todayStr}
+            <button
+              class="flex flex-col items-center gap-[1px] group/dot"
+              on:click={() => toggleGoalDay(goal.id, date)}
+              aria-label="{DAY_LABELS[i]} {done ? 'abhaken' : 'markieren'}"
+              title="{DAY_LABELS[i]}"
+            >
+              <div
+                class="w-3 h-3 rounded-full transition-colors {done ? 'bg-accent' : 'bg-transparent border border-border group-hover/dot:border-accent'} {isToday ? 'ring-1 ring-accent ring-offset-1 ring-offset-surface' : ''}"
+              ></div>
+              <span class="text-[8px] text-muted leading-none">{DAY_LABELS[i]}</span>
+            </button>
+          {/each}
+        </div>
       </li>
     {/each}
     {#if goals.length === 0 && !adding}

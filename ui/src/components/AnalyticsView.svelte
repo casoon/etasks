@@ -62,6 +62,117 @@
     function weekStartIso(): string {
         return getWeekStart(new Date());
     }
+
+    // --- Weekly stacked bar chart ---
+
+    const DAY_LABELS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+
+    $: weekDays = (() => {
+        const ws = new Date(weekStartIso());
+        return Array.from({ length: 7 }, (_, i) => {
+            const d = new Date(ws);
+            d.setDate(ws.getDate() + i);
+            return d;
+        });
+    })();
+
+    $: weekDayIsos = weekDays.map((d) => d.toISOString().slice(0, 10));
+
+    // entries in current week
+    $: weekEntries = timeEntries.filter(
+        (e) =>
+            e.startAt >= weekStartIso() &&
+            e.durationMinutes != null &&
+            (e.durationMinutes ?? 0) > 0,
+    );
+
+    // total minutes tracked this week (for headline)
+    $: totalWeekMinutes = weekEntries.reduce(
+        (s, e) => s + (e.durationMinutes ?? 0),
+        0,
+    );
+
+    // collect unique projectIds that appear in weekEntries
+    $: weekProjectIds = (() => {
+        const seen = new Set<string>();
+        for (const e of weekEntries) {
+            seen.add(e.projectId ?? "ohne-projekt");
+        }
+        return [...seen];
+    })();
+
+    // data[dayIndex][projectId] = minutes
+    $: chartData = (() => {
+        const data: Record<string, number>[] = Array.from({ length: 7 }, () => ({}));
+        for (const e of weekEntries) {
+            const dayIso = e.startAt.slice(0, 10);
+            const dayIdx = weekDayIsos.indexOf(dayIso);
+            if (dayIdx < 0) continue;
+            const pid = e.projectId ?? "ohne-projekt";
+            data[dayIdx][pid] = (data[dayIdx][pid] ?? 0) + (e.durationMinutes ?? 0);
+        }
+        return data;
+    })();
+
+    // max total minutes per day → for y-axis
+    $: maxDayMinutes = (() => {
+        const totals = chartData.map((d) =>
+            Object.values(d).reduce((s, v) => s + v, 0),
+        );
+        return Math.max(...totals, 60); // at least 60 min (1h)
+    })();
+
+    // round up to next full hour
+    $: yMaxMinutes = Math.ceil(maxDayMinutes / 60) * 60;
+    $: yTicks = Array.from({ length: yMaxMinutes / 60 + 1 }, (_, i) => i);
+
+    function projectColor(pid: string): string {
+        if (pid === "ohne-projekt") return "#d1d5db";
+        return projects.find((p) => p.id === pid)?.color ?? "#e5e7eb";
+    }
+
+    function projectName(pid: string): string {
+        if (pid === "ohne-projekt") return "Ohne Projekt";
+        return projects.find((p) => p.id === pid)?.name ?? pid;
+    }
+
+    // SVG layout constants
+    const CHART_H = 180;
+    const LEFT_MARGIN = 32;
+    const RIGHT_MARGIN = 8;
+    const TOP_MARGIN = 8;
+    const BOTTOM_MARGIN = 36;
+    const SVG_W = 320;
+    const SVG_H = CHART_H + TOP_MARGIN + BOTTOM_MARGIN;
+    const PLOT_W = SVG_W - LEFT_MARGIN - RIGHT_MARGIN;
+    const BAR_GAP = 6;
+
+    $: barWidth = (() => {
+        const slotW = PLOT_W / 7;
+        return Math.max(slotW - BAR_GAP, 4);
+    })();
+
+    function barX(dayIdx: number): number {
+        const slotW = PLOT_W / 7;
+        return LEFT_MARGIN + dayIdx * slotW + (slotW - barWidth) / 2;
+    }
+
+    function minutesToY(minutes: number): number {
+        return TOP_MARGIN + CHART_H - (minutes / yMaxMinutes) * CHART_H;
+    }
+
+    // stacked segments for a day: [{pid, y, h}]
+    function stackedSegments(dayIdx: number): { pid: string; y: number; h: number }[] {
+        const dayData = chartData[dayIdx];
+        let accumulated = 0;
+        return weekProjectIds.map((pid) => {
+            const mins = dayData[pid] ?? 0;
+            const h = (mins / yMaxMinutes) * CHART_H;
+            const y = TOP_MARGIN + CHART_H - accumulated * (CHART_H / yMaxMinutes) - h;
+            accumulated += mins;
+            return { pid, y, h };
+        });
+    }
 </script>
 
 <div class="overflow-y-auto p-6">
@@ -72,6 +183,97 @@
     </h2>
 
     <div class="flex flex-col gap-4">
+        <!-- Weekly stacked bar chart -->
+        <div
+            class="bg-surface rounded-2xl shadow-card border border-border p-5 flex flex-col gap-3"
+        >
+            <span
+                class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted"
+                >Was wurde erledigt</span
+            >
+            <span class="text-[22px] font-bold text-primary">
+                {Math.round((totalWeekMinutes / 60) * 10) / 10} Stunden erfasst diese Woche
+            </span>
+
+            <div class="w-full overflow-x-auto">
+                <svg
+                    viewBox="0 0 {SVG_W} {SVG_H}"
+                    width={SVG_W}
+                    height={SVG_H}
+                    style="display:block; max-width:100%"
+                >
+                    <!-- Y gridlines + labels -->
+                    {#each yTicks as tick}
+                        {@const gy = minutesToY(tick * 60)}
+                        <line
+                            x1={LEFT_MARGIN}
+                            y1={gy}
+                            x2={SVG_W - RIGHT_MARGIN}
+                            y2={gy}
+                            stroke="#e5e7eb"
+                            stroke-width="1"
+                        />
+                        <text
+                            x={LEFT_MARGIN - 4}
+                            y={gy + 4}
+                            text-anchor="end"
+                            font-size="9"
+                            fill="#9ca3af"
+                        >{tick}h</text>
+                    {/each}
+
+                    <!-- Bars -->
+                    {#each Array.from({ length: 7 }, (_, i) => i) as dayIdx}
+                        {@const segments = stackedSegments(dayIdx)}
+                        {#each segments as seg (seg.pid)}
+                            {#if seg.h > 0}
+                                <rect
+                                    x={barX(dayIdx)}
+                                    y={seg.y}
+                                    width={barWidth}
+                                    height={seg.h}
+                                    fill={projectColor(seg.pid)}
+                                    rx="2"
+                                />
+                            {/if}
+                        {/each}
+
+                        <!-- X-axis labels -->
+                        <text
+                            x={barX(dayIdx) + barWidth / 2}
+                            y={TOP_MARGIN + CHART_H + 14}
+                            text-anchor="middle"
+                            font-size="9"
+                            fill="#6b7280"
+                            font-weight="600"
+                        >{DAY_LABELS[dayIdx]}</text>
+                        <text
+                            x={barX(dayIdx) + barWidth / 2}
+                            y={TOP_MARGIN + CHART_H + 25}
+                            text-anchor="middle"
+                            font-size="9"
+                            fill="#9ca3af"
+                        >{weekDays[dayIdx]?.getDate()}</text>
+                    {/each}
+                </svg>
+            </div>
+
+            <!-- Legend -->
+            {#if weekProjectIds.length > 0}
+                <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                    {#each weekProjectIds as pid (pid)}
+                        <span class="flex items-center gap-1.5 text-[11px] text-secondary">
+                            <span
+                                class="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                                style="background:{projectColor(pid)}"
+                            ></span>
+                            {projectName(pid)}
+                        </span>
+                    {/each}
+                </div>
+            {/if}
+        </div>
+
         <div
             class="bg-surface rounded-2xl shadow-card border border-border p-5 flex flex-col gap-3"
         >

@@ -9,6 +9,9 @@
   import { $dailyIntention as intentionStore, $mitTaskIds as mitStore, setIntention, toggleMit } from '../stores/planningStore';
   import { formatDate } from '../domain/dateUtils';
   import CalendarView from './CalendarView.svelte';
+  import { importICSFile } from '../lib/icsParser';
+  import { upsertBlock } from '../lib/db';
+  import { initBlocks } from '../stores/calendarStore';
   import type { Task } from '../domain/types';
 
   let tasks: Task[] = tasksStore.get();
@@ -105,6 +108,20 @@
   function startDay() {
     (document.querySelector('[data-nav="today"]') as HTMLElement)?.click();
   }
+
+  let icsImporting = false;
+  async function handleICSImport() {
+    icsImporting = true;
+    try {
+      const blocks = await importICSFile();
+      for (const block of blocks) {
+        upsertBlock(block);
+      }
+      if (blocks.length > 0) initBlocks();
+    } finally {
+      icsImporting = false;
+    }
+  }
 </script>
 
 <!--
@@ -129,6 +146,12 @@
       {#if doneTodayCount > 0}
         <span class="text-[11px] text-muted">{doneTodayCount} erledigt</span>
       {/if}
+      <button
+        on:click={handleICSImport}
+        disabled={icsImporting}
+        class="px-2.5 py-1 border border-border rounded-md text-[11px] text-secondary hover:bg-bg transition-colors disabled:opacity-50"
+        title="Kalendertermine aus ICS-Datei importieren"
+      >{icsImporting ? '…' : '📅 ICS'}</button>
       <button
         on:click={startDay}
         class="px-3 py-1 bg-accent text-white rounded-md text-[12px] font-semibold hover:bg-accent/90 transition-colors"
