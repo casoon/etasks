@@ -201,3 +201,8 @@ pub fn import_logo_file(app: tauri::AppHandle) -> Result<Option<String>, String>
 
     Ok(Some(target.to_string_lossy().to_string()))
 }
+
+#[tauri::command]
+pub fn file_exists(path: String) -> bool {
+    std::path::Path::new(&path).exists()
+}

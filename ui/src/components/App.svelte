@@ -9,6 +9,7 @@
     import { loadAppConfig } from "../stores/configStore";
     import { activateTenant } from "../lib/appBootstrap";
     import { isTauriAvailable } from "../lib/platform";
+    import { invoke } from "@tauri-apps/api/core";
     import TodayView from "./TodayView.svelte";
     import WeeklyObjectives from "./WeeklyObjectives.svelte";
     import PomodoroWidget from "./PomodoroWidget.svelte";
@@ -32,7 +33,9 @@
         }),
     );
 
-    let showSetup = false;
+    // Default: show setup overlay until we verify the app state
+    let showSetup = true;
+    let appReady = false;
 
     function initStores() {
         reinitStores();
@@ -42,14 +45,30 @@
     onMount(async () => {
         const config = await loadAppConfig();
         if (isTauriAvailable()) {
-            if (!config.setup_done || !config.active_tenant) {
+            const hasConfig = config.setup_done && !!config.active_tenant;
+            const dbExists = hasConfig
+                ? await invoke<boolean>("file_exists", { path: config.active_tenant })
+                : false;
+
+            if (!hasConfig || !dbExists) {
+                // Reset setup_done if DB is gone so wizard starts fresh
+                if (hasConfig && !dbExists) {
+                    // The config says done but the DB file is missing — re-run wizard
+                    const { saveAppConfig } = await import("../stores/configStore");
+                    await saveAppConfig({ ...config, setup_done: false, active_tenant: null });
+                }
                 showSetup = true;
+                appReady = true;
             } else {
                 await activateTenant(config.active_tenant);
                 scheduleDailySnapshot();
+                showSetup = false;
+                appReady = true;
             }
         } else {
             initStores();
+            showSetup = false;
+            appReady = true;
         }
 
         function onKey(e: KeyboardEvent) {
@@ -68,6 +87,7 @@
     }
 </script>
 
+{#if appReady && !showSetup}
 <div class="flex-1 overflow-hidden flex flex-col">
     {#if nav === "today"}
         <div class="flex-1 overflow-hidden flex flex-col animate-fade-in">
@@ -111,13 +131,14 @@
     {#if nav === "clients"}<div class="flex-1 overflow-hidden animate-fade-in">
             <ClientsView />
         </div>{/if}
-    {#if nav === "settings"}<div class="flex-1 overflow-hidden animate-fade-in">
+    {#if nav === "settings"}<div class="flex-1 overflow-hidden flex flex-col animate-fade-in">
             <SettingsView />
         </div>{/if}
 
     <QuickAddModal />
     <ShutdownModal />
 </div>
+{/if}
 
 <ToastContainer />
 
