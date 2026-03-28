@@ -23,7 +23,7 @@
   $: focusTask = focusId ? tasks.find(t => t.id === focusId) : null;
 
   // Today's open tasks for the selector
-  $: todayTasks = tasks.filter(t => !t.done);
+  $: todayTasks = tasks.filter(t => t.status !== 'done');
 
   $: displayMinutes = Math.floor(seconds / 60);
   $: displaySecs = seconds % 60;
@@ -103,7 +103,7 @@
       <select
         class="text-[12px] text-secondary bg-transparent border border-border rounded px-2 py-0.5 max-w-[160px] truncate cursor-pointer hover:border-accent transition-colors"
         value={focusId ?? ''}
-        on:change={(e) => selectTask((e.target as HTMLSelectElement).value)}
+        on:change={(e) => selectTask(e.currentTarget.value)}
         aria-label="Aufgabe auswählen"
       >
         <option value="">Aufgabe auswählen</option>
