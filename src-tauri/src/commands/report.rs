@@ -25,12 +25,16 @@ pub struct ProjectReportInput {
 pub async fn generate_project_report(
     app: tauri::AppHandle,
     project: ProjectReportInput,
+    output_dir: Option<String>,
 ) -> Result<String, String> {
     let pdf = tauri::async_runtime::spawn_blocking(move || build_pdf(project))
         .await
         .map_err(|e| e.to_string())??;
 
-    let downloads = app.path().download_dir().map_err(|e| e.to_string())?;
+    let downloads = match output_dir {
+        Some(dir) if !dir.trim().is_empty() => std::path::PathBuf::from(dir),
+        _ => app.path().download_dir().map_err(|e| e.to_string())?,
+    };
     let safe_name = project_safe_name(&pdf.0);
     let filename = format!("{}-bericht.pdf", safe_name);
     let path = downloads.join(&filename);

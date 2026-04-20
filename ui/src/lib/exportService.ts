@@ -1,3 +1,4 @@
+// @core
 import {
   loadTasks,
   loadBlocks,
@@ -52,7 +53,11 @@ export async function exportToFile(): Promise<void> {
 
   if (isTauriAvailable()) {
     try {
-      await invoke("export_to_file", { json, filename });
+      await invoke("export_to_file", {
+        json,
+        filename,
+        directory: $appConfig.get()?.default_export_dir ?? null,
+      });
       return;
     } catch {
       // Fallback auf Browser-Download

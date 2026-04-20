@@ -1,3 +1,4 @@
+// @module:billing
 import { invoke } from '@tauri-apps/api/core';
 import { isTauriAvailable } from './platform';
 import type { AppConfig } from '../stores/configStore';
@@ -65,6 +66,7 @@ export async function generateInvoice(
   }
   const result = await invoke<{ path: string }>('generate_invoice', {
     input: { invoice, profile: config.profile },
+    outputDir: config.default_export_dir ?? null,
   });
   return result.path;
 }

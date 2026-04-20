@@ -37,6 +37,7 @@ pub struct GenerateOfferResult {
 pub fn generate_invoice(
     app: tauri::AppHandle,
     input: GenerateInvoiceInput,
+    output_dir: Option<String>,
 ) -> Result<GenerateInvoiceResult, String> {
     let company = profile_to_company(&input.profile);
 
@@ -45,7 +46,10 @@ pub fn generate_invoice(
         .map_err(|e| e.to_string())?;
 
     // Save to Downloads folder
-    let downloads = app.path().download_dir().map_err(|e| e.to_string())?;
+    let downloads = match output_dir {
+        Some(dir) if !dir.trim().is_empty() => std::path::PathBuf::from(dir),
+        _ => app.path().download_dir().map_err(|e| e.to_string())?,
+    };
 
     std::fs::create_dir_all(&downloads).map_err(|e| e.to_string())?;
 
@@ -68,6 +72,7 @@ pub fn generate_invoice(
 pub fn generate_offer(
     app: tauri::AppHandle,
     input: GenerateOfferInput,
+    output_dir: Option<String>,
 ) -> Result<GenerateOfferResult, String> {
     let company = profile_to_company(&input.profile);
 
@@ -80,7 +85,10 @@ pub fn generate_offer(
         )
         .map_err(|e| e.to_string())?;
 
-    let downloads = app.path().download_dir().map_err(|e| e.to_string())?;
+    let downloads = match output_dir {
+        Some(dir) if !dir.trim().is_empty() => std::path::PathBuf::from(dir),
+        _ => app.path().download_dir().map_err(|e| e.to_string())?,
+    };
     std::fs::create_dir_all(&downloads).map_err(|e| e.to_string())?;
 
     let offer_number = input.offer["metadata"]["offer_number"]

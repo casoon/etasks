@@ -38,9 +38,14 @@ pub async fn export_to_file(
     app: tauri::AppHandle,
     json: String,
     filename: String,
+    directory: Option<String>,
 ) -> Result<String, String> {
-    let downloads = app.path().download_dir().map_err(|e| e.to_string())?;
-    let path = downloads.join(&filename);
+    let base_dir = match directory {
+        Some(dir) if !dir.trim().is_empty() => std::path::PathBuf::from(dir),
+        _ => app.path().download_dir().map_err(|e| e.to_string())?,
+    };
+    std::fs::create_dir_all(&base_dir).map_err(|e| e.to_string())?;
+    let path = base_dir.join(&filename);
     std::fs::write(&path, &json).map_err(|e| e.to_string())?;
     Ok(path.to_string_lossy().to_string())
 }

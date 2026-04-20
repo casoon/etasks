@@ -1,0 +1,73 @@
+---
+---
+
+<header class="h-[56px] flex items-center justify-between px-6 border-b border-border glass-shell flex-shrink-0">
+  <div id="topbar-date" class="text-[15px] font-semibold text-primary"></div>
+
+  <div class="flex items-center gap-3">
+    <!-- Projekte/Kunden/Leistungen switch (nur bei Projekte) -->
+    <div id="projects-switch" class="flex bg-bg rounded-lg p-0.5 gap-0.5" role="group" aria-label="Projektansicht" style="display:none">
+      <button
+        class="view-btn px-3 py-1 rounded-md text-[13px] font-medium text-secondary transition-colors hover:text-primary is-active"
+        data-pview="project"
+      >Projekte</button>
+      <button
+        class="view-btn px-3 py-1 rounded-md text-[13px] font-medium text-secondary transition-colors hover:text-primary"
+        data-pview="clients"
+      >Kunden</button>
+      <button
+        class="view-btn px-3 py-1 rounded-md text-[13px] font-medium text-secondary transition-colors hover:text-primary"
+        data-pview="services"
+      >Leistungen</button>
+    </div>
+  </div>
+</header>
+
+<script>
+  import { $navItem, $projectsView } from '../../stores/uiStore';
+  import { $selectedProjectId } from '../../stores/projectStore';
+  import { formatDate } from '../../domain/dateUtils';
+  import { $activeDate } from '../../stores/taskStore';
+
+  // Update date display
+  function updateDate() {
+    const el = document.getElementById('topbar-date');
+    if (el) el.textContent = formatDate($activeDate.get());
+  }
+  updateDate();
+  $activeDate.subscribe(updateDate);
+
+  // Show/hide projects switch
+  const projectsSwitch = document.getElementById('projects-switch') as HTMLElement;
+  function updateSwitches(nav: string) {
+    projectsSwitch.style.display = nav === 'projects' ? '' : 'none';
+  }
+  updateSwitches($navItem.get());
+  $navItem.subscribe(updateSwitches);
+
+  // Projects view switch
+  document.querySelectorAll('[data-pview]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const view = (btn as HTMLElement).dataset.pview as 'project' | 'clients' | 'services';
+      if (view === 'project') $selectedProjectId.set(null);
+      $projectsView.set(view);
+      document.querySelectorAll('[data-pview]').forEach((b) => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+    });
+  });
+
+  // Sync active state when store changes externally
+  $projectsView.subscribe((view) => {
+    document.querySelectorAll('[data-pview]').forEach((btn) => {
+      btn.classList.toggle('is-active', (btn as HTMLElement).dataset.pview === view);
+    });
+  });
+</script>
+
+<style>
+  .view-btn.is-active {
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    box-shadow: var(--shadow-card);
+  }
+</style>

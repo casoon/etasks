@@ -1,3 +1,4 @@
+// @module:billing
 import { invoke } from "@tauri-apps/api/core";
 import { isTauriAvailable } from "./platform";
 import type { AppConfig } from "../stores/configStore";
@@ -62,6 +63,7 @@ export async function generateOffer(
   }
   const result = await invoke<{ path: string }>("generate_offer", {
     input: { offer, profile: config.profile },
+    outputDir: config.default_export_dir ?? null,
   });
   return result.path;
 }

@@ -1,10 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import {
+  diffDays,
   toDateKey,
+  toDateKeyFromIso,
   getWeekStart,
   formatDuration,
   formatTrackedTime,
   formatElapsed,
+  daysSince,
+  isToday,
 } from './dateUtils';
 
 describe('toDateKey', () => {
@@ -32,6 +36,49 @@ describe('getWeekStart', () => {
   it('returns the previous Monday for a Sunday', () => {
     const sun = new Date('2026-03-29T12:00:00');
     expect(getWeekStart(sun)).toBe('2026-03-23');
+  });
+});
+
+describe('toDateKeyFromIso', () => {
+  it('accepts date keys unchanged', () => {
+    expect(toDateKeyFromIso('2026-03-23')).toBe('2026-03-23');
+  });
+
+  it('normalizes ISO timestamps to date keys', () => {
+    expect(toDateKeyFromIso('2026-03-23T09:15:00.000Z')).toBe('2026-03-23');
+  });
+
+  it('returns null for invalid values', () => {
+    expect(toDateKeyFromIso('not-a-date')).toBeNull();
+  });
+});
+
+describe('diffDays and daysSince', () => {
+  it('computes whole day differences between dates', () => {
+    expect(diffDays('2026-03-20', '2026-03-23')).toBe(3);
+  });
+
+  it('handles ISO timestamps and date keys together', () => {
+    expect(diffDays('2026-03-20T08:00:00.000Z', '2026-03-23')).toBe(3);
+  });
+
+  it('returns null for invalid input', () => {
+    expect(diffDays('bad', '2026-03-23')).toBeNull();
+  });
+
+  it('uses today-like reference values for age calculations', () => {
+    expect(daysSince('2026-03-20', '2026-03-23')).toBe(3);
+  });
+});
+
+describe('isToday', () => {
+  it('matches date keys and ISO timestamps against the same day', () => {
+    expect(isToday('2026-03-23', '2026-03-23')).toBe(true);
+    expect(isToday('2026-03-23T09:15:00.000Z', '2026-03-23')).toBe(true);
+  });
+
+  it('returns false for other days', () => {
+    expect(isToday('2026-03-22T23:59:00.000Z', '2026-03-23')).toBe(false);
   });
 });
 

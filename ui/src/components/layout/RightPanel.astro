@@ -1,0 +1,97 @@
+---
+
+---
+
+<aside
+    class="w-[44px] border-l border-border glass-rail flex flex-col items-center py-3 gap-0.5 flex-shrink-0"
+    title="Datenverwaltung"
+>
+    <input
+        id="backup-import-input"
+        type="file"
+        accept="application/json,.json"
+        class="hidden"
+    />
+
+    <div class="text-[8px] font-bold uppercase tracking-widest text-muted mb-1 select-none" style="writing-mode:vertical-rl;transform:rotate(180deg);letter-spacing:0.15em;">Daten</div>
+
+    <button
+        class="icon-btn"
+        id="action-export"
+        title="Backup exportieren"
+    >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v12"></path><path d="M8 11l4 4 4-4"></path><path d="M4 21h16"></path>
+        </svg>
+    </button>
+
+    <button
+        class="icon-btn"
+        id="action-import"
+        title="Backup importieren"
+    >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21V9"></path><path d="M8 13l4-4 4 4"></path><path d="M4 3h16"></path>
+        </svg>
+    </button>
+
+    <button
+        class="icon-btn"
+        id="action-snapshot"
+        title="Snapshot speichern"
+    >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+        </svg>
+    </button>
+</aside>
+
+<script>
+    import {
+        runExportWithFeedback,
+        runSnapshotWithFeedback,
+        restoreFromBackupFile,
+    } from "../../lib/backupActions";
+
+    document.getElementById("action-export")?.addEventListener("click", () => {
+        runExportWithFeedback();
+    });
+    document.getElementById("action-snapshot")?.addEventListener("click", () => {
+        runSnapshotWithFeedback();
+    });
+
+    const importInput = document.getElementById("backup-import-input");
+    document.getElementById("action-import")?.addEventListener("click", () => {
+        importInput?.click();
+    });
+    importInput?.addEventListener("change", async (event) => {
+        const file = (event.target as HTMLInputElement)?.files?.[0];
+        if (!file) return;
+        await restoreFromBackupFile(file);
+        (importInput as HTMLInputElement).value = "";
+    });
+</script>
+
+<style>
+    .icon-btn {
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        color: var(--color-text-muted);
+        transition:
+            background 0.15s,
+            color 0.15s;
+        cursor: pointer;
+        opacity: 0.6;
+    }
+    .icon-btn:hover {
+        background: var(--color-bg);
+        color: var(--color-text-secondary);
+        opacity: 1;
+    }
+</style>

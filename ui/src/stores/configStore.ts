@@ -1,3 +1,4 @@
+// @core
 import { atom, computed } from "nanostores";
 import { invoke } from "@tauri-apps/api/core";
 import { metaSet } from "../lib/metaStore";
@@ -51,6 +52,9 @@ export interface AppConfig {
   active_tenant: string | null;
   tenants: TenantInfo[];
   profile: UserProfile;
+  logging_enabled?: boolean;
+  default_workspace_dir?: string | null;
+  default_export_dir?: string | null;
 }
 
 const WEB_CONFIG_KEY = "etasks.app-config";
@@ -98,6 +102,8 @@ export function createDefaultAppConfig(): AppConfig {
     active_tenant: null,
     tenants: [],
     profile: createDefaultUserProfile(),
+    default_workspace_dir: null,
+    default_export_dir: null,
   };
 }
 
