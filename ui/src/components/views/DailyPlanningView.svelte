@@ -6,10 +6,13 @@
     $activeDate as activeDateStore,
     addTask, updateTask, reorderTasks, cloneRecurringTask,
   } from '../../stores/taskStore';
+  import { $todayBlocks as todayBlocksStore, dropTaskOnCalendar, removeBlockForTask } from '../../stores/calendarStore';
   import { $projects as projectsStore } from '../../stores/projectStore';
+  import { $termine as termineStore } from '../../stores/terminStore';
   import { $dailyIntention as intentionStore, $mitTaskIds as mitStore, setIntention, toggleMit } from '../../stores/planningStore';
   import { $currentWeekPlan as currentWeekPlanStore } from '../../stores/weekPlanStore';
   import { daysSince, formatDate, isRecurringDueOn } from '../../domain/dateUtils';
+  import { autoScheduleTasks } from '../../domain/taskService';
   import CalendarView from './CalendarView.svelte';
   import RecurringTasksPanel from '../widgets/RecurringTasksPanel.svelte';
   import type { Task } from '../../domain/types';
@@ -24,11 +27,15 @@
   let activeDate: string = activeDateStore.get();
   let intention: string = intentionStore.get();
   let mitIds: string[] = mitStore.get();
+  let todayBlocks = todayBlocksStore.get();
+  let termine = termineStore.get();
 
   onDestroy(tasksStore.subscribe(v => { tasks = [...v]; }));
   onDestroy(activeDateStore.subscribe(v => { activeDate = v; }));
   onDestroy(intentionStore.subscribe(v => { intention = v; }));
   onDestroy(mitStore.subscribe(v => { mitIds = [...v]; }));
+  onDestroy(todayBlocksStore.subscribe(v => { todayBlocks = [...v]; }));
+  onDestroy(termineStore.subscribe(v => { termine = [...v]; }));
 
   $: projects = $projectsStore;
   $: activeProjects = projects.filter(p => p.status === 'active');
@@ -126,6 +133,36 @@
   $: totalLabel = totalMinutes >= 60
     ? `${Math.floor(totalMinutes / 60)}h${totalMinutes % 60 > 0 ? ' ' + totalMinutes % 60 + 'min' : ''}`
     : totalMinutes > 0 ? `${totalMinutes} min` : '';
+  $: scheduledTodayTasks = todayTasks
+    .filter(t => !!t.scheduledStart)
+    .sort((a, b) => (a.scheduledStart ?? '').localeCompare(b.scheduledStart ?? ''));
+  $: unscheduledTodayTasks = todayTasks.filter(t => !t.scheduledStart);
+  $: scheduledCount = scheduledTodayTasks.length;
+  $: unscheduledCount = unscheduledTodayTasks.length;
+  $: blockedMinutes = todayBlocks.reduce((sum, block) => {
+    const start = new Date(block.start).getTime();
+    const end = new Date(block.end).getTime();
+    return sum + Math.max(0, Math.round((end - start) / 60_000));
+  }, 0);
+  $: terminMinutes = termine
+    .filter((termin) => termin.date === activeDate)
+    .reduce((sum, termin) => sum + termin.durationMinutes, 0);
+  $: totalReservedMinutes = blockedMinutes + terminMinutes;
+  $: planningWindowMinutes = 9 * 60;
+  $: remainingCapacityMinutes = planningWindowMinutes - totalReservedMinutes;
+  $: capacityLabel = Math.abs(remainingCapacityMinutes) >= 60
+    ? `${Math.floor(Math.abs(remainingCapacityMinutes) / 60)}h${Math.abs(remainingCapacityMinutes) % 60 > 0 ? ' ' + Math.abs(remainingCapacityMinutes) % 60 + 'min' : ''}`
+    : `${Math.abs(remainingCapacityMinutes)} min`;
+  $: blockedLabel = blockedMinutes >= 60
+    ? `${Math.floor(blockedMinutes / 60)}h${blockedMinutes % 60 > 0 ? ' ' + blockedMinutes % 60 + 'min' : ''}`
+    : blockedMinutes > 0 ? `${blockedMinutes} min` : '0 min';
+  $: planningState = todayTasks.length === 0
+    ? 'leer'
+    : unscheduledCount === 0
+      ? 'komplett'
+      : scheduledCount === 0
+        ? 'offen'
+        : 'teilweise';
 
   function projectColor(task: Task): string | null {
     if (!task.projectId) return null;
@@ -186,8 +223,80 @@
   }
 
   function removeFromToday(task: Task) {
-    updateTask(task.id, { plannedDate: null });
+    removeBlockForTask(task.id);
+    updateTask(task.id, { plannedDate: null, scheduledStart: null, scheduledEnd: null });
     if (todayTasks.length - 1 < TODAY_WIP_LIMIT) limitWarning = '';
+  }
+
+  function createDateTime(time: string): Date {
+    return new Date(`${activeDate}T${time}:00`);
+  }
+
+  function formatScheduledTime(value: string | null | undefined): string {
+    if (!value) return '';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+      ? value
+      : date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function scheduleTask(task: Task, start: Date): void {
+    const scheduledStart = start.toISOString();
+    updateTask(task.id, {
+      plannedDate: activeDate,
+      scheduledStart,
+      scheduledEnd: null,
+    });
+    dropTaskOnCalendar({ ...task, plannedDate: activeDate }, start);
+  }
+
+  function quickSchedule(task: Task, time: string): void {
+    scheduleTask(task, createDateTime(time));
+  }
+
+  function unscheduleTask(task: Task): void {
+    removeBlockForTask(task.id);
+    updateTask(task.id, {
+      scheduledStart: null,
+      scheduledEnd: null,
+    });
+  }
+
+  function autoPlanTask(task: Task): void {
+    const busySlots = getBusySlots();
+    const [planned] = autoScheduleTasks([{ ...task, scheduledStart: null }], busySlots, 9, 18);
+    if (planned?.scheduledStart) {
+      scheduleTask(task, new Date(planned.scheduledStart));
+    }
+  }
+
+  function getBusySlots() {
+    return [
+      ...todayBlocks.map((block) => ({ start: new Date(block.start), end: new Date(block.end) })),
+      ...termine
+        .filter((termin) => termin.date === activeDate)
+        .map((termin) => {
+          const start = createDateTime(termin.startTime);
+          const end = new Date(start.getTime() + termin.durationMinutes * 60_000);
+          return { start, end };
+        }),
+    ];
+  }
+
+  function autoPlanRemainingTasks(): void {
+    if (unscheduledTodayTasks.length === 0) return;
+    const busySlots = getBusySlots();
+    const planned = autoScheduleTasks(
+      unscheduledTodayTasks.map((task) => ({ ...task, scheduledStart: null })),
+      busySlots,
+      9,
+      18,
+    );
+    for (const task of planned) {
+      if (task.scheduledStart) {
+        scheduleTask(task, new Date(task.scheduledStart));
+      }
+    }
   }
 
   // ── Duration inline edit ──────────────────────────────────────────────────
@@ -282,6 +391,39 @@
         class="px-3 py-1 bg-accent text-white rounded-md text-[12px] font-semibold hover:bg-accent/90 transition-colors"
       >Tag starten →</button>
     </div>
+  </div>
+
+  <div class="px-4 py-2 border-b border-border bg-surface/80 flex items-center gap-2 flex-wrap text-[11px]">
+    <span class="px-2 py-1 rounded-full border border-border bg-bg text-secondary">
+      Heute: {todayTasks.length} Tasks
+    </span>
+    <span class="px-2 py-1 rounded-full border border-border bg-bg text-secondary">
+      Terminiert: {scheduledCount}
+    </span>
+    <span class="px-2 py-1 rounded-full border border-border bg-bg text-secondary">
+      Offen: {unscheduledCount}
+    </span>
+    <span class="px-2 py-1 rounded-full border border-border bg-bg text-secondary">
+      Blockiert: {blockedLabel}
+    </span>
+    <span class="px-2 py-1 rounded-full border {remainingCapacityMinutes < 0 ? 'border-red-200 bg-red-50 text-red-700' : remainingCapacityMinutes <= 60 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-border bg-bg text-secondary'}">
+      {remainingCapacityMinutes < 0 ? `Überplant: ${capacityLabel}` : `Frei: ${capacityLabel}`}
+    </span>
+    <span class="px-2 py-1 rounded-full border {planningState === 'komplett' ? 'border-green-200 bg-green-50 text-green-700' : planningState === 'teilweise' ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-border bg-bg text-muted'}">
+      {planningState === 'leer'
+        ? 'Noch nichts geplant'
+        : planningState === 'offen'
+          ? 'Noch nicht terminiert'
+          : planningState === 'teilweise'
+            ? 'Teilweise terminiert'
+            : 'Tagesplan steht'}
+    </span>
+    {#if unscheduledCount > 0}
+      <button
+        class="ml-auto px-2.5 py-1 rounded-md bg-accent text-white font-semibold hover:bg-accent/90 transition-colors"
+        on:click={autoPlanRemainingTasks}
+      >Rest automatisch einplanen</button>
+    {/if}
   </div>
 
   <!-- 3 columns on bg-bg -->
@@ -468,6 +610,9 @@
           {#if totalLabel}
             <span class="text-[11px] text-muted">· {totalLabel}</span>
           {/if}
+          {#if todayTasks.length > 0}
+            <span class="text-[11px] text-muted">· {scheduledCount} terminiert</span>
+          {/if}
           <span class="text-[11px] text-muted ml-auto">★ {mitIds.length}/3</span>
         </div>
         <p class="text-[11px] text-muted mt-0.5">
@@ -478,12 +623,30 @@
           {:else if mitIds.length === 0}
             Markiere bis zu 3 Aufgaben mit ★ als Top-Priorität.
           {:else}
-            ⠿ Reihenfolge per Drag ändern · Dauer anklicken zum Bearbeiten
+            Von hier aus priorisieren, dann per Drag oder Schnellaktion in den Kalender terminieren.
           {/if}
         </p>
+        {#if unscheduledCount > 0}
+          <div class="mt-2 flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-900">
+            <span>{unscheduledCount} Task{unscheduledCount === 1 ? '' : 's'} sind fuer heute entschieden, aber noch ohne Zeitslot.</span>
+            <button
+              class="font-semibold text-amber-800 hover:text-amber-950 whitespace-nowrap"
+              on:click={autoPlanRemainingTasks}
+            >Auto-Plan</button>
+          </div>
+        {/if}
         {#if limitWarning}
           <div class="mt-2 px-2.5 py-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-900">
             {limitWarning}
+          </div>
+        {/if}
+        {#if planningState === 'komplett'}
+          <div class="mt-2 flex items-center justify-between gap-2 rounded-lg border border-green-200 bg-green-50 px-2.5 py-2 text-[11px] text-green-900">
+            <span>Der Tag ist komplett terminiert. Jetzt nur noch gegen Restkapazität und Prioritäten prüfen.</span>
+            <button
+              class="font-semibold text-green-800 hover:text-green-950 whitespace-nowrap"
+              on:click={startDay}
+            >Zum Tagesfokus</button>
           </div>
         {/if}
       </div>
@@ -496,7 +659,17 @@
         on:drop={onDrop}
         on:dragleave={() => { todayDropActive = false; }}
       >
-        {#each todayTasks as task, _i (task.id)}
+        {#if unscheduledTodayTasks.length > 0}
+          <div class="px-3 py-2 border-b border-border/60 bg-bg/50">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-bold uppercase tracking-[0.07em] text-muted">Noch einplanen</span>
+              <span class="text-[10px] text-muted bg-surface px-1.5 py-0.5 rounded-md">{unscheduledCount}</span>
+            </div>
+            <p class="text-[11px] text-muted mt-1">Diese Tasks sind fuer heute entschieden, haben aber noch keinen Zeitslot.</p>
+          </div>
+        {/if}
+
+        {#each unscheduledTodayTasks as task, _i (task.id)}
           {@const isMit = mitIds.includes(task.id)}
           {@const col = projectColor(task)}
           <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -551,6 +724,24 @@
               >{(task.estimatedMinutes ?? 0) < 60 ? (task.estimatedMinutes ?? 0) + 'm' : ((task.estimatedMinutes ?? 0) / 60) + 'h'}</button>
             {/if}
 
+            <div class="flex items-center gap-1 flex-shrink-0">
+              <button
+                class="px-1.5 py-0.5 rounded text-[10px] text-accent hover:bg-accent-subtle"
+                on:click={() => autoPlanTask(task)}
+                title="Naechsten freien Slot finden"
+              >Auto</button>
+              <button
+                class="px-1.5 py-0.5 rounded text-[10px] text-muted hover:bg-bg hover:text-accent"
+                on:click={() => quickSchedule(task, '09:00')}
+                title="Um 09:00 einplanen"
+              >09</button>
+              <button
+                class="px-1.5 py-0.5 rounded text-[10px] text-muted hover:bg-bg hover:text-accent"
+                on:click={() => quickSchedule(task, '13:00')}
+                title="Um 13:00 einplanen"
+              >13</button>
+            </div>
+
             <!-- Remove -->
             <button
               on:click={() => removeFromToday(task)}
@@ -558,14 +749,69 @@
               title="Aus Heute entfernen"
             >✕</button>
           </div>
-        {:else}
+        {/each}
+
+        {#if scheduledTodayTasks.length > 0}
+          <div class="px-3 py-2 border-b border-border/60 bg-accent-subtle/30">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-bold uppercase tracking-[0.07em] text-accent">Terminiert</span>
+              <span class="text-[10px] text-accent bg-surface px-1.5 py-0.5 rounded-md">{scheduledCount}</span>
+            </div>
+            <p class="text-[11px] text-muted mt-1">Diese Tasks haben bereits einen Slot im Kalender und koennen dort per Drag verschoben werden.</p>
+          </div>
+        {/if}
+
+        {#each scheduledTodayTasks as task, _i (task.id)}
+          {@const isMit = mitIds.includes(task.id)}
+          {@const col = projectColor(task)}
+          <div
+            class="flex items-center gap-2 px-3 py-[9px] border-b border-border/60 cursor-grab select-none bg-accent-subtle/10
+              {draggingId === task.id && dragSource === 'today' ? 'opacity-30' : ''}"
+            draggable="true"
+            on:dragstart={e => onDragStartToday(e, task.id)}
+            on:dragend={onDragEnd}
+          >
+            <span class="text-muted/60 text-[11px] flex-shrink-0 cursor-grab">⠿</span>
+            <button
+              on:click={() => toggleMit(task.id)}
+              class="text-[13px] flex-shrink-0 transition-colors leading-none
+                {isMit ? 'text-amber-400' : 'text-border-strong hover:text-amber-400'}"
+              disabled={!isMit && mitIds.length >= 3}
+              title={isMit ? 'Aus Top 3 entfernen' : mitIds.length < 3 ? 'Als Top 3 markieren' : '3 bereits gewählt'}
+            >★</button>
+            {#if col}
+              <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:{col}" />
+            {/if}
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-surface text-accent flex-shrink-0">
+              {formatScheduledTime(task.scheduledStart)}
+            </span>
+            <span class="text-[13px] flex-1 min-w-0 truncate {isMit ? 'font-semibold text-primary' : 'text-primary'}">
+              {task.title}
+            </span>
+            <span class="text-[11px] text-muted flex-shrink-0 tabular-nums min-w-[32px] text-right">
+              {(task.estimatedMinutes ?? 0) < 60 ? (task.estimatedMinutes ?? 0) + 'm' : ((task.estimatedMinutes ?? 0) / 60) + 'h'}
+            </span>
+            <button
+              on:click={() => unscheduleTask(task)}
+              class="px-1.5 py-0.5 rounded text-[10px] text-muted hover:bg-bg hover:text-accent flex-shrink-0"
+              title="Zeitslot loesen"
+            >Zeit lösen</button>
+            <button
+              on:click={() => removeFromToday(task)}
+              class="w-5 h-5 flex items-center justify-center rounded text-muted/50 hover:text-secondary hover:bg-bg transition-colors flex-shrink-0 text-[11px]"
+              title="Aus Heute entfernen"
+            >✕</button>
+          </div>
+        {/each}
+
+        {#if todayTasks.length === 0}
           <div class="px-4 py-8 text-center">
             <p class="text-[13px] font-medium text-secondary mb-1">Noch leer</p>
             <p class="text-[11px] text-muted leading-relaxed">
               Klicke „→" neben einer Aufgabe im Pool<br/>oder erstelle direkt eine neue.
             </p>
           </div>
-        {/each}
+        {/if}
       </div>
     </div>
 

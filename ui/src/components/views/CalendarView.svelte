@@ -1,6 +1,6 @@
 <!-- @module:calendar -->
 <script lang="ts">
-  import { $todayBlocks as todayBlocksStore, moveBlock, dropTaskOnCalendar } from '../../stores/calendarStore';
+  import { $todayBlocks as todayBlocksStore, moveBlock, dropTaskOnCalendar, removeBlock } from '../../stores/calendarStore';
   import { $tasks as tasksStore, updateTask } from '../../stores/taskStore';
   import { $termine as termineStore, addTermin, removeTermin } from '../../stores/terminStore';
   import { $projects as projectsStore } from '../../stores/projectStore';
@@ -21,6 +21,16 @@
 
   let gridEl: HTMLDivElement;
   let scrollEl: HTMLDivElement;
+
+  function scheduleTask(task: { id: string; plannedDate?: string | null }, start: Date): void {
+    const scheduledStart = start.toISOString();
+    updateTask(task.id, {
+      plannedDate: activeDate,
+      scheduledStart,
+      scheduledEnd: null,
+    });
+    dropTaskOnCalendar({ ...task, plannedDate: activeDate }, start);
+  }
 
   function getTimeFromY(y: number): Date {
     const date = new Date();
@@ -46,7 +56,15 @@
     function onUp(ev: PointerEvent) {
       const rawY = ev.clientY - gridRect.top - offsetY;
       const clampedY = Math.max(0, Math.min(rawY, (DAY_END - DAY_START) * HOUR_HEIGHT));
-      moveBlock(block.id, getTimeFromY(clampedY));
+      const nextStart = getTimeFromY(clampedY);
+      moveBlock(block.id, nextStart);
+      if (block.taskId) {
+        updateTask(block.taskId, {
+          plannedDate: activeDate,
+          scheduledStart: nextStart.toISOString(),
+          scheduledEnd: null,
+        });
+      }
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
     }
@@ -63,6 +81,8 @@
   // ── Task-Drop auf Kalender ─────────────────────────────────────────────────
   let ghostY: number | null = null;
   let ghostLabel = '';
+  let hoverY: number | null = null;
+  let hoverLabel = '';
 
   function getYFromEvent(e: DragEvent): number {
     const rect = gridEl.getBoundingClientRect();
@@ -88,16 +108,37 @@
     const task = $tasksStore.find(t => t.id === taskId);
     if (!task) return;
     const start = getTimeFromY(getYFromEvent(e));
-    if (task.plannedDate !== activeDate) {
-      updateTask(task.id, { plannedDate: activeDate });
-    }
-    dropTaskOnCalendar(task, start);
+    scheduleTask(task, start);
   }
 
   function onGridDragLeave(e: DragEvent) {
     // Only clear ghost if leaving the scroll container entirely
     if (scrollEl && !scrollEl.contains(e.relatedTarget as Node)) {
       ghostY = null;
+    }
+  }
+
+  function onGridMouseMove(e: MouseEvent) {
+    if (!planningMode || !gridEl) return;
+    const rect = gridEl.getBoundingClientRect();
+    const y = Math.max(0, Math.min(e.clientY - rect.top, (DAY_END - DAY_START) * HOUR_HEIGHT));
+    hoverY = y;
+    const t = getTimeFromY(y);
+    hoverLabel = t.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function onGridMouseLeave() {
+    hoverY = null;
+    hoverLabel = '';
+  }
+
+  function handleBlockRemove(block: CalendarBlock) {
+    removeBlock(block.id);
+    if (block.taskId) {
+      updateTask(block.taskId, {
+        scheduledStart: null,
+        scheduledEnd: null,
+      });
     }
   }
 
@@ -150,6 +191,7 @@
   <div class="flex items-center gap-2 px-4 pt-4 pb-3 flex-shrink-0">
     <h2 class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted whitespace-nowrap overflow-hidden text-ellipsis flex-1">Kalender</h2>
     {#if planningMode}
+      <span class="text-[10px] text-muted hidden lg:inline">Tasks aus „Heute“ hier hineinziehen oder Slots direkt setzen</span>
       <button
         class="text-[11px] px-2 py-0.5 rounded-md border border-dashed border-border text-muted hover:border-accent hover:text-accent transition-colors flex-shrink-0"
         on:click={() => addingTermin = !addingTermin}
@@ -213,9 +255,16 @@
     on:dragover={onGridDragOver}
     on:drop={onGridDrop}
     on:dragleave={onGridDragLeave}
+    on:mousemove={onGridMouseMove}
+    on:mouseleave={onGridMouseLeave}
   >
+    {#if planningMode}
+      <div class="mb-3 rounded-xl border border-dashed border-accent/30 bg-accent-subtle/25 px-3 py-2 text-[11px] text-secondary">
+        Freie Tasks aus der Mitte hier auf eine Uhrzeit ziehen. Beim Loslassen wird sofort ein echter Zeitslot angelegt.
+      </div>
+    {/if}
     <div
-      class="relative w-full min-h-full"
+      class="relative w-full min-h-full rounded-xl {ghostY !== null ? 'ring-2 ring-accent/30 bg-accent-subtle/10' : ''}"
       bind:this={gridEl}
     >
       {#each HOURS as hour (hour)}
@@ -250,6 +299,16 @@
         </div>
       {/if}
 
+      {#if planningMode && hoverY !== null && ghostY === null}
+        <div
+          class="absolute left-10 right-0 z-[4] pointer-events-none flex items-center gap-1 opacity-70"
+          style="top:{hoverY}px"
+        >
+          <div class="h-[1px] flex-1 bg-accent/35 rounded" />
+          <span class="text-[10px] text-accent font-medium bg-surface/90 px-1 rounded border border-accent/10">{hoverLabel}</span>
+        </div>
+      {/if}
+
       {#each blocks as block (block.id)}
         {@const start = new Date(block.start)}
         {@const end = new Date(block.end)}
@@ -258,6 +317,7 @@
           top={getBlockTop(start, DAY_START, HOUR_HEIGHT)}
           height={getBlockHeight(start, end, HOUR_HEIGHT)}
           onMoveStart={handleMoveStart}
+          onRemove={handleBlockRemove}
         />
       {/each}
 
