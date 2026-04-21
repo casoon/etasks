@@ -147,15 +147,39 @@
   $: terminMinutes = termine
     .filter((termin) => termin.date === activeDate)
     .reduce((sum, termin) => sum + termin.durationMinutes, 0);
-  $: totalReservedMinutes = blockedMinutes + terminMinutes;
   $: planningWindowMinutes = 9 * 60;
-  $: remainingCapacityMinutes = planningWindowMinutes - totalReservedMinutes;
-  $: capacityLabel = Math.abs(remainingCapacityMinutes) >= 60
-    ? `${Math.floor(Math.abs(remainingCapacityMinutes) / 60)}h${Math.abs(remainingCapacityMinutes) % 60 > 0 ? ' ' + Math.abs(remainingCapacityMinutes) % 60 + 'min' : ''}`
-    : `${Math.abs(remainingCapacityMinutes)} min`;
+  $: availableTaskCapacityMinutes = Math.max(0, planningWindowMinutes - terminMinutes);
+  $: workloadDeltaMinutes = availableTaskCapacityMinutes - totalMinutes;
+  $: workloadLabel = Math.abs(workloadDeltaMinutes) >= 60
+    ? `${Math.floor(Math.abs(workloadDeltaMinutes) / 60)}h${Math.abs(workloadDeltaMinutes) % 60 > 0 ? ' ' + Math.abs(workloadDeltaMinutes) % 60 + 'min' : ''}`
+    : `${Math.abs(workloadDeltaMinutes)} min`;
+  $: reservedCapacityMinutes = planningWindowMinutes - (blockedMinutes + terminMinutes);
+  $: reservedCapacityLabel = Math.abs(reservedCapacityMinutes) >= 60
+    ? `${Math.floor(Math.abs(reservedCapacityMinutes) / 60)}h${Math.abs(reservedCapacityMinutes) % 60 > 0 ? ' ' + Math.abs(reservedCapacityMinutes) % 60 + 'min' : ''}`
+    : `${Math.abs(reservedCapacityMinutes)} min`;
   $: blockedLabel = blockedMinutes >= 60
     ? `${Math.floor(blockedMinutes / 60)}h${blockedMinutes % 60 > 0 ? ' ' + blockedMinutes % 60 + 'min' : ''}`
     : blockedMinutes > 0 ? `${blockedMinutes} min` : '0 min';
+  $: terminLabel = terminMinutes >= 60
+    ? `${Math.floor(terminMinutes / 60)}h${terminMinutes % 60 > 0 ? ' ' + terminMinutes % 60 + 'min' : ''}`
+    : terminMinutes > 0 ? `${terminMinutes} min` : '0 min';
+  $: loadPercent = availableTaskCapacityMinutes > 0
+    ? Math.max(0, Math.min(100, Math.round((totalMinutes / availableTaskCapacityMinutes) * 100)))
+    : 0;
+  $: loadTrackClass = workloadDeltaMinutes < 0
+    ? 'bg-red-500'
+    : workloadDeltaMinutes <= 60
+      ? 'bg-amber-500'
+      : 'bg-green-500';
+  $: completionStatus = todayTasks.length === 0
+    ? 'leer'
+    : unscheduledCount > 0
+      ? 'slots-offen'
+      : workloadDeltaMinutes < 0
+        ? 'ueberplant'
+        : mitIds.length === 0
+          ? 'priorisieren'
+          : 'bereit';
   $: planningState = todayTasks.length === 0
     ? 'leer'
     : unscheduledCount === 0
@@ -404,19 +428,27 @@
       Offen: {unscheduledCount}
     </span>
     <span class="px-2 py-1 rounded-full border border-border bg-bg text-secondary">
-      Blockiert: {blockedLabel}
+      Slots: {blockedLabel}
     </span>
-    <span class="px-2 py-1 rounded-full border {remainingCapacityMinutes < 0 ? 'border-red-200 bg-red-50 text-red-700' : remainingCapacityMinutes <= 60 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-border bg-bg text-secondary'}">
-      {remainingCapacityMinutes < 0 ? `Überplant: ${capacityLabel}` : `Frei: ${capacityLabel}`}
+    <span class="px-2 py-1 rounded-full border border-border bg-bg text-secondary">
+      Termine: {terminLabel}
     </span>
-    <span class="px-2 py-1 rounded-full border {planningState === 'komplett' ? 'border-green-200 bg-green-50 text-green-700' : planningState === 'teilweise' ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-border bg-bg text-muted'}">
-      {planningState === 'leer'
+    <span class="px-2 py-1 rounded-full border {workloadDeltaMinutes < 0 ? 'border-red-200 bg-red-50 text-red-700' : workloadDeltaMinutes <= 60 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-border bg-bg text-secondary'}">
+      {workloadDeltaMinutes < 0 ? `Tasklast zu hoch: ${workloadLabel}` : `Task-Puffer: ${workloadLabel}`}
+    </span>
+    <span class="px-2 py-1 rounded-full border {reservedCapacityMinutes < 0 ? 'border-red-200 bg-red-50 text-red-700' : reservedCapacityMinutes <= 60 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-border bg-bg text-secondary'}">
+      {reservedCapacityMinutes < 0 ? `Kalender überzogen: ${reservedCapacityLabel}` : `Kalender frei: ${reservedCapacityLabel}`}
+    </span>
+    <span class="px-2 py-1 rounded-full border {completionStatus === 'bereit' ? 'border-green-200 bg-green-50 text-green-700' : completionStatus === 'ueberplant' ? 'border-red-200 bg-red-50 text-red-700' : completionStatus === 'priorisieren' || planningState === 'teilweise' ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-border bg-bg text-muted'}">
+      {completionStatus === 'leer'
         ? 'Noch nichts geplant'
-        : planningState === 'offen'
-          ? 'Noch nicht terminiert'
-          : planningState === 'teilweise'
-            ? 'Teilweise terminiert'
-            : 'Tagesplan steht'}
+        : completionStatus === 'slots-offen'
+          ? 'Slots fehlen noch'
+          : completionStatus === 'ueberplant'
+            ? 'Plan überzieht'
+            : completionStatus === 'priorisieren'
+              ? 'Top 3 noch offen'
+              : 'Tagesplan bereit'}
     </span>
     {#if unscheduledCount > 0}
       <button
@@ -626,6 +658,26 @@
             Von hier aus priorisieren, dann per Drag oder Schnellaktion in den Kalender terminieren.
           {/if}
         </p>
+        {#if todayTasks.length > 0}
+          <div class="mt-2 rounded-lg border border-border/70 bg-surface px-2.5 py-2">
+            <div class="flex items-center justify-between gap-2 text-[11px] text-muted">
+              <span>Kapazität für Aufgaben</span>
+              <span>{totalLabel || '0 min'} / {availableTaskCapacityMinutes >= 60 ? `${Math.floor(availableTaskCapacityMinutes / 60)}h${availableTaskCapacityMinutes % 60 > 0 ? ' ' + availableTaskCapacityMinutes % 60 + 'min' : ''}` : `${availableTaskCapacityMinutes} min`}</span>
+            </div>
+            <div class="mt-2 h-2 overflow-hidden rounded-full bg-bg">
+              <div class="h-full rounded-full transition-[width] duration-300 {loadTrackClass}" style="width:{loadPercent}%" />
+            </div>
+            <div class="mt-2 text-[11px] {workloadDeltaMinutes < 0 ? 'text-red-700' : workloadDeltaMinutes <= 60 ? 'text-amber-800' : 'text-muted'}">
+              {#if workloadDeltaMinutes < 0}
+                Die heutige Aufgabenlast liegt {workloadLabel} über der verfügbaren Zeit nach Terminen.
+              {:else if workloadDeltaMinutes <= 60}
+                Der Plan ist knapp. Es bleiben nur noch {workloadLabel} Puffer für Aufgaben.
+              {:else}
+                Es bleiben noch {workloadLabel} Puffer für Aufgaben zusätzlich zu den gesetzten Slots.
+              {/if}
+            </div>
+          </div>
+        {/if}
         {#if unscheduledCount > 0}
           <div class="mt-2 flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-900">
             <span>{unscheduledCount} Task{unscheduledCount === 1 ? '' : 's'} sind fuer heute entschieden, aber noch ohne Zeitslot.</span>
@@ -642,7 +694,15 @@
         {/if}
         {#if planningState === 'komplett'}
           <div class="mt-2 flex items-center justify-between gap-2 rounded-lg border border-green-200 bg-green-50 px-2.5 py-2 text-[11px] text-green-900">
-            <span>Der Tag ist komplett terminiert. Jetzt nur noch gegen Restkapazität und Prioritäten prüfen.</span>
+            <span>
+              {#if completionStatus === 'ueberplant'}
+                Alle Tasks haben Slots, aber der Plan ist zeitlich zu voll. Verschiebe oder kürze etwas.
+              {:else if completionStatus === 'priorisieren'}
+                Alle Tasks haben Slots. Für einen wirklich sauberen Tagesabschluss fehlen nur noch die Top 3.
+              {:else}
+                Der Tag ist sauber vorbereitet: alle Tasks terminiert, Kapazität plausibel, Fokus gesetzt.
+              {/if}
+            </span>
             <button
               class="font-semibold text-green-800 hover:text-green-950 whitespace-nowrap"
               on:click={startDay}

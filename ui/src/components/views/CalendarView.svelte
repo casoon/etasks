@@ -16,6 +16,7 @@
   const DAY_END = 20;
   const HOUR_HEIGHT = 64;
   const HOURS = Array.from({ length: DAY_END - DAY_START }, (_, i) => DAY_START + i);
+  const GRID_HEIGHT = (DAY_END - DAY_START) * HOUR_HEIGHT;
 
   $: blocks = $todayBlocksStore;
 
@@ -83,6 +84,8 @@
   let ghostLabel = '';
   let hoverY: number | null = null;
   let hoverLabel = '';
+  let slotDropIso = '';
+  let slotDropTop: number | null = null;
 
   function getYFromEvent(e: DragEvent): number {
     const rect = gridEl.getBoundingClientRect();
@@ -98,10 +101,16 @@
     ghostY = y;
     const t = getTimeFromY(y);
     ghostLabel = t.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    slotDropIso = t.toISOString();
+    slotDropTop = getBlockTop(t, DAY_START, HOUR_HEIGHT);
   }
 
   function onGridDrop(e: DragEvent) {
     ghostY = null;
+    hoverY = null;
+    hoverLabel = '';
+    slotDropIso = '';
+    slotDropTop = null;
     const taskId = getTaskDragData(e.dataTransfer);
     if (!taskId) return;
     e.preventDefault();
@@ -115,6 +124,8 @@
     // Only clear ghost if leaving the scroll container entirely
     if (scrollEl && !scrollEl.contains(e.relatedTarget as Node)) {
       ghostY = null;
+      slotDropIso = '';
+      slotDropTop = null;
     }
   }
 
@@ -130,6 +141,33 @@
   function onGridMouseLeave() {
     hoverY = null;
     hoverLabel = '';
+  }
+
+  function onSlotDragOver(e: DragEvent, iso: string) {
+    if (!hasTaskDragData(e.dataTransfer)) return;
+    e.preventDefault();
+    e.dataTransfer!.dropEffect = 'move';
+    const start = snapToGrid(new Date(iso));
+    const top = getBlockTop(start, DAY_START, HOUR_HEIGHT);
+    ghostY = top;
+    ghostLabel = start.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    slotDropIso = start.toISOString();
+    slotDropTop = top;
+  }
+
+  function onSlotDrop(e: DragEvent, iso: string) {
+    if (!hasTaskDragData(e.dataTransfer)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const taskId = getTaskDragData(e.dataTransfer);
+    const task = $tasksStore.find(t => t.id === taskId);
+    ghostY = null;
+    slotDropIso = '';
+    slotDropTop = null;
+    hoverY = null;
+    hoverLabel = '';
+    if (!task) return;
+    scheduleTask(task, snapToGrid(new Date(iso)));
   }
 
   function handleBlockRemove(block: CalendarBlock) {
@@ -266,6 +304,7 @@
     <div
       class="relative w-full min-h-full rounded-xl {ghostY !== null ? 'ring-2 ring-accent/30 bg-accent-subtle/10' : ''}"
       bind:this={gridEl}
+      style="height:{GRID_HEIGHT}px; min-height:{GRID_HEIGHT}px"
     >
       {#each HOURS as hour (hour)}
         <div class="relative flex items-start border-t border-border-subtle" style="height:{HOUR_HEIGHT}px">
@@ -275,13 +314,26 @@
             {@const d = new Date()}
             {@const _ = d.setHours(hour, min, 0, 0)}
             <div
-              class="absolute left-10 right-0 z-[1]"
+              class="absolute left-10 right-0 z-[1] transition-colors {slotDropIso === snapToGrid(new Date(d)).toISOString() ? 'bg-accent/10' : ''}"
               data-time-slot={d.toISOString()}
               style="top:{(min / 60) * HOUR_HEIGHT}px; height:{HOUR_HEIGHT / 4}px"
+              on:dragover={(e) => onSlotDragOver(e, d.toISOString())}
+              on:drop={(e) => onSlotDrop(e, d.toISOString())}
             />
           {/each}
         </div>
       {/each}
+
+      {#if planningMode && slotDropTop !== null}
+        <div
+          class="absolute left-10 right-0 z-[2] rounded-md border border-dashed border-accent/50 bg-accent/8 pointer-events-none"
+          style="top:{slotDropTop}px; height:{HOUR_HEIGHT / 4}px"
+        >
+          <div class="absolute right-2 top-1 rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+            Ablegen um {ghostLabel}
+          </div>
+        </div>
+      {/if}
 
       {#if showNowLine && !planningMode}
         <div class="absolute left-10 right-0 h-[2px] bg-red-500 z-[3] pointer-events-none" style="top:{nowTop}px">
