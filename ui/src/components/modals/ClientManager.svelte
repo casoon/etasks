@@ -9,8 +9,7 @@
         removeClient,
     } from "../../stores/projectStore";
     import { $tasks as tasksStore } from "../../stores/taskStore";
-    import { $timeEntries as timeEntriesStore } from "../../stores/timerStore";
-    import { $invoices as invoicesStore } from "../../stores/invoiceStore";
+    import { $bridgeTimeEntries as timeEntriesStore, $bridgeInvoices as invoicesStore } from "../../stores/coreBridge";
     import { PROJECT_COLORS } from "../../domain/types";
     import type { Client } from "../../domain/types";
     import { isTauriAvailable } from "../../lib/platform";

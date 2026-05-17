@@ -1,7 +1,7 @@
 <!-- @module:planning -->
 <script lang="ts">
     import { $tasks as tasksStore } from "../../stores/taskStore";
-    import { $timeEntries as timeEntriesStore } from "../../stores/timerStore";
+    import { $bridgeTimeEntries as timeEntriesStore } from "../../stores/coreBridge";
     import { $projects as projectsStore } from "../../stores/projectStore";
     import { TAG_COLORS } from "../../domain/types";
     import { diffDays, getWeekStart, today } from "../../domain/dateUtils";

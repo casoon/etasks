@@ -13,8 +13,7 @@ import {
   loadDayPlans,
 } from "./db";
 import { storageGet, storageSet, KEYS } from "./storage";
-import { $services } from "../stores/serviceStore";
-import { $invoices } from "../stores/invoiceStore";
+import { $bridgeServices as $services, $bridgeInvoices as $invoices } from "../stores/coreBridge";
 import { $appConfig, saveAppConfig } from "../stores/configStore";
 import { metaAll } from "./metaStore";
 import { today } from "../domain/dateUtils";

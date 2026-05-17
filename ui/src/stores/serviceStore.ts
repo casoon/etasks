@@ -1,3 +1,4 @@
+// @module:billing
 import { atom } from "nanostores";
 import type { ServiceItem } from "../domain/types";
 import {
@@ -5,8 +6,10 @@ import {
   upsertService,
   deleteService as dbDeleteService,
 } from "../lib/db";
+import { $bridgeServices } from "./coreBridge";
 
 export const $services = atom<ServiceItem[]>(loadServices());
+$services.subscribe(val => $bridgeServices.set(val as ServiceItem[]));
 
 export function initServices(): void {
   $services.set(loadServices());

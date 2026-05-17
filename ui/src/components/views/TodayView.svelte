@@ -11,7 +11,7 @@
   import { $projects as projectsStore } from '../../stores/projectStore';
   import { $focusTaskId as focusTaskIdStore } from '../../stores/uiStore';
   import { $todayBlocks as todayBlocksStore } from '../../stores/calendarStore';
-  import { $timeEntries as timeEntriesStore } from '../../stores/timerStore';
+  import { $bridgeTimeEntries as timeEntriesStore } from '../../stores/coreBridge';
   import type { Task } from '../../domain/types';
   import { onMount, onDestroy } from 'svelte';
 

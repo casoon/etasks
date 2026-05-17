@@ -1,3 +1,4 @@
+// @module:billing
 import { atom } from "nanostores";
 import type { Invoice } from "../domain/types";
 import {
@@ -5,8 +6,10 @@ import {
   upsertInvoice,
   deleteInvoice as dbDeleteInvoice,
 } from "../lib/db";
+import { $bridgeInvoices } from "./coreBridge";
 
 export const $invoices = atom<Invoice[]>(loadInvoices());
+$invoices.subscribe(val => $bridgeInvoices.set(val as Invoice[]));
 
 export function initInvoices(): void {
   $invoices.set(loadInvoices());

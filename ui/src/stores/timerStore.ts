@@ -1,10 +1,13 @@
+// @module:time-tracking
 import { atom, computed } from 'nanostores';
 import type { TimeEntry } from '../domain/types';
 import { loadTimeEntries, loadTasks } from '../lib/db';
 import { startTimer as svcStart, stopTimer as svcStop } from '../lib/timerService';
 import { $tasks } from './taskStore';
+import { $bridgeTimeEntries } from './coreBridge';
 
 export const $timeEntries = atom<TimeEntry[]>([]);
+$timeEntries.subscribe(val => $bridgeTimeEntries.set(val as TimeEntry[]));
 
 export const $activeEntry = computed($timeEntries, (entries) =>
   entries.find(e => !e.endAt) ?? null
