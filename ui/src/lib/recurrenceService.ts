@@ -1,3 +1,4 @@
+// @core
 import type { Task, RecurrenceRule } from '../domain/types';
 import { today, toDateKey } from '../domain/dateUtils';
 import { createTask } from '../domain/taskService';
@@ -23,6 +24,8 @@ export function isDue(rule: RecurrenceRule, lastDate: string, targetDate: string
       const dayOfMonth = rule.dayOfMonth ?? last.getDate();
       return target.getDate() === dayOfMonth;
     }
+    default:
+      return false;
   }
 }
 

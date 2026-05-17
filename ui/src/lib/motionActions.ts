@@ -9,6 +9,9 @@ const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 type MotionModule = typeof import('motion');
 
+// motion v12 changed keyframe types for DOM elements; suppress overload errors with targeted ignores
+type AnyKeyframes = Record<string, string | number | (string | number)[]>;
+
 let motionModulePromise: Promise<MotionModule> | null = null;
 
 function prefersReducedMotion(): boolean {
@@ -30,6 +33,7 @@ export function pageReveal(node: HTMLElement, options: RevealOptions = {}) {
 
   loadMotion().then(({ animate }) => {
     if (destroyed) return;
+    // @ts-ignore — motion v12 DOMKeyframesDefinition does not expose transform shorthands in TS
     controls = animate(
       node,
       {
@@ -37,11 +41,11 @@ export function pageReveal(node: HTMLElement, options: RevealOptions = {}) {
         y: [options.distance ?? 14, 0],
         scale: [options.scale ?? 0.985, 1],
         filter: ['blur(8px)', 'blur(0px)'],
-      },
+      } as AnyKeyframes,
       {
         duration: options.duration ?? 0.45,
         delay: options.delay ?? 0,
-        easing: EASE,
+        ease: EASE,
       },
     );
   });
@@ -70,13 +74,14 @@ export function staggerReveal(node: HTMLElement) {
 
   loadMotion().then(({ animate, stagger }) => {
     if (destroyed) return;
+    // @ts-ignore — motion v12 DOMKeyframesDefinition does not expose transform shorthands in TS
     controls = animate(
       items,
-      { opacity: [0, 1], y: [10, 0] },
+      { opacity: [0, 1], y: [10, 0] } as AnyKeyframes,
       {
         duration: 0.36,
         delay: stagger(0.04),
-        easing: EASE,
+        ease: EASE,
       },
     );
   });
@@ -102,20 +107,22 @@ export function hoverLift(node: HTMLElement) {
   function playHover() {
     if (!animateFn) return;
     controls?.cancel();
+    // @ts-ignore — motion v12 DOMKeyframesDefinition does not expose transform shorthands in TS
     controls = animateFn(
       node,
-      { y: -3, scale: 1.01 },
-      { duration: 0.22, easing: EASE },
+      { y: -3, scale: 1.01 } as AnyKeyframes,
+      { duration: 0.22, ease: EASE },
     );
   }
 
   function playRest() {
     if (!animateFn) return;
     controls?.cancel();
+    // @ts-ignore — motion v12 DOMKeyframesDefinition does not expose transform shorthands in TS
     controls = animateFn(
       node,
-      { y: 0, scale: 1 },
-      { duration: 0.24, easing: EASE },
+      { y: 0, scale: 1 } as AnyKeyframes,
+      { duration: 0.24, ease: EASE },
     );
   }
 

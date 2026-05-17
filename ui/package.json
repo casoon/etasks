@@ -8,7 +8,8 @@
     "preview": "astro preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "check": "svelte-check"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -23,6 +24,7 @@
     "astro": "^6.1.1",
     "happy-dom": "^20.8.9",
     "svelte": "^4.2.20",
+    "svelte-check": "^3.8.6",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.8.2",
     "vitest": "^4.1.2"

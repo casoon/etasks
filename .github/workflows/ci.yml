@@ -22,11 +22,15 @@ jobs:
           cache-dependency-path: ui/package-lock.json
 
       - name: Install UI dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
         working-directory: ui
 
       - name: Run tests
         run: npm test
+        working-directory: ui
+
+      - name: Svelte type check
+        run: npm run check
         working-directory: ui
 
       - name: Build UI

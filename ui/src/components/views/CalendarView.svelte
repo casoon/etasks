@@ -6,7 +6,7 @@
   import { $projects as projectsStore } from '../../stores/projectStore';
   import CalendarBlockComponent from '../widgets/CalendarBlock.svelte';
   import { getBlockTop, getBlockHeight, snapToGrid } from '../../domain/calendarService';
-  import type { CalendarBlock, TerminType } from '../../domain/types';
+  import type { CalendarBlock, Task, TerminType } from '../../domain/types';
   import { getTaskDragData, hasTaskDragData } from '../../lib/taskDrag';
 
   export let planningMode = false;
@@ -30,7 +30,7 @@
       scheduledStart,
       scheduledEnd: null,
     });
-    dropTaskOnCalendar({ ...task, plannedDate: activeDate }, start);
+    dropTaskOnCalendar({ ...task, plannedDate: activeDate } as Task, start);
   }
 
   function getTimeFromY(y: number): Date {

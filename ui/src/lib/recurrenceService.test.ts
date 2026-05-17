@@ -20,14 +20,14 @@ function makeRecurringTemplate(overrides: Partial<Task> = {}): Task {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     sortOrder: 1,
-    recurrence: { frequency: 'daily' },
+    recurrence: { weekdays: [], frequency: 'daily' },
     ...overrides,
   };
 }
 
 describe('isDue', () => {
   describe('daily', () => {
-    const rule: RecurrenceRule = { frequency: 'daily' };
+    const rule: RecurrenceRule = { weekdays: [], frequency: 'daily' };
 
     it('is due on the next day', () => {
       expect(isDue(rule, '2026-03-26', '2026-03-27')).toBe(true);
@@ -48,7 +48,7 @@ describe('isDue', () => {
 
   describe('weekly', () => {
     // Friday is day 5
-    const rule: RecurrenceRule = { frequency: 'weekly', dayOfWeek: 5 };
+    const rule: RecurrenceRule = { weekdays: [], frequency: 'weekly', dayOfWeek: 5 };
 
     it('is due on the correct weekday', () => {
       // 2026-03-27 is a Friday
@@ -72,7 +72,7 @@ describe('isDue', () => {
   });
 
   describe('monthly', () => {
-    const rule: RecurrenceRule = { frequency: 'monthly', dayOfMonth: 15 };
+    const rule: RecurrenceRule = { weekdays: [], frequency: 'monthly', dayOfMonth: 15 };
 
     it('is due on the configured day of month', () => {
       expect(isDue(rule, '2026-02-15', '2026-03-15')).toBe(true);
@@ -116,7 +116,7 @@ describe('generateDueInstances', () => {
     // Monday template, target is a Friday
     const template = makeRecurringTemplate({
       plannedDate: '2026-03-23',
-      recurrence: { frequency: 'weekly', dayOfWeek: 1 },
+      recurrence: { weekdays: [], frequency: 'weekly', dayOfWeek: 1 },
     });
     // 2026-03-27 is a Friday
     const instances = generateDueInstances([template], '2026-03-27');

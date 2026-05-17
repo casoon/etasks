@@ -1,3 +1,4 @@
+// @core
 import { isTauriAvailable } from "./platform";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -112,8 +113,12 @@ export const KEYS = {
   dayPlans: "etasks:dayPlans",
   services: "etasks:services",
   invoices: "etasks:invoices",
+  weekPlans: "etasks:weekPlans",
+  termine: "etasks:termine",
 } as const;
 
+// KEYS.termine is intentionally excluded: no Rust commands exist for it yet.
+// Termine use the KV table (db_set/db_get) so data persists in SQLite as a blob.
 const ENTITY_BACKED_KEYS = new Set<string>([
   KEYS.tasks,
   KEYS.blocks,
