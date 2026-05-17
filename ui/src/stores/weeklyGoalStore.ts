@@ -1,3 +1,4 @@
+// @module:planning
 import { atom, computed } from 'nanostores';
 import type { WeeklyGoal } from '../domain/types';
 import { getWeekStart } from '../domain/dateUtils';

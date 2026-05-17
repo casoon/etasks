@@ -1,3 +1,4 @@
+// @module:projects
 import type { ProjectTemplate, TemplateTask, KanbanStatus } from '../domain/types';
 import { loadCustomTemplates, upsertTemplate } from './db';
 import { today } from '../domain/dateUtils';

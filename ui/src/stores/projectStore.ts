@@ -1,3 +1,4 @@
+// @module:projects
 import { atom, computed } from 'nanostores';
 import type { Client, Project } from '../domain/types';
 import { PROJECT_COLORS } from '../domain/types';
@@ -83,7 +84,19 @@ export function addProject(clientId: string, name: string): Project {
 export function updateProject(id: string, patch: Partial<Project>): void {
   const project = $projects.get().find((p) => p.id === id);
   if (!project) return;
-  $projects.set(upsertProject({ ...project, ...patch }));
+  // Guard: clientId is immutable once set
+  const safePatch = { ...patch };
+  if (project.clientId && 'clientId' in safePatch) {
+    delete safePatch.clientId;
+  }
+  $projects.set(upsertProject({ ...project, ...safePatch }));
+}
+
+/** One-way assignment: only allowed if project has no client yet. */
+export function assignClientToProject(projectId: string, clientId: string): void {
+  const project = $projects.get().find((p) => p.id === projectId);
+  if (!project || project.clientId) return;
+  $projects.set(upsertProject({ ...project, clientId }));
 }
 
 export function removeProject(id: string): void {

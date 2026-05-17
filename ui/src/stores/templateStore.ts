@@ -1,3 +1,4 @@
+// @module:projects
 import { atom } from 'nanostores';
 import type { ProjectTemplate, TemplateTask } from '../domain/types';
 import { loadAllTemplates, applyTemplate as svcApply, saveAsTemplate as svcSave } from '../lib/templateService';

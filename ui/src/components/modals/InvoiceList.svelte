@@ -1,5 +1,6 @@
+<!-- @module:billing -->
 <script lang="ts">
-  import type { Client, Invoice } from '../domain/types';
+  import type { Client, Invoice } from '../../domain/types';
 
   export let invoices: Invoice[] = [];
   export let clients: Client[] = [];

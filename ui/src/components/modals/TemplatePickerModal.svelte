@@ -1,7 +1,8 @@
+<!-- @module:projects -->
 <script lang="ts">
-  import { $templates as templatesStore, applyProjectTemplate } from '../stores/templateStore';
-  import type { ProjectTemplate } from '../domain/types';
-  import { formatDuration } from '../domain/dateUtils';
+  import { $templates as templatesStore, applyProjectTemplate } from '../../stores/templateStore';
+  import type { ProjectTemplate } from '../../domain/types';
+  import { formatDuration } from '../../domain/dateUtils';
 
   export let projectId: string;
   export let onClose: () => void;

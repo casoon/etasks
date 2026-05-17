@@ -1,3 +1,4 @@
+// @core
 import { initTasks } from '../stores/taskStore';
 import { initBlocks } from '../stores/calendarStore';
 import { initGoals } from '../stores/weeklyGoalStore';
@@ -7,6 +8,8 @@ import { initTemplates } from '../stores/templateStore';
 import { initBillingItems } from '../stores/billingStore';
 import { initServices } from '../stores/serviceStore';
 import { initInvoices } from '../stores/invoiceStore';
+import { initWeekPlans } from '../stores/weekPlanStore';
+import { initTermine } from '../stores/terminStore';
 import { initRecurringTasks } from './recurrenceService';
 import { loadDayPlans } from './db';
 import { $dayPlans } from '../stores/planningStore';
@@ -21,6 +24,8 @@ export function reinitStores(): void {
   initBillingItems();
   initServices();
   initInvoices();
+  initWeekPlans();
+  initTermine();
   initRecurringTasks();
   $dayPlans.set(loadDayPlans());
 }

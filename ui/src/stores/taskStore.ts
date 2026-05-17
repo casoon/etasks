@@ -1,3 +1,4 @@
+// @core
 import { atom, computed } from 'nanostores';
 import type { Task, KanbanStatus } from '../domain/types';
 import { today } from '../domain/dateUtils';
@@ -68,6 +69,27 @@ export function updateTask(id: string, patch: Partial<Task>): void {
 
 export function removeTask(id: string): void {
   $tasks.set(dbDeleteTask(id));
+}
+
+export function cloneRecurringTask(templateId: string, plannedDate: string): Task {
+  const template = $tasks.get().find((t) => t.id === templateId);
+  if (!template) throw new Error('Recurring template not found');
+  const now = new Date().toISOString();
+  const clone: Task = {
+    ...template,
+    id: crypto.randomUUID(),
+    sourceTaskId: templateId,
+    plannedDate,
+    status: 'todo',
+    recurrence: undefined,
+    kanbanStatus: undefined,
+    sortOrder: null,
+    createdAt: now,
+    updatedAt: now,
+    completedAt: null,
+  };
+  $tasks.set(upsertTask(clone));
+  return clone;
 }
 
 export function reorderTasks(orderedIds: string[]): void {

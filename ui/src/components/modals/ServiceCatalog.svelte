@@ -1,6 +1,7 @@
+<!-- @module:billing -->
 <script lang="ts">
-  import { $services as servicesStore, addService, updateService, removeService } from '../stores/serviceStore';
-  import type { ServiceItem } from '../domain/types';
+  import { $services as servicesStore, addService, updateService, removeService } from '../../stores/serviceStore';
+  import type { ServiceItem } from '../../domain/types';
 
   $: services = $servicesStore;
 

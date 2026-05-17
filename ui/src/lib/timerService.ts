@@ -1,3 +1,4 @@
+// @module:time-tracking
 import type { TimeEntry } from '../domain/types';
 import { loadTimeEntries, upsertTimeEntry, loadTasks, upsertTask } from './db';
 export { formatTrackedTime, formatElapsed } from '../domain/dateUtils';

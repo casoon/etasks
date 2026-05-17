@@ -1,3 +1,4 @@
+// @core
 import { openTenant } from '../stores/configStore';
 import { syncFromDatabase } from './storage';
 import { reinitStores } from './storeInit';

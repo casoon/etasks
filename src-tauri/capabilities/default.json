@@ -8,6 +8,7 @@
     "fs:allow-read-text-file",
     "fs:allow-mkdir",
     "dialog:allow-open",
+    "dialog:allow-save",
     "notification:default"
   ]
 }

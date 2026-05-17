@@ -1,7 +1,8 @@
+<!-- @core -->
 <script lang="ts">
-  import { $energyCheckPending as pendingStore } from '../stores/uiStore';
-  import { resetBreakTimer } from '../lib/notificationScheduler';
-  import { today } from '../domain/dateUtils';
+  import { $energyCheckPending as pendingStore } from '../../stores/uiStore';
+  import { resetBreakTimer } from '../../lib/notificationScheduler';
+  import { today } from '../../domain/dateUtils';
 
   const ENERGY_KEY = 'etasks.energy-log';
 

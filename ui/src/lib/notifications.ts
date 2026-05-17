@@ -1,3 +1,4 @@
+// @core
 import { isTauriAvailable } from './platform';
 import { invoke } from '@tauri-apps/api/core';
 

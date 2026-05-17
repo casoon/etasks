@@ -1,7 +1,8 @@
+<!-- @core -->
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { $toasts as toastsStore, dismissToast } from '../stores/toastStore';
-  import type { Toast } from '../stores/toastStore';
+  import { $toasts as toastsStore, dismissToast } from '../../stores/toastStore';
+  import type { Toast } from '../../stores/toastStore';
 
   let toasts: Toast[] = toastsStore.get();
   onDestroy(toastsStore.subscribe(v => { toasts = [...v]; }));

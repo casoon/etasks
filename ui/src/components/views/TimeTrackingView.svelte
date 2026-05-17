@@ -1,9 +1,10 @@
+<!-- @module:time-tracking -->
 <script lang="ts">
-  import { $timeEntries as timeEntriesStore, $activeEntry as activeEntryStore, stopActiveTimer } from '../stores/timerStore';
-  import { $tasks as tasksStore } from '../stores/taskStore';
-  import { $projects as projectsStore } from '../stores/projectStore';
-  import { formatTrackedTime } from '../domain/dateUtils';
-  import { formatTime, toDateKey } from '../domain/dateUtils';
+  import { $timeEntries as timeEntriesStore, $activeEntry as activeEntryStore, stopActiveTimer } from '../../stores/timerStore';
+  import { $tasks as tasksStore } from '../../stores/taskStore';
+  import { $projects as projectsStore } from '../../stores/projectStore';
+  import { formatTrackedTime } from '../../domain/dateUtils';
+  import { formatTime, toDateKey } from '../../domain/dateUtils';
 
   $: entries = $timeEntriesStore;
   $: tasks = $tasksStore;
@@ -67,7 +68,13 @@
 
   <div class="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-6">
     {#if Object.keys(byDate).length === 0}
-      <p class="text-[13px] text-muted text-center py-8 px-4 leading-relaxed">Noch keine Zeiteinträge. Starte einen Timer über den ▶-Button auf einer Aufgabe.</p>
+      <div class="flex flex-col items-center gap-4 py-10 px-6 text-center">
+        <p class="text-[13px] text-muted leading-relaxed max-w-xs">Noch keine Zeiteinträge. Öffne die Tagesplanung, wähle eine Aufgabe und starte den Timer über den ▶-Button.</p>
+        <button
+          class="px-4 py-2 rounded-lg border border-border text-[13px] text-secondary hover:bg-bg hover:text-primary transition-colors"
+          on:click={() => window.dispatchEvent(new CustomEvent('etasks:nav', { detail: 'planning-daily' }))}
+        >Zur Tagesplanung →</button>
+      </div>
     {/if}
 
     {#each Object.entries(byDate) as [date, dateEntries] (date)}

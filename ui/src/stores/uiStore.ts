@@ -1,3 +1,4 @@
+// @core
 import { atom } from 'nanostores';
 import type { NavItem, ViewMode } from '../domain/types';
 

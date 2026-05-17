@@ -1,8 +1,9 @@
+<!-- @core -->
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { $quickAddOpen as openStore, $quickAddProjectId as projectIdStore } from '../stores/uiStore';
-  import { $projects as projectsStore } from '../stores/projectStore';
-  import { addTask } from '../stores/taskStore';
+  import { $quickAddOpen as openStore, $quickAddProjectId as projectIdStore } from '../../stores/uiStore';
+  import { $projects as projectsStore } from '../../stores/projectStore';
+  import { addTask } from '../../stores/taskStore';
 
   let title = '';
   let duration = 30;

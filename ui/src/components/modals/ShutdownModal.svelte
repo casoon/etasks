@@ -1,8 +1,9 @@
+<!-- @core -->
 <script lang="ts">
-  import { $showShutdown as showStore } from '../stores/uiStore';
-  import { $todayTasks as todayTasksStore, updateTask } from '../stores/taskStore';
-  import { today } from '../domain/dateUtils';
-  import { upsertNote, loadTimeEntries, loadProjects } from '../lib/db';
+  import { $showShutdown as showStore } from '../../stores/uiStore';
+  import { $todayTasks as todayTasksStore, updateTask } from '../../stores/taskStore';
+  import { today } from '../../domain/dateUtils';
+  import { upsertNote, loadTimeEntries, loadProjects } from '../../lib/db';
 
   $: show = $showStore;
   $: tasks = $todayTasksStore;

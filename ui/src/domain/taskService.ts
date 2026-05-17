@@ -1,3 +1,4 @@
+// @core
 import { type Task, type TaskStatus, type KanbanStatus } from './types';
 
 export function createTask(partial: Partial<Task> & { title: string }): Task {

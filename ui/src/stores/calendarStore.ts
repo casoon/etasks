@@ -1,3 +1,4 @@
+// @module:calendar
 import { atom, computed } from 'nanostores';
 import type { CalendarBlock } from '../domain/types';
 import { $activeDate } from './taskStore';

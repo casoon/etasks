@@ -1,3 +1,4 @@
+// @core
 /**
  * Scheduled notifications: daily shutdown reminder + break reminders.
  * Call startNotificationScheduler() once after app boot.

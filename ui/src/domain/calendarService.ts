@@ -1,3 +1,4 @@
+// @module:calendar
 import type { CalendarBlock, Task } from './types';
 
 export function createBlockFromTask(task: Task, start: Date): CalendarBlock {

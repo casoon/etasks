@@ -1,3 +1,4 @@
+// @core
 /**
  * Platform detection — single source of truth for Tauri availability.
  */

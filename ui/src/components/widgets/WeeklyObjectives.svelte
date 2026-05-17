@@ -1,6 +1,7 @@
+<!-- @module:planning -->
 <script lang="ts">
-  import { $currentWeekGoals as goalsStore, addGoal, toggleGoal, removeGoal, toggleGoalDay } from '../stores/weeklyGoalStore';
-  import { getWeekStart, today } from '../domain/dateUtils';
+  import { $currentWeekGoals as goalsStore, addGoal, toggleGoal, removeGoal, toggleGoalDay } from '../../stores/weeklyGoalStore';
+  import { getWeekStart, today } from '../../domain/dateUtils';
 
   $: goals = $goalsStore;
   let inputValue = '';

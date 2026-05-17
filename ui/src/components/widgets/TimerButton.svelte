@@ -1,8 +1,9 @@
+<!-- @module:time-tracking -->
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { $activeTaskId as activeTaskIdStore, $activeEntry as activeEntryStore, startTaskTimer, stopActiveTimer } from '../stores/timerStore';
-  import { formatTrackedTime, formatElapsed } from '../domain/dateUtils';
-  import { $timeEntries as timeEntriesStore } from '../stores/timerStore';
+  import { $activeTaskId as activeTaskIdStore, $activeEntry as activeEntryStore, startTaskTimer, stopActiveTimer } from '../../stores/timerStore';
+  import { formatTrackedTime, formatElapsed } from '../../domain/dateUtils';
+  import { $timeEntries as timeEntriesStore } from '../../stores/timerStore';
 
   export let taskId: string;
 

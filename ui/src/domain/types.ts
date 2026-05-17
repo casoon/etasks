@@ -1,12 +1,18 @@
+// @core
 export type TaskStatus = "todo" | "done" | "archived";
 export type KanbanStatus = "backlog" | "in_progress" | "review" | "done";
 
+// Legacy (kept for migration of existing data)
 export type RecurrenceFrequency = "daily" | "weekly" | "monthly";
 
 export interface RecurrenceRule {
-  frequency: RecurrenceFrequency;
-  dayOfWeek?: number; // 0–6 (Mo=1…So=0) für weekly
-  dayOfMonth?: number; // 1–31 für monthly
+  weekdays: number[];   // 0=So, 1=Mo, 2=Di, 3=Mi, 4=Do, 5=Fr, 6=Sa
+  startDate?: string;   // YYYY-MM-DD
+  endDate?: string;     // YYYY-MM-DD, optional
+  // Legacy fields – only present on old records, ignored when weekdays is set
+  frequency?: RecurrenceFrequency;
+  dayOfWeek?: number;
+  dayOfMonth?: number;
 }
 
 export interface Task {
@@ -61,6 +67,12 @@ export interface WeeklyGoal {
   daysCompleted?: string[];
 }
 
+export interface WeekPlan {
+  weekStart: string;
+  focusProjectIds: string[];
+  outcomeNote?: string;
+}
+
 export interface DayPlan {
   id: string;
   date: string;
@@ -89,6 +101,23 @@ export interface BillingItemTask {
   billingItemId: string;
   taskId: string;
   createdAt: string;
+}
+
+export type TerminType = 'video' | 'phone' | 'onsite';
+
+export interface Termin {
+  id: string;
+  date: string;          // YYYY-MM-DD
+  startTime: string;     // HH:MM
+  durationMinutes: number;
+  type: TerminType;
+  title: string;
+  clientId?: string;
+  projectId?: string;
+  notes?: string;
+  billable: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DailyNote {
@@ -132,6 +161,7 @@ export interface Project {
   color: string;
   status: "active" | "paused" | "done";
   notes?: string;
+  deadline?: string; // YYYY-MM-DD
   createdAt: string;
 }
 
@@ -187,6 +217,7 @@ export type NavItem =
   | "projects"
   | "time-tracking"
   | "clients"
+  | "report"
   | "settings";
 
 export const TAG_COLORS: Record<string, string> = {

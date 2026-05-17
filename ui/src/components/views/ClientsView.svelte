@@ -1,28 +1,29 @@
+<!-- @module:projects -->
 <script lang="ts">
     import {
         $clients as clientsStore,
         $projects as projectsStore,
-    } from "../stores/projectStore";
-    import { $tasks as tasksStore } from "../stores/taskStore";
-    import { $services as servicesStore } from "../stores/serviceStore";
+    } from "../../stores/projectStore";
+    import { $tasks as tasksStore } from "../../stores/taskStore";
+    import { $services as servicesStore } from "../../stores/serviceStore";
     import {
         $invoices as invoicesStore,
         addInvoice,
         updateInvoice,
         removeInvoice,
-    } from "../stores/invoiceStore";
+    } from "../../stores/invoiceStore";
     import {
         $appConfig as appConfigStore,
         saveAppConfig,
-    } from "../stores/configStore";
-    import { toast } from "../stores/toastStore";
-    import { isTauriAvailable } from "../lib/platform";
-    import { generateInvoice, type InvoiceData } from "../lib/invoiceService";
-    import type { Invoice } from "../domain/types";
-    import ClientManager from "./ClientManager.svelte";
-    import ServiceCatalog from "./ServiceCatalog.svelte";
-    import InvoiceList from "./InvoiceList.svelte";
-    import InvoiceEditor from "./InvoiceEditor.svelte";
+    } from "../../stores/configStore";
+    import { toast } from "../../stores/toastStore";
+    import { isTauriAvailable } from "../../lib/platform";
+    import { generateInvoice, type InvoiceData } from "../../lib/invoiceService";
+    import type { Invoice } from "../../domain/types";
+    import ClientManager from "../modals/ClientManager.svelte";
+    import ServiceCatalog from "../modals/ServiceCatalog.svelte";
+    import InvoiceList from "../modals/InvoiceList.svelte";
+    import InvoiceEditor from "../modals/InvoiceEditor.svelte";
 
     $: clients = [...$clientsStore];
     $: projects = [...$projectsStore];
@@ -355,16 +356,40 @@
             <ServiceCatalog />
         {:else if !selectedInvoice}
             <div
-                class="flex-1 flex flex-col items-center justify-center gap-4 text-center"
+                class="flex-1 flex flex-col items-center justify-center gap-5 text-center px-8"
             >
-                <p class="text-muted text-sm">
-                    Wähle eine Rechnung oder erstelle eine neue.
-                </p>
-                <button
-                    class="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:opacity-90 transition-opacity"
-                    on:click={createNewInvoice}
-                    >+ Neue Rechnung erstellen</button
-                >
+                {#if invoices.length === 0}
+                    <div class="flex flex-col gap-2 max-w-xs">
+                        <p class="text-[14px] font-semibold text-primary">Noch keine Rechnungen.</p>
+                        <p class="text-[13px] text-muted leading-relaxed">Erstelle Rechnungen aus Kunden, Leistungen und erfasster Zeit.</p>
+                    </div>
+                    <div class="flex flex-col gap-2 w-full max-w-[200px]">
+                        <button
+                            class="px-4 py-2 rounded-lg bg-accent text-white text-[13px] font-medium hover:opacity-90 transition-opacity"
+                            on:click={createNewInvoice}
+                        >+ Erste Rechnung erstellen</button>
+                        {#if clients.length === 0}
+                            <button
+                                class="px-4 py-1.5 rounded-lg border border-border text-[12px] text-secondary hover:bg-bg transition-colors"
+                                on:click={() => (rightView = "clients")}
+                            >Kunden anlegen</button>
+                        {/if}
+                        {#if services.length === 0}
+                            <button
+                                class="px-4 py-1.5 rounded-lg border border-border text-[12px] text-secondary hover:bg-bg transition-colors"
+                                on:click={() => (rightView = "services")}
+                            >Leistungen anlegen</button>
+                        {/if}
+                    </div>
+                {:else}
+                    <p class="text-muted text-[13px]">
+                        Wähle eine Rechnung oder erstelle eine neue.
+                    </p>
+                    <button
+                        class="px-4 py-2 rounded-lg bg-accent text-white text-[13px] font-medium hover:opacity-90 transition-opacity"
+                        on:click={createNewInvoice}
+                    >+ Neue Rechnung erstellen</button>
+                {/if}
             </div>
         {:else}
             <InvoiceEditor

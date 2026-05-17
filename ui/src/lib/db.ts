@@ -1,7 +1,9 @@
+// @core
 import type {
   Task,
   CalendarBlock,
   WeeklyGoal,
+  WeekPlan,
   DailyNote,
   Client,
   Project,
@@ -12,6 +14,7 @@ import type {
   DayPlan,
   ServiceItem,
   Invoice,
+  Termin,
 } from "../domain/types";
 import { storageGet, storageSet, KEYS } from "./storage";
 import { isTauriAvailable } from "./platform";
@@ -95,6 +98,25 @@ export function deleteGoal(id: string): WeeklyGoal[] {
   saveGoals(n);
   dbInvoke("delete_goal", { id });
   return n;
+}
+
+// ── Week Plans ────────────────────────────────────────────────────────────────
+
+export function loadWeekPlans(): WeekPlan[] {
+  return storageGet<WeekPlan[]>(KEYS.weekPlans) ?? [];
+}
+export function saveWeekPlans(plans: WeekPlan[]): void {
+  storageSet(KEYS.weekPlans, plans);
+}
+export function upsertWeekPlan(plan: WeekPlan): WeekPlan[] {
+  const all = loadWeekPlans();
+  const idx = all.findIndex((p) => p.weekStart === plan.weekStart);
+  const next =
+    idx >= 0
+      ? [...all.slice(0, idx), plan, ...all.slice(idx + 1)]
+      : [...all, plan];
+  saveWeekPlans(next);
+  return next;
 }
 
 // ── Daily Notes ───────────────────────────────────────────────────────────────
@@ -335,5 +357,24 @@ export function deleteInvoice(id: string): Invoice[] {
   const n = loadInvoices().filter((i) => i.id !== id);
   saveInvoices(n);
   dbInvoke("delete_invoice", { id });
+  return n;
+}
+
+// ── Termine ────────────────────────────────────────────────────────────────────
+
+export function loadTermine(): Termin[] {
+  return storageGet<Termin[]>(KEYS.termine) ?? [];
+}
+export function saveTermine(t: Termin[]): void {
+  storageSet(KEYS.termine, t);
+}
+export function upsertTermin(termin: Termin): Termin[] {
+  const n = withUpdate(loadTermine(), termin);
+  saveTermine(n);
+  return n;
+}
+export function deleteTermin(id: string): Termin[] {
+  const n = loadTermine().filter((t) => t.id !== id);
+  saveTermine(n);
   return n;
 }

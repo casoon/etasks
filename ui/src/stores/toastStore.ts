@@ -1,3 +1,4 @@
+// @core
 import { atom } from 'nanostores';
 
 export type ToastType = 'success' | 'error' | 'info';

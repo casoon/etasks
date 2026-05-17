@@ -1,3 +1,4 @@
+// @module:billing
 import { atom, computed } from 'nanostores';
 import type { BillingItem, BillingItemTask } from '../domain/types';
 import { $tasks } from './taskStore';

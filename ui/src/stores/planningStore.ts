@@ -1,3 +1,4 @@
+// @core
 import { atom, computed } from 'nanostores';
 import { $activeDate, $tasks, updateTask } from './taskStore';
 import { upsertDayPlan, getDayPlanByDate, loadDayPlans } from '../lib/db';
