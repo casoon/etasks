@@ -139,6 +139,18 @@ This builds and uploads to GitHub Releases:
 - `eTasks_0.1.0-alpha.1_x64_en-US.msi` — Windows installer
 - `eTasks_0.1.0-alpha.1_x64-setup.exe` — Windows NSIS
 
+### Verify a download
+
+Official installers come only from the
+[GitHub releases of `casoon/etasks`](https://github.com/casoon/etasks/releases) —
+built there by the release workflow, never on a developer machine. Each file has
+a `.sha256` next to it and a signed build provenance attestation:
+
+```bash
+shasum -a 256 -c <file>.sha256
+gh attestation verify <file> --repo casoon/etasks
+```
+
 ### macOS: App ohne Apple-Zertifikat öffnen
 
 Releases are ad-hoc signed (no paid Apple Developer account). macOS will warn on first launch:
