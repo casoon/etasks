@@ -52,12 +52,9 @@ vi.mock("./db", () => ({
   loadDayPlans: () => [{ id: "plan-1", date: "2026-03-28" }],
 }));
 
-vi.mock("../stores/serviceStore", () => ({
-  $services: { get: () => [{ id: "service-1" }] },
-}));
-
-vi.mock("../stores/invoiceStore", () => ({
-  $invoices: { get: () => [{ id: "invoice-1" }] },
+vi.mock("../stores/coreBridge", () => ({
+  $bridgeServices: { get: () => [{ id: "service-1" }] },
+  $bridgeInvoices: { get: () => [{ id: "invoice-1" }] },
 }));
 
 vi.mock("../stores/configStore", () => ({
