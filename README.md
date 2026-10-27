@@ -135,7 +135,6 @@ git push origin v0.1.0-alpha.1
 
 This builds and uploads to GitHub Releases:
 - `eTasks_0.1.0-alpha.1_aarch64.dmg` — macOS Apple Silicon
-- `eTasks_0.1.0-alpha.1_x64.dmg` — macOS Intel
 - `eTasks_0.1.0-alpha.1_x64_en-US.msi` — Windows installer
 - `eTasks_0.1.0-alpha.1_x64-setup.exe` — Windows NSIS
 
