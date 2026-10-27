@@ -1,11 +1,11 @@
 <!-- @core -->
 <script lang="ts">
-    import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+    import { command } from "@casoon/origin-client";
     import {
         $appConfig as appConfigStore,
         saveAppConfig,
     } from "../../stores/configStore";
-    import { isTauriAvailable } from "../../lib/platform";
+    import { assetUrl, isTauriAvailable } from "../../lib/platform";
     import type { UserProfile } from "../../stores/configStore";
     import SettingsDatenSection from "./SettingsDatenSection.svelte";
     import SettingsArbeitsbereichSection from "./SettingsArbeitsbereichSection.svelte";
@@ -22,7 +22,7 @@
 
     $: logoPreviewUrl =
         isTauriAvailable() && profile.logo?.trim()
-            ? convertFileSrc(profile.logo)
+            ? assetUrl(profile.logo)
             : profile.logo?.trim() || "";
     $: invoicePrefixPreview = buildNumberPreview(
         profile.invoice_number_prefix,
@@ -72,7 +72,7 @@
         logoImporting = true;
         errorMsg = "";
         try {
-            const imported = await invoke<string | null>("import_logo_file");
+            const imported = await command<string | null>("import_logo_file");
             if (imported) {
                 profile.logo = imported;
                 logoPreviewError = false;

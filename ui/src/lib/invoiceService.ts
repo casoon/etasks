@@ -1,5 +1,5 @@
 // @module:billing
-import { invoke } from '@tauri-apps/api/core';
+import { command } from '@casoon/origin-client';
 import { isTauriAvailable } from './platform';
 import type { AppConfig } from '../stores/configStore';
 
@@ -64,7 +64,7 @@ export async function generateInvoice(
   if (!isTauriAvailable()) {
     throw new Error('Rechnungsgenerierung ist nur in der Desktop-App verfügbar.');
   }
-  const result = await invoke<{ path: string }>('generate_invoice', {
+  const result = await command<{ path: string }>('generate_invoice', {
     input: { invoice, profile: config.profile },
     outputDir: config.default_export_dir ?? null,
   });

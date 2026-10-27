@@ -1,5 +1,5 @@
 // @module:billing
-import { invoke } from "@tauri-apps/api/core";
+import { command } from "@casoon/origin-client";
 import { isTauriAvailable } from "./platform";
 import type { AppConfig } from "../stores/configStore";
 
@@ -61,7 +61,7 @@ export async function generateOffer(
   if (!isTauriAvailable()) {
     throw new Error("Angebotserzeugung ist nur in der Desktop-App verfügbar.");
   }
-  const result = await invoke<{ path: string }>("generate_offer", {
+  const result = await command<{ path: string }>("generate_offer", {
     input: { offer, profile: config.profile },
     outputDir: config.default_export_dir ?? null,
   });

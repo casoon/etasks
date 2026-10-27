@@ -1,7 +1,7 @@
 <!-- @core -->
 <script lang="ts">
     import { onMount } from "svelte";
-    import { invoke } from "@tauri-apps/api/core";
+    import { command } from "@casoon/origin-client";
     import {
         $appConfig as appConfigStore,
         saveAppConfig,
@@ -40,8 +40,8 @@
 
     onMount(async () => {
         if (isTauriAvailable()) {
-            appPaths = await invoke<AppPaths>("app_paths").catch(() => ({}));
-            existingWorkspaces = await invoke<string[]>("list_workspace_files").catch(() => []);
+            appPaths = await command<AppPaths>("app_paths").catch(() => ({}));
+            existingWorkspaces = await command<string[]>("list_workspace_files").catch(() => []);
             hydrateLocationDefaults();
             await refreshPathPreview();
         }
@@ -145,7 +145,7 @@
             return;
         }
         const baseDir = currentWorkspaceBaseDir();
-        pathPreview = await invoke<WorkspacePaths>("default_workspace_paths", {
+        pathPreview = await command<WorkspacePaths>("default_workspace_paths", {
             tenantName: tenantName.trim(),
             baseDir,
         }).catch(() => null);
@@ -156,7 +156,7 @@
     }
 
     async function pickWorkspaceDirectory() {
-        const picked = await invoke<string | null>("pick_directory", {
+        const picked = await command<string | null>("pick_directory", {
             defaultPath: customWorkspaceDir || appPaths.documentsDir || appPaths.appDataDir || null,
         }).catch(() => null);
         if (picked) {
@@ -166,7 +166,7 @@
     }
 
     async function pickExportDirectory() {
-        const picked = await invoke<string | null>("pick_directory", {
+        const picked = await command<string | null>("pick_directory", {
             defaultPath: currentExportDir() || appPaths.downloadsDir || appPaths.documentsDir || null,
         }).catch(() => null);
         if (picked) {
@@ -188,7 +188,7 @@
             const displayName = tenantName.trim() || "Mein Arbeitsbereich";
             const path = workspaceLocation === "custom" && customWorkspaceDir.trim()
                 ? `${customWorkspaceDir}/etasks.sqlite3`
-                : await invoke<string>("default_tenant_path", {
+                : await command<string>("default_tenant_path", {
                     tenantName: displayName,
                     baseDir: currentWorkspaceBaseDir(),
                 });

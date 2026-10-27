@@ -1,5 +1,5 @@
 // @core
-import { invoke } from "@tauri-apps/api/core";
+import { command } from "@casoon/origin-client";
 import { isTauriAvailable } from "./platform";
 import { $appConfig } from "../stores/configStore";
 
@@ -24,7 +24,7 @@ function log(level: LogLevel, message: string): void {
   if (isTauriAvailable()) {
     const path = getLogPath();
     if (path) {
-      invoke("write_log", { path, level, message }).catch(() => {});
+      command("write_log", { path, level, message }).catch(() => {});
     }
   }
 }

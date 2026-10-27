@@ -10,7 +10,7 @@
     import { loadAppConfig } from "../../stores/configStore";
     import { activateTenant } from "../../lib/appBootstrap";
     import { isTauriAvailable } from "../../lib/platform";
-    import { invoke } from "@tauri-apps/api/core";
+    import { command } from "@casoon/origin-client";
     import { startNotificationScheduler, stopNotificationScheduler } from "../../lib/notificationScheduler";
     import { logger } from "../../lib/logger";
     import TodayView from "../views/TodayView.svelte";
@@ -56,7 +56,7 @@
                 if (isTauriAvailable()) {
                     const hasConfig = config.setup_done && !!config.active_tenant;
                     const dbExists = hasConfig
-                        ? await invoke<boolean>("file_exists", { path: config.active_tenant })
+                        ? await command<boolean>("file_exists", { path: config.active_tenant })
                         : false;
 
                     if (!hasConfig || !dbExists) {

@@ -1,6 +1,6 @@
 // @core
 import { isTauriAvailable } from './platform';
-import { invoke } from '@tauri-apps/api/core';
+import { command } from '@casoon/origin-client';
 
 export async function requestPermission(): Promise<void> {
   if (typeof window === 'undefined') return;
@@ -13,7 +13,7 @@ export function notify(title: string, body: string, icon?: string): void {
   if (typeof window === 'undefined') return;
 
   if (isTauriAvailable()) {
-    invoke('show_notification', { title, body }).catch(console.warn);
+    command('show_notification', { title, body }).catch(console.warn);
     return;
   }
 

@@ -18,7 +18,7 @@ import { $appConfig, saveAppConfig } from "../stores/configStore";
 import { metaAll } from "./metaStore";
 import { today } from "../domain/dateUtils";
 import { isTauriAvailable } from "./platform";
-import { invoke } from "@tauri-apps/api/core";
+import { command } from "@casoon/origin-client";
 
 export async function buildSnapshot() {
   const tenantMeta = isTauriAvailable() ? await metaAll() : [];
@@ -52,7 +52,7 @@ export async function exportToFile(): Promise<void> {
 
   if (isTauriAvailable()) {
     try {
-      await invoke("export_to_file", {
+      await command("export_to_file", {
         json,
         filename,
         directory: $appConfig.get()?.default_export_dir ?? null,
@@ -80,7 +80,7 @@ export async function saveToICloud(): Promise<boolean> {
   const filename = `snapshot-${today()}.json`;
 
   try {
-    await invoke("save_to_icloud", { json, filename });
+    await command("save_to_icloud", { json, filename });
     storageSet(KEYS.exportMeta, { lastSnapshotDate: today() });
     return true;
   } catch (e) {
@@ -132,7 +132,7 @@ export async function importFromJSON(json: string): Promise<boolean> {
     if (dayPlans) storageSet(KEYS.dayPlans, dayPlans);
     if (invoices) storageSet(KEYS.invoices, invoices);
     if (isTauriAvailable()) {
-      await invoke("import_snapshot", {
+      await command("import_snapshot", {
         payload: {
           tasks: tasks ?? [],
           blocks: blocks ?? [],

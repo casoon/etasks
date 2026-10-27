@@ -1,7 +1,7 @@
 <!-- @core -->
 <script lang="ts">
     import { onMount } from "svelte";
-    import { invoke } from "@tauri-apps/api/core";
+    import { command } from "@casoon/origin-client";
     import {
         $appConfig as appConfigStore,
         saveAppConfig,
@@ -54,7 +54,7 @@
 
     onMount(async () => {
         if (isTauriAvailable()) {
-            appPaths = await invoke<AppPaths>("app_paths").catch(() => ({}));
+            appPaths = await command<AppPaths>("app_paths").catch(() => ({}));
         }
         await loadWorkspaceSettings();
     });
@@ -98,7 +98,7 @@
             appPaths.downloadsDir ??
             appPaths.documentsDir ??
             "";
-        workspaceFs = await invoke<WorkspacePaths>("workspace_paths", {
+        workspaceFs = await command<WorkspacePaths>("workspace_paths", {
             path: config.active_tenant,
         }).catch(() => null);
     }
@@ -203,7 +203,7 @@
     async function pickTenantDirectory() {
         errorMsg = "";
         try {
-            const dir = await invoke<string | null>("pick_directory", {
+            const dir = await command<string | null>("pick_directory", {
                 defaultPath:
                     tenantDir ||
                     defaultWorkspaceDir ||
@@ -220,7 +220,7 @@
     async function pickDefaultWorkspaceDirectory() {
         workspaceError = "";
         try {
-            const dir = await invoke<string | null>("pick_directory", {
+            const dir = await command<string | null>("pick_directory", {
                 defaultPath:
                     defaultWorkspaceDir ||
                     appPaths.documentsDir ||
@@ -236,7 +236,7 @@
     async function pickDefaultExportDirectory() {
         workspaceError = "";
         try {
-            const dir = await invoke<string | null>("pick_directory", {
+            const dir = await command<string | null>("pick_directory", {
                 defaultPath:
                     defaultExportDir ||
                     appPaths.downloadsDir ||

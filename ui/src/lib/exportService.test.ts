@@ -6,8 +6,8 @@ vi.mock("./platform", () => ({
   isTauriAvailable: () => true,
 }));
 
-vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn(),
+vi.mock("@casoon/origin-client", () => ({
+  command: vi.fn(),
 }));
 
 vi.mock("./storage", () => ({

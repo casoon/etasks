@@ -1,5 +1,5 @@
 // @module:reporting
-import { invoke } from '@tauri-apps/api/core';
+import { command } from '@casoon/origin-client';
 import type { Task, Project, TimeEntry } from '../domain/types';
 import { $appConfig } from '../stores/configStore';
 
@@ -54,7 +54,7 @@ export function buildProjectReportInput(
 }
 
 export async function generateProjectReport(input: ProjectReportInput): Promise<string> {
-  return invoke<string>('generate_project_report', {
+  return command<string>('generate_project_report', {
     project: input,
     outputDir: $appConfig.get()?.default_export_dir ?? null,
   });

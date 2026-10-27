@@ -1,6 +1,6 @@
 <!-- @module:projects -->
 <script lang="ts">
-    import { invoke } from "@tauri-apps/api/core";
+    import { command } from "@casoon/origin-client";
     import {
         $clients as clientsStore,
         $projects as projectsStore,
@@ -189,7 +189,7 @@
         csvMessage = "";
         try {
             if (isTauriAvailable()) {
-                await invoke("export_to_file", { json: csv, filename });
+                await command("export_to_file", { json: csv, filename });
             } else {
                 const blob = new Blob([csv], {
                     type: "text/csv;charset=utf-8",

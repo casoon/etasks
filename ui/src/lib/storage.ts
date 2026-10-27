@@ -1,6 +1,6 @@
 // @core
 import { isTauriAvailable } from "./platform";
-import { invoke } from "@tauri-apps/api/core";
+import { command } from "@casoon/origin-client";
 
 const memoryFallback = new Map<string, string>();
 
@@ -38,7 +38,7 @@ export async function syncFromDatabase(): Promise<void> {
       ["list_invoices", KEYS.invoices],
     ];
     const results = await Promise.all(
-      entityLoads.map(([cmd]) => invoke<unknown[]>(cmd).catch(() => null)),
+      entityLoads.map(([cmd]) => command<unknown[]>(cmd).catch(() => null)),
     );
     if (isLocalStorageAvailable()) {
       for (let i = 0; i < entityLoads.length; i++) {
@@ -49,10 +49,10 @@ export async function syncFromDatabase(): Promise<void> {
       }
     }
     // Also load legacy KV keys not covered by entity tables
-    const keys = await invoke<string[]>("db_all_keys");
+    const keys = await command<string[]>("db_all_keys");
     for (const key of keys) {
       if (isEntityBackedKey(key)) continue;
-      const raw = await invoke<string | null>("db_get", { key });
+      const raw = await command<string | null>("db_get", { key });
       if (raw !== null && isLocalStorageAvailable()) {
         localStorage.setItem(key, raw);
       }
@@ -83,7 +83,7 @@ export function storageSet<T>(key: string, value: T): void {
   }
   // Only legacy key/value state belongs in the KV table.
   if (isTauriAvailable() && !isEntityBackedKey(key)) {
-    invoke("db_set", { key, value: raw }).catch(console.error);
+    command("db_set", { key, value: raw }).catch(console.error);
   }
 }
 
@@ -94,7 +94,7 @@ export function storageRemove(key: string): void {
     memoryFallback.delete(key);
   }
   if (isTauriAvailable() && !isEntityBackedKey(key)) {
-    invoke("db_remove", { key }).catch(console.error);
+    command("db_remove", { key }).catch(console.error);
   }
 }
 

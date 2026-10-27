@@ -1,6 +1,6 @@
 // @core
 import { atom, computed } from "nanostores";
-import { invoke } from "@tauri-apps/api/core";
+import { command } from "@casoon/origin-client";
 import { metaSet } from "../lib/metaStore";
 import { isTauriAvailable } from "../lib/platform";
 
@@ -149,7 +149,7 @@ export const $activeTenantName = computed($appConfig, (config) => {
 
 export async function loadAppConfig(): Promise<AppConfig> {
   const config = isTauriAvailable()
-    ? normalizeConfig(await invoke<AppConfig>("load_config"))
+    ? normalizeConfig(await command<AppConfig>("load_config"))
     : loadWebConfig();
   $appConfig.set(config);
   return config;
@@ -158,7 +158,7 @@ export async function loadAppConfig(): Promise<AppConfig> {
 export async function saveAppConfig(config: AppConfig): Promise<void> {
   const normalized = normalizeConfig(config);
   if (isTauriAvailable()) {
-    await invoke("save_config", { config: normalized });
+    await command("save_config", { config: normalized });
   } else {
     saveWebConfig(normalized);
   }
@@ -169,7 +169,7 @@ export async function openTenant(
   path: string,
   displayName?: string,
 ): Promise<void> {
-  await invoke("db_open", { path });
+  await command("db_open", { path });
   const config = $appConfig.get();
   const now = new Date().toISOString();
   const name = displayName ?? tenantNameFromPath(path);

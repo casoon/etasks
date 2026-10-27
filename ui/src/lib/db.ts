@@ -18,10 +18,10 @@ import type {
 } from "../domain/types";
 import { storageGet, storageSet, KEYS } from "./storage";
 import { isTauriAvailable } from "./platform";
-import { invoke } from "@tauri-apps/api/core";
+import { command } from "@casoon/origin-client";
 
 function dbInvoke(cmd: string, args?: Record<string, unknown>): void {
-  if (isTauriAvailable()) invoke(cmd, args).catch(console.error);
+  if (isTauriAvailable()) command(cmd, args).catch(console.error);
 }
 
 function withUpdate<T extends { id: string }>(arr: T[], item: T): T[] {
