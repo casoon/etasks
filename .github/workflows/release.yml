@@ -10,13 +10,12 @@ permissions:
 
 jobs:
   release-macos:
-    name: macOS (arm64 + x64)
+    name: macOS (arm64)
     runs-on: macos-latest
     strategy:
       matrix:
         target:
           - aarch64-apple-darwin
-          - x86_64-apple-darwin
 
     steps:
       - name: Checkout etasks
