@@ -19,3 +19,8 @@ All notable changes to eTasks are listed here. eTasks follows
 ### Removed
 
 - **Releases:** the macOS Intel (`x64`) build; macOS installers are Apple Silicon only.
+
+### Security
+
+- **Dependencies:** `rusqlite` 0.41 bundles SQLite 3.54, which closes RUSTSEC-2026-0459 (a crafted
+  database with a mismatched `-wal` file could read uninitialised memory). Building needs Rust 1.89.
