@@ -5,6 +5,11 @@
         $projects as projectsStore,
     } from "../../stores/projectStore";
     import { $tasks as tasksStore } from "../../stores/taskStore";
+    import { $timeEntries as timeEntriesStore } from "../../stores/timerStore";
+    import {
+        $billingItems as billingItemsStore,
+        $unlockedBillingItemIds as unlockedBillingItemIdsStore,
+    } from "../../stores/billingStore";
     import { $services as servicesStore } from "../../stores/serviceStore";
     import {
         $invoices as invoicesStore,
@@ -424,6 +429,9 @@
                 {tasks}
                 {projects}
                 {appConfig}
+                billingItems={$billingItemsStore}
+                unlockedBillingItemIds={$unlockedBillingItemIdsStore}
+                timeEntries={$timeEntriesStore}
                 {blockedTaskIds}
                 {otherInvoiceNumbers}
                 pdfBusy={generatingPdf}
