@@ -40,6 +40,11 @@
     import { generateOffer, type OfferData } from "../../lib/offerService";
     import KanbanBoard from "./KanbanBoard.svelte";
     import { $termine as termineStore, addTermin, removeTermin } from "../../stores/terminStore";
+    import {
+        calcInvoiceTotals,
+        formatCents,
+        lineTotalCents,
+    } from "../../lib/invoiceMoney";
     import type { TerminType } from "../../domain/types";
     import TemplatePickerModal from "../modals/TemplatePickerModal.svelte";
     import ClientManager from "../modals/ClientManager.svelte";
@@ -208,7 +213,7 @@
                       ? "Pauschal"
                       : "Einheit";
             const unitPrice = (item.unitPriceCents ?? 0) / 100;
-            const total = Math.round(quantity * unitPrice * 100) / 100;
+            const total = formatCents(lineTotalCents(unitPrice, quantity));
             return {
                 position: index + 1,
                 title: item.title,
@@ -219,14 +224,23 @@
                 quantity: item.billingType === "fixed" ? "1" : quantity,
                 unit,
                 unit_price: { amount: unitPrice.toFixed(2), currency: "EUR" },
-                total: { amount: total.toFixed(2), currency: "EUR" },
+                total: { amount: total, currency: "EUR" },
             };
         });
 
-        const subtotal = offerItems.reduce(
-            (sum, item) => sum + Number(item.total.amount),
-            0,
+        // Angebotspositionen haben keinen eigenen MwSt.-Satz: Profil-Standard, sonst 19 %.
+        const vatRate = profile.default_vat_rate ?? 19;
+        const offerTotals = calcInvoiceTotals(
+            offerItems.map((item) => ({
+                unitPrice: Number(item.total.amount),
+                quantity: 1,
+                vatRate,
+            })),
         );
+        const money = (cents: number) => ({
+            amount: formatCents(cents),
+            currency: "EUR",
+        });
         const additionalTerms = (profile.offer_additional_terms ?? "")
             .split("\n")
             .map((line) => line.trim())
@@ -256,8 +270,13 @@
             },
             items: offerItems,
             totals: {
-                subtotal: { amount: subtotal.toFixed(2), currency: "EUR" },
-                total: { amount: subtotal.toFixed(2), currency: "EUR" },
+                subtotal: money(offerTotals.nettoCents),
+                vat_breakdown: offerTotals.vatEntries.map((entry) => ({
+                    rate: { percentage: entry.rate },
+                    base: money(entry.baseCents),
+                    amount: money(entry.amountCents),
+                })),
+                total: money(offerTotals.totalCents),
             },
             terms: {
                 validity: `Dieses Angebot ist gueltig bis ${validUntil.toLocaleDateString("de-DE")}`,

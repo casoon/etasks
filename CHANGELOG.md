@@ -48,3 +48,4 @@ All notable changes to eTasks are listed here. eTasks follows
 - **Setup:** "Vorhandene Arbeitsbereiche" also finds workspaces created by the wizard (`Documents/<name>/` and the default workspace folder) and lists them by folder name; the path preview updates while typing the name or changing the location.
 - **Invoices:** the net amount is the sum of the rounded line totals; net, VAT per rate and gross are calculated in cents, so the editor and the PDF show the same figures.
 - **Invoices:** "PDF erzeugen" produces a PDF again: the invoice dates and the VAT rate per breakdown row are sent in the shape the template reads, the VAT base is the net of that rate, decimal VAT rates are accepted, and a missing bank name or BIC in the profile no longer aborts the PDF.
+- **Offers:** the offer PDF shows net, VAT and total; the VAT rate is the profile default (19 % if unset), since project positions have no VAT rate of their own.

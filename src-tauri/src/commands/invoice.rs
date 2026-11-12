@@ -79,6 +79,17 @@ fn render_invoice(invoice: &Value, company: &CompanyData) -> Result<Vec<u8>, Str
         .map_err(|e| e.to_string())
 }
 
+fn render_offer(offer: &Value, company: &CompanyData) -> Result<Vec<u8>, String> {
+    DocgenCompiler::new()
+        .compile(
+            "offer",
+            serde_json::to_vec(offer).map_err(|e| e.to_string())?,
+            company,
+            &company.language,
+        )
+        .map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub fn generate_offer(
     app: tauri::AppHandle,
@@ -87,14 +98,7 @@ pub fn generate_offer(
 ) -> Result<GenerateOfferResult, String> {
     let company = profile_to_company(&input.profile);
 
-    let pdf_bytes = DocgenCompiler::new()
-        .compile(
-            "offer",
-            serde_json::to_vec(&input.offer).map_err(|e| e.to_string())?,
-            &company,
-            &company.language,
-        )
-        .map_err(|e| e.to_string())?;
+    let pdf_bytes = render_offer(&input.offer, &company)?;
 
     let downloads = match output_dir {
         Some(dir) if !dir.trim().is_empty() => std::path::PathBuf::from(dir),
@@ -238,5 +242,54 @@ mod tests {
         invoice["totals"]["vat_breakdown"][0]["rate"] = json!(19);
         let company = profile_to_company(&UserProfile::default());
         assert!(render_invoice(&invoice, &company).is_err());
+    }
+
+    #[test]
+    fn renders_offer_pdf_with_totals_block() {
+        let offer = json!({
+            "metadata": {
+                "offer_number": "ANG-2026-001",
+                "offer_date": { "date": "2026-11-12" },
+                "valid_until": { "date": "2026-12-12" },
+                "show_footer": true
+            },
+            "recipient": {
+                "name": "Erika Beispiel",
+                "company": "Beispiel GmbH",
+                "address": {
+                    "street": "Hauptstraße",
+                    "house_number": "5",
+                    "postal_code": "10115",
+                    "city": "Berlin",
+                    "country": "Deutschland"
+                }
+            },
+            "salutation": { "greeting": "Hallo Erika," },
+            "items": [{
+                "position": 1,
+                "title": "Konzept",
+                "description": "",
+                "quantity": 2,
+                "unit": "Stunden",
+                "unit_price": { "amount": "95.50", "currency": "EUR" },
+                "total": { "amount": "191.00", "currency": "EUR" }
+            }],
+            "totals": {
+                "subtotal": { "amount": "191.00", "currency": "EUR" },
+                "vat_breakdown": [{
+                    "rate": { "percentage": 19 },
+                    "base": { "amount": "191.00", "currency": "EUR" },
+                    "amount": { "amount": "36.29", "currency": "EUR" }
+                }],
+                "total": { "amount": "227.29", "currency": "EUR" }
+            },
+            "terms": { "validity": "Dieses Angebot ist gültig bis 12.12.2026" }
+        });
+        let company = profile_to_company(&UserProfile::default());
+        let pdf = render_offer(&offer, &company).expect("offer PDF");
+        assert!(pdf.starts_with(b"%PDF"));
+        if let Ok(dir) = std::env::var("ETASKS_TEST_PDF_DIR") {
+            std::fs::write(std::path::Path::new(&dir).join("offer.pdf"), &pdf).unwrap();
+        }
     }
 }
