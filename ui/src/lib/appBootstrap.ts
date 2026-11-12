@@ -1,4 +1,5 @@
 // @core
+import { command } from '@casoon/origin-client';
 import { openTenant } from '../stores/configStore';
 import { syncFromDatabase } from './storage';
 import { reinitStores } from './storeInit';
@@ -15,4 +16,9 @@ export async function activateTenant(path: string, displayName?: string): Promis
   reinitStores();
   startNotificationScheduler();
   void scheduleDailySnapshot();
+}
+
+/** True, wenn die Datenbankdatei des Arbeitsbereichs noch existiert (db_open würde sonst eine leere anlegen). */
+export async function tenantDbExists(path: string): Promise<boolean> {
+  return command<boolean>('file_exists', { path });
 }

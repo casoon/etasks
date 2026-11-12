@@ -44,3 +44,5 @@ All notable changes to eTasks are listed here. eTasks follows
 - **Persistence:** failed database writes are logged and shown as a "Speichern fehlgeschlagen" toast (once per burst) instead of being swallowed.
 - **Workspaces:** the display name is stored in `config.json` and kept on startup and when switching; renaming it sticks. Without a name the folder name is used instead of "etasks.sqlite3".
 - **Settings:** saving the "Arbeitsbereich" tab no longer resets the invoice prefix and payment term of the profile; both fields now read and write the profile only.
+- **Workspaces:** switching to a workspace whose database file is gone shows an error instead of silently creating an empty one; "Neuen Arbeitsbereich hinzufügen" creates its own subfolder and never reopens or renames an existing workspace.
+- **Setup:** "Vorhandene Arbeitsbereiche" also finds workspaces created by the wizard (`Documents/<name>/` and the default workspace folder) and lists them by folder name; the path preview updates while typing the name or changing the location.

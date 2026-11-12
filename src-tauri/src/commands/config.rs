@@ -393,36 +393,49 @@ pub fn file_exists(path: String) -> bool {
     std::path::Path::new(&path).exists()
 }
 
+/// Sammelt Datenbankdateien eine Ebene unterhalb von `root`. Mit `only_default_name`
+/// zählt nur `etasks.sqlite3` (für allgemeine Ordner wie Dokumente).
+fn scan_workspace_root(root: &std::path::Path, only_default_name: bool, found: &mut Vec<String>) {
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        if !entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+            continue;
+        }
+        let Ok(files) = std::fs::read_dir(entry.path()) else {
+            continue;
+        };
+        for file in files.flatten() {
+            let name = file.file_name().to_string_lossy().to_string();
+            let matches = if only_default_name {
+                name == WORKSPACE_DB_FILENAME
+            } else {
+                name.ends_with(".etasks")
+                    || name.ends_with(".db")
+                    || name.ends_with(".sqlite")
+                    || name.ends_with(".sqlite3")
+            };
+            if matches {
+                found.push(file.path().to_string_lossy().to_string());
+            }
+        }
+    }
+}
+
 #[tauri::command]
 pub fn list_workspace_files(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     let mut found = vec![];
-    let mut roots = vec![documents_workspace_root(&app)?];
+    scan_workspace_root(&documents_workspace_root(&app)?, false, &mut found);
     if let Ok(app_data) = app.path().app_data_dir() {
-        roots.push(app_data.join("Workspaces"));
+        scan_workspace_root(&app_data.join("Workspaces"), false, &mut found);
     }
-
-    for workspaces in roots {
-        if !workspaces.exists() {
-            continue;
-        }
-        if let Ok(entries) = std::fs::read_dir(&workspaces) {
-            for entry in entries.flatten() {
-                if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
-                    if let Ok(files) = std::fs::read_dir(entry.path()) {
-                        for file in files.flatten() {
-                            let name = file.file_name().to_string_lossy().to_string();
-                            if name.ends_with(".etasks")
-                                || name.ends_with(".db")
-                                || name.ends_with(".sqlite")
-                                || name.ends_with(".sqlite3")
-                            {
-                                found.push(file.path().to_string_lossy().to_string());
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    // Der Wizard legt Arbeitsbereiche unter <Dokumente>/<slug>/ bzw. im gewählten Standardordner an.
+    if let Ok(documents) = app.path().document_dir() {
+        scan_workspace_root(&documents, true, &mut found);
+    }
+    if let Some(dir) = load_config(app.clone()).default_workspace_dir {
+        scan_workspace_root(std::path::Path::new(&dir), true, &mut found);
     }
     found.sort();
     found.dedup();
@@ -483,5 +496,30 @@ mod tests {
         )
         .unwrap();
         assert_eq!(snake.display_name.as_deref(), Some("A"));
+    }
+
+    #[test]
+    fn scan_finds_default_named_databases_one_level_down() {
+        let root = std::env::temp_dir().join(format!("etasks-scan-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("studio-nord")).unwrap();
+        std::fs::create_dir_all(root.join("other")).unwrap();
+        std::fs::write(root.join("studio-nord").join(WORKSPACE_DB_FILENAME), "").unwrap();
+        std::fs::write(root.join("other").join("notes.db"), "").unwrap();
+        std::fs::write(root.join(WORKSPACE_DB_FILENAME), "").unwrap();
+
+        let mut strict = vec![];
+        scan_workspace_root(&root, true, &mut strict);
+        assert_eq!(strict.len(), 1);
+        assert!(strict[0].ends_with("studio-nord/etasks.sqlite3"));
+
+        let mut loose = vec![];
+        scan_workspace_root(&root, false, &mut loose);
+        assert_eq!(loose.len(), 2);
+
+        let mut missing = vec![];
+        scan_workspace_root(&root.join("nope"), true, &mut missing);
+        assert!(missing.is_empty());
+        let _ = std::fs::remove_dir_all(&root);
     }
 }
