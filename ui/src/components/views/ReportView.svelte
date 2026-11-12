@@ -2,8 +2,9 @@
 <script lang="ts">
   import { $tasks as tasksStore } from '../../stores/taskStore';
   import { $timeEntries as timeEntriesStore } from '../../stores/timerStore';
-  import { today, toDateKey, toDateKeyFromIso } from '../../domain/dateUtils';
+  import { today, toDateKey } from '../../domain/dateUtils';
   import { $projects as projectsStore, $clients as clientsStore } from '../../stores/projectStore';
+  import { buildReportRows } from '../../lib/reportService';
 
   type ReportMode = 'personal' | 'client';
 
@@ -27,65 +28,50 @@
     ? projects.filter(p => p.clientId === selectedClientId)
     : projects;
 
-  // Rows: completed tasks within date range, with time data
-  interface ReportRow {
+  interface ViewRow {
     taskId: string;
     title: string;
+    done: boolean;
     projectName: string;
     clientName: string;
     projectColor: string;
     completedDate: string;
-    durationMinutes: number;
+    trackedMinutes: number;
+    estimatedMinutes: number;
   }
 
   $: rows = (() => {
     const projectMap = new Map(projects.map(p => [p.id, p]));
     const clientMap = new Map(clients.map(c => [c.id, c]));
 
-    // Sum time entries per task
-    const taskDuration = new Map<string, number>();
-    for (const entry of timeEntries) {
-      if (!entry.durationMinutes) continue;
-      taskDuration.set(entry.taskId, (taskDuration.get(entry.taskId) ?? 0) + entry.durationMinutes);
-    }
-
-    const result: ReportRow[] = [];
-
-    for (const task of tasks) {
-      if (task.status !== 'done') continue;
-
-      // Date filter: use updatedAt as completion proxy
-      const completedDate = toDateKeyFromIso(task.updatedAt) ?? '';
-      if (completedDate < dateFrom || completedDate > dateTo) continue;
-
-      // Scope filter
-      if (scopeType === 'project' && selectedProjectId && task.projectId !== selectedProjectId) continue;
-
-      // Client scope filter (client mode + client selected)
+    const inScope = (projectId: string | undefined) => {
+      if (scopeType === 'project' && selectedProjectId && projectId !== selectedProjectId) return false;
       if (mode === 'client' && selectedClientId) {
-        const proj = task.projectId ? projectMap.get(task.projectId) : null;
-        if (!proj || proj.clientId !== selectedClientId) continue;
+        const proj = projectId ? projectMap.get(projectId) : null;
+        if (!proj || proj.clientId !== selectedClientId) return false;
       }
+      return true;
+    };
 
-      const proj = task.projectId ? projectMap.get(task.projectId) : null;
+    return buildReportRows(tasks, timeEntries, dateFrom, dateTo, inScope).map((r): ViewRow => {
+      const proj = r.task?.projectId ? projectMap.get(r.task.projectId) : null;
       const client = proj?.clientId ? clientMap.get(proj.clientId) : null;
-
-      result.push({
-        taskId: task.id,
-        title: task.title,
+      return {
+        taskId: r.taskId,
+        title: r.task?.title ?? 'Gelöschte Aufgabe',
+        done: r.done,
         projectName: proj?.name ?? '—',
         clientName: client?.name ?? '—',
         projectColor: proj?.color ?? '#6366f1',
-        completedDate,
-        durationMinutes: taskDuration.get(task.id) ?? task.estimatedMinutes ?? 0,
-      });
-    }
-
-    result.sort((a, b) => a.completedDate.localeCompare(b.completedDate));
-    return result;
+        completedDate: r.completedDate,
+        trackedMinutes: r.trackedMinutes,
+        estimatedMinutes: r.estimatedMinutes,
+      };
+    });
   })();
 
-  $: totalMinutes = rows.reduce((sum, r) => sum + r.durationMinutes, 0);
+  $: totalMinutes = rows.reduce((sum, r) => sum + r.trackedMinutes, 0);
+  $: totalEstimated = rows.reduce((sum, r) => sum + r.estimatedMinutes, 0);
 
   function formatDuration(minutes: number): string {
     if (!minutes) return '—';
@@ -108,7 +94,7 @@
       ? `Tätigkeitsbericht für ${client.name}\nZeitraum: ${formatDate(dateFrom)} – ${formatDate(dateTo)}\n\n`
       : `Tätigkeitsbericht\nZeitraum: ${formatDate(dateFrom)} – ${formatDate(dateTo)}\n\n`;
 
-    const grouped = new Map<string, ReportRow[]>();
+    const grouped = new Map<string, ViewRow[]>();
     for (const row of rows) {
       const key = row.projectName;
       if (!grouped.has(key)) grouped.set(key, []);
@@ -119,10 +105,10 @@
     for (const [projectName, projectRows] of grouped) {
       body += `${projectName}\n`;
       for (const row of projectRows) {
-        const dur = row.durationMinutes ? ` (${formatDuration(row.durationMinutes)})` : '';
-        body += `  • ${formatDate(row.completedDate)}  ${row.title}${dur}\n`;
+        const dur = row.trackedMinutes ? ` (${formatDuration(row.trackedMinutes)})` : '';
+        body += `  • ${formatDate(row.completedDate)}  ${row.title}${row.done ? '' : ' [offen]'}${dur}\n`;
       }
-      const projectMinutes = projectRows.reduce((s, r) => s + r.durationMinutes, 0);
+      const projectMinutes = projectRows.reduce((s, r) => s + r.trackedMinutes, 0);
       if (projectMinutes) body += `  Gesamt: ${formatDuration(projectMinutes)}\n`;
       body += '\n';
     }
@@ -199,7 +185,7 @@
 
     <div class="text-[12px] text-muted">
       {rows.length} Aufgabe{rows.length !== 1 ? 'n' : ''} ·
-      <span class="font-semibold text-primary">{formatDuration(totalMinutes)}</span> gesamt
+      <span class="font-semibold text-primary">{formatDuration(totalMinutes)}</span> erfasst
     </div>
 
     {#if mode === 'client' && rows.length > 0}
@@ -214,7 +200,7 @@
   <div class="flex-1 overflow-y-auto">
     {#if rows.length === 0}
       <div class="flex flex-col items-center justify-center h-full gap-2 text-center">
-        <p class="text-[13px] text-muted">Keine erledigten Aufgaben im gewählten Zeitraum.</p>
+        <p class="text-[13px] text-muted">Keine erledigten Aufgaben oder erfasste Zeit im gewählten Zeitraum.</p>
         <p class="text-[12px] text-muted/70">Zeitraum oder Filter anpassen.</p>
       </div>
     {:else}
@@ -227,7 +213,8 @@
             {#if mode === 'personal' || !selectedClientId}
               <th class="text-left px-3 py-2.5 text-muted font-medium">Kunde</th>
             {/if}
-            <th class="text-right px-6 py-2.5 text-muted font-medium">Dauer</th>
+            <th class="text-right px-3 py-2.5 text-muted font-medium">Geschätzt</th>
+            <th class="text-right px-6 py-2.5 text-muted font-medium">Erfasst</th>
           </tr>
         </thead>
         <tbody>
@@ -235,7 +222,7 @@
             <tr class="border-b border-border-subtle hover:bg-surface/50 transition-colors">
               <td class="px-6 py-2.5 text-secondary whitespace-nowrap">{formatDate(row.completedDate)}</td>
               <td class="px-3 py-2.5 text-primary font-medium max-w-[280px]">
-                <span class="block truncate" title={row.title}>{row.title}</span>
+                <span class="block truncate" title={row.title}>{row.title}{#if !row.done} <span class="text-muted font-normal">(offen)</span>{/if}</span>
               </td>
               <td class="px-3 py-2.5 text-secondary">
                 <span class="flex items-center gap-1.5">
@@ -246,13 +233,15 @@
               {#if mode === 'personal' || !selectedClientId}
                 <td class="px-3 py-2.5 text-muted">{row.clientName}</td>
               {/if}
-              <td class="px-6 py-2.5 text-right text-secondary tabular-nums">{formatDuration(row.durationMinutes)}</td>
+              <td class="px-3 py-2.5 text-right text-muted tabular-nums">{formatDuration(row.estimatedMinutes)}</td>
+              <td class="px-6 py-2.5 text-right text-secondary tabular-nums">{formatDuration(row.trackedMinutes)}</td>
             </tr>
           {/each}
         </tbody>
         <tfoot>
           <tr class="border-t border-border bg-surface">
             <td colspan={mode === 'personal' || !selectedClientId ? 4 : 3} class="px-6 py-2.5 text-[11px] text-muted font-medium uppercase tracking-wide">Gesamt</td>
+            <td class="px-3 py-2.5 text-right text-muted tabular-nums">{formatDuration(totalEstimated)}</td>
             <td class="px-6 py-2.5 text-right font-bold text-primary tabular-nums">{formatDuration(totalMinutes)}</td>
           </tr>
         </tfoot>

@@ -10,10 +10,10 @@
 
   $: invoicesByClient = (() => {
     const clientMap = new Map(clients.map((c) => [c.id, c]));
-    const groups = new Map<string, { client: Client | null; invs: Invoice[] }>();
+    const groups = new Map<string, { key: string; client: Client | null; invs: Invoice[] }>();
     for (const inv of invoices) {
       const key = inv.clientId || '__none';
-      if (!groups.has(key)) groups.set(key, { client: clientMap.get(key) ?? null, invs: [] });
+      if (!groups.has(key)) groups.set(key, { key, client: clientMap.get(key) ?? null, invs: [] });
       groups.get(key)!.invs.push(inv);
     }
     return [...groups.values()]
@@ -42,7 +42,7 @@
     {#if invoices.length === 0}
       <p class="text-[13px] text-muted px-2 py-4 leading-relaxed">Noch keine Rechnungen.</p>
     {/if}
-    {#each invoicesByClient as group (group.client?.id ?? '__none')}
+    {#each invoicesByClient as group (group.key)}
       <p class="text-[10px] font-bold uppercase tracking-widest text-muted px-2 pt-3 pb-1">{group.client?.name ?? 'Ohne Kunde'}</p>
       {#each group.invs as inv (inv.id)}
         <button class="flex items-center gap-2 py-[6px] px-2 rounded-lg w-full text-left transition-colors min-w-0 {selectedInvoiceId === inv.id ? 'bg-accent-subtle' : 'hover:bg-bg'}" on:click={() => onSelect(inv.id)}>

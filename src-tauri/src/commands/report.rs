@@ -35,6 +35,7 @@ pub async fn generate_project_report(
         Some(dir) if !dir.trim().is_empty() => std::path::PathBuf::from(dir),
         _ => app.path().download_dir().map_err(|e| e.to_string())?,
     };
+    std::fs::create_dir_all(&downloads).map_err(|e| e.to_string())?;
     let safe_name = project_safe_name(&pdf.0);
     let filename = format!("{}-bericht.pdf", safe_name);
     let path = downloads.join(&filename);
@@ -62,7 +63,7 @@ fn build_pdf(project: ProjectReportInput) -> Result<PdfResult, String> {
     let mut task_table = AuditTable::new(vec![
         TableColumn::new("Aufgabe").with_width("55%"),
         TableColumn::new("Status").with_width("25%"),
-        TableColumn::new("Dauer").with_width("20%"),
+        TableColumn::new("Erfasst").with_width("20%"),
     ])
     .with_title("Aufgaben");
 

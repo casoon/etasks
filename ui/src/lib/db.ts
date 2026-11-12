@@ -297,6 +297,19 @@ export function removeBillingItemTasksByBillingItem(
   return n;
 }
 
+export function removeBillingItemTasksByTask(taskId: string): BillingItemTask[] {
+  const all = loadBillingItemTasks();
+  const billingItemIds = all
+    .filter((l) => l.taskId === taskId)
+    .map((l) => l.billingItemId);
+  const n = all.filter((l) => l.taskId !== taskId);
+  saveBillingItemTasks(n);
+  for (const billingItemId of billingItemIds) {
+    dbInvoke("remove_billing_item_task", { billingItemId, taskId });
+  }
+  return n;
+}
+
 // ── Day Plans ──────────────────────────────────────────────────────────────────
 
 export function loadDayPlans(): DayPlan[] {

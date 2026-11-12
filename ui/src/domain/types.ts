@@ -205,6 +205,7 @@ export interface Invoice {
   status: InvoiceStatus;
   lineItems: InvoiceLineItem[];
   notes?: string;
+  pdfPath?: string; // zuletzt erzeugtes PDF; wird bei erneuter Erzeugung ersetzt
   createdAt: string;
 }
 

@@ -1,5 +1,6 @@
 <!-- @module:billing -->
 <script lang="ts">
+    import { onDestroy } from "svelte";
     import type {
         Client,
         Invoice,
@@ -9,15 +10,28 @@
         Task,
     } from "../../domain/types";
 
+    import {
+        calcInvoiceTotals,
+        formatCents,
+        isValidQuantity,
+        isValidUnitPrice,
+        isValidVatRate,
+        lineTotalCents,
+    } from "../../lib/invoiceMoney";
+    import { isInvoiceNumberTaken } from "../../lib/invoiceNumber";
+    import { toast } from "../../stores/toastStore";
+
     export let invoice: Invoice;
     export let clients: Client[] = [];
     export let services: ServiceItem[] = [];
     export let tasks: Task[] = [];
     export let projects: Array<{ id: string; name: string; clientId: string }> =
         [];
-    export let appConfig: { profile?: { default_vat_rate?: number } } | null =
-        null;
+    export let appConfig: {
+        profile?: { default_vat_rate?: number; invoice_number_prefix?: string };
+    } | null = null;
     export let blockedTaskIds: Set<string> = new Set();
+    export let otherInvoiceNumbers: string[] = [];
     export let pdfAvailable = false;
     export let pdfBusy = false;
     export let onUpdate: (
@@ -31,7 +45,16 @@
     let newItemInput = "";
     let showNewItemSuggestions = false;
     let taskPickerForLineItem: string | null = null;
-    let lineItemDebounce: Record<string, ReturnType<typeof setTimeout>> = {};
+    // Pending text edits; flushed on blur (before another invoice is selected) and on destroy.
+    const lineItemPending = new Map<string, { timer: ReturnType<typeof setTimeout>; run: () => void }>();
+
+    function flushLineItemEdits() {
+        for (const { timer, run } of [...lineItemPending.values()]) {
+            clearTimeout(timer);
+            run();
+        }
+    }
+    onDestroy(flushLineItemEdits);
 
     $: clientTasksForInvoice = invoice.clientId
         ? tasks.filter(
@@ -49,27 +72,19 @@
                   s.name.toLowerCase().includes(newItemInput.toLowerCase()),
               )
             : [];
-    $: invoiceTotals = calcTotals(invoice.lineItems);
-
-    function calcTotals(lineItems: InvoiceLineItem[]) {
-        const vatMap: Record<number, number> = {};
-        let netto = 0;
-        for (const li of lineItems) {
-            const lineNetto = li.unitPrice * li.quantity;
-            netto += lineNetto;
-            if (!vatMap[li.vatRate]) vatMap[li.vatRate] = 0;
-            vatMap[li.vatRate] += lineNetto;
-        }
-        const vatEntries = Object.entries(vatMap).map(([rate, base]) => ({
-            rate: Number(rate),
-            amount: base * (Number(rate) / 100),
-        }));
-        return {
-            netto,
-            vatEntries,
-            total: netto + vatEntries.reduce((s, v) => s + v.amount, 0),
-        };
-    }
+    $: invoiceTotals = calcInvoiceTotals(invoice.lineItems);
+    $: numberProblem = !invoice.invoiceNumber.trim()
+        ? "Bitte eine Rechnungsnummer angeben."
+        : isInvoiceNumberTaken(invoice.invoiceNumber, otherInvoiceNumbers)
+          ? "Diese Rechnungsnummer ist bereits vergeben."
+          : "";
+    $: sendBlockedReason = numberProblem
+        ? numberProblem
+        : !invoice.clientId
+        ? "Wähle zuerst einen Kunden."
+        : invoice.lineItems.length === 0
+          ? "Füge mindestens eine Position hinzu."
+          : "";
 
     function patchLineItem(
         lineItemId: string,
@@ -88,24 +103,53 @@
                 e.currentTarget as HTMLInputElement | HTMLTextAreaElement
             ).value;
             const key = lineItemId + ":" + String(field);
-            clearTimeout(lineItemDebounce[key]);
-            lineItemDebounce[key] = setTimeout(
-                () =>
-                    patchLineItem(lineItemId, {
-                        [field]: val,
-                    } as Partial<InvoiceLineItem>),
-                400,
-            );
+            clearTimeout(lineItemPending.get(key)?.timer);
+            const run = () => {
+                lineItemPending.delete(key);
+                patchLineItem(lineItemId, {
+                    [field]: val,
+                } as Partial<InvoiceLineItem>);
+            };
+            lineItemPending.set(key, { timer: setTimeout(run, 400), run });
         };
     }
 
-    function onLineItemNum(lineItemId: string, field: keyof InvoiceLineItem) {
+    const lineItemNumRules: Record<
+        "unitPrice" | "quantity" | "vatRate",
+        { valid: (value: number) => boolean; message: string }
+    > = {
+        unitPrice: {
+            valid: isValidUnitPrice,
+            message: "Der Einzelpreis darf nicht negativ sein.",
+        },
+        quantity: {
+            valid: isValidQuantity,
+            message: "Die Menge muss größer als 0 sein.",
+        },
+        vatRate: {
+            valid: isValidVatRate,
+            message: "Die MwSt. muss zwischen 0 und 100 % liegen.",
+        },
+    };
+
+    function onLineItemNum(
+        lineItemId: string,
+        field: "unitPrice" | "quantity" | "vatRate",
+    ) {
         return (e: Event) => {
-            patchLineItem(lineItemId, {
-                [field]:
-                    parseFloat((e.currentTarget as HTMLInputElement).value) ||
-                    0,
-            } as Partial<InvoiceLineItem>);
+            const input = e.currentTarget as HTMLInputElement;
+            const value = parseFloat(input.value);
+            const rule = lineItemNumRules[field];
+            if (!rule.valid(value)) {
+                input.value = String(
+                    invoice.lineItems.find((li) => li.id === lineItemId)?.[
+                        field
+                    ] ?? "",
+                );
+                toast(rule.message, "error", 3500);
+                return;
+            }
+            patchLineItem(lineItemId, { [field]: value });
         };
     }
 
@@ -190,7 +234,7 @@
     }
 
     function lineItemTotal(li: InvoiceLineItem) {
-        return (li.unitPrice * li.quantity).toFixed(2);
+        return formatCents(lineTotalCents(li.unitPrice, li.quantity));
     }
 
     function handleClientChange(e: Event) {
@@ -198,8 +242,11 @@
         const client = clients.find((entry) => entry.id === clientId);
         onUpdate({
             clientId,
-            customerNumber: client?.customerNumber ?? invoice.customerNumber,
+            customerNumber: client?.customerNumber ?? "",
+            // Aufgaben gehören zum bisherigen Kunden und würden sonst auf der neuen Rechnung hängen bleiben.
+            lineItems: invoice.lineItems.map((li) => ({ ...li, taskIds: [] })),
         });
+        taskPickerForLineItem = null;
     }
 
     function handleInvoiceNumberChange(e: Event) {
@@ -236,63 +283,96 @@
 
 <div class="flex-1 overflow-y-auto flex flex-col">
     <div class="px-6 py-4 border-b border-border flex-shrink-0">
-        <div class="flex items-center gap-2 flex-wrap">
-            <select
-                class="border border-border rounded-md px-2 py-[5px] text-[13px] bg-bg outline-none text-primary focus:border-accent flex-1 min-w-[160px]"
-                value={invoice.clientId}
-                on:change={handleClientChange}
-            >
-                <option value="">— Kein Kunde —</option>
-                {#each clients as c (c.id)}<option value={c.id}>{c.name}</option
-                    >{/each}
-            </select>
-            <input
-                class="input font-mono w-[140px]"
-                value={invoice.invoiceNumber}
-                placeholder="RE-2026-001"
-                on:input={handleInvoiceNumberChange}
-            />
-            <input
-                class="input font-mono w-[120px]"
-                value={invoice.customerNumber ?? ""}
-                placeholder="Kunden-Nr."
-                on:input={handleInvoiceMetaChange("customerNumber")}
-            />
-            <input
-                class="input w-[130px]"
-                type="date"
-                value={invoice.date}
-                on:input={handleDateChange("date")}
-            />
-            <input
-                class="input w-[130px]"
-                type="date"
-                value={invoice.dueDate}
-                on:input={handleDateChange("dueDate")}
-            />
+        <div class="flex items-end gap-2 flex-wrap">
+            <label class="flex flex-col gap-1 flex-1 min-w-[160px]">
+                <span class="text-[10px] uppercase tracking-wide text-muted"
+                    >Kunde</span
+                >
+                <select
+                    class="border border-border rounded-md px-2 py-[5px] text-[13px] bg-bg outline-none text-primary focus:border-accent"
+                    value={invoice.clientId}
+                    on:change={handleClientChange}
+                >
+                    <option value="">— Kein Kunde —</option>
+                    {#each clients as c (c.id)}<option value={c.id}
+                            >{c.name}</option
+                        >{/each}
+                </select>
+            </label>
+            <label class="flex flex-col gap-1 w-[140px]">
+                <span class="text-[10px] uppercase tracking-wide text-muted"
+                    >Rechnungsnummer</span
+                >
+                <input
+                    class="input font-mono"
+                    class:border-red-500={Boolean(numberProblem)}
+                    value={invoice.invoiceNumber}
+                    placeholder={`${appConfig?.profile?.invoice_number_prefix?.trim() || "RE-"}001`}
+                    on:input={handleInvoiceNumberChange}
+                />
+            </label>
+            <label class="flex flex-col gap-1 w-[120px]">
+                <span class="text-[10px] uppercase tracking-wide text-muted"
+                    >Kundennummer</span
+                >
+                <input
+                    class="input font-mono"
+                    value={invoice.customerNumber ?? ""}
+                    placeholder="Kunden-Nr."
+                    on:input={handleInvoiceMetaChange("customerNumber")}
+                />
+            </label>
+            <label class="flex flex-col gap-1 w-[130px]">
+                <span class="text-[10px] uppercase tracking-wide text-muted"
+                    >Rechnungsdatum</span
+                >
+                <input
+                    class="input"
+                    type="date"
+                    value={invoice.date}
+                    on:input={handleDateChange("date")}
+                />
+            </label>
+            <label class="flex flex-col gap-1 w-[130px]">
+                <span class="text-[10px] uppercase tracking-wide text-muted"
+                    >Fällig am</span
+                >
+                <input
+                    class="input"
+                    type="date"
+                    value={invoice.dueDate}
+                    on:input={handleDateChange("dueDate")}
+                />
+            </label>
             <select
                 class="border border-border rounded-md px-2 py-[5px] text-[12px] bg-bg outline-none text-secondary focus:border-accent"
                 value={invoice.status}
                 on:change={handleStatusChange}
             >
                 <option value="draft">Entwurf</option>
-                <option value="sent">Gesendet</option>
+                <option
+                    value="sent"
+                    disabled={Boolean(sendBlockedReason) &&
+                        invoice.status !== "sent"}>Gesendet</option
+                >
                 <option value="paid">Bezahlt</option>
             </select>
             <button
                 class="ml-auto rounded-lg border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-bg disabled:opacity-50"
                 on:click={onGeneratePdf}
-                disabled={!pdfAvailable || pdfBusy}
+                disabled={!pdfAvailable || pdfBusy || Boolean(numberProblem)}
                 title={!pdfAvailable
                     ? "Nur in der Desktop-App verfügbar"
-                    : "PDF im Standard-Exportordner erzeugen"}
+                    : numberProblem || "PDF im Standard-Exportordner erzeugen"}
             >
                 {pdfBusy ? "PDF wird erstellt…" : "PDF erzeugen"}
             </button>
             {#if invoice.status === "draft"}
                 <button
-                    class="rounded-lg border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-bg"
+                    class="rounded-lg border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-bg disabled:opacity-50"
                     on:click={onMarkSent}
+                    disabled={Boolean(sendBlockedReason)}
+                    title={sendBlockedReason}
                 >
                     Als gesendet markieren
                 </button>
@@ -306,6 +386,14 @@
                 </button>
             {/if}
         </div>
+        {#if numberProblem}
+            <p class="mt-2 text-[11px] text-red-500">{numberProblem}</p>
+        {/if}
+        {#if invoice.status === "draft" && sendBlockedReason && !numberProblem}
+            <p class="mt-2 text-[11px] text-muted">
+                „Als gesendet markieren“ ist noch nicht möglich. {sendBlockedReason}
+            </p>
+        {/if}
         <p class="mt-2 text-[11px] text-muted">
             {#if pdfAvailable}
                 PDF-Rechnungen werden im Standard-Exportordner der Desktop-App
@@ -345,7 +433,7 @@
         </div>
     </div>
 
-    <div class="px-6 py-4 flex flex-col gap-3">
+    <div class="px-6 py-4 flex flex-col gap-3" on:focusout={flushLineItemEdits}>
         <h3
             class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted"
         >
@@ -410,6 +498,7 @@
                             class="input text-[12px] tabular-nums"
                             type="number"
                             step="0.01"
+                            min="0"
                             value={li.unitPrice}
                             on:change={onLineItemNum(li.id, "unitPrice")}
                         /></label
@@ -421,7 +510,8 @@
                         ><input
                             class="input text-[12px] tabular-nums"
                             type="number"
-                            step="0.5"
+                            step="any"
+                            min="0"
                             value={li.quantity}
                             on:change={onLineItemNum(li.id, "quantity")}
                         /></label
@@ -433,6 +523,8 @@
                         ><input
                             class="input text-[12px] tabular-nums"
                             type="number"
+                            min="0"
+                            max="100"
                             value={li.vatRate}
                             on:change={onLineItemNum(li.id, "vatRate")}
                         /></label
@@ -576,14 +668,14 @@
             <div class="flex gap-8 text-[13px] text-secondary">
                 <span>Netto</span>
                 <span class="tabular-nums w-[100px] text-right"
-                    >{invoiceTotals.netto.toFixed(2)} €</span
+                    >{formatCents(invoiceTotals.nettoCents)} €</span
                 >
             </div>
             {#each invoiceTotals.vatEntries as v (v.rate)}
                 <div class="flex gap-8 text-[13px] text-secondary">
                     <span>MwSt. {v.rate} %</span>
                     <span class="tabular-nums w-[100px] text-right"
-                        >{v.amount.toFixed(2)} €</span
+                        >{formatCents(v.amountCents)} €</span
                     >
                 </div>
             {/each}
@@ -592,7 +684,7 @@
             >
                 <span>Gesamt</span>
                 <span class="tabular-nums w-[100px] text-right"
-                    >{invoiceTotals.total.toFixed(2)} €</span
+                    >{formatCents(invoiceTotals.totalCents)} €</span
                 >
             </div>
         </div>

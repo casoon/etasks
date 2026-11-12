@@ -1,18 +1,20 @@
 <!-- @module:projects -->
 <script lang="ts">
+    import { onDestroy } from "svelte";
     import { command } from "@casoon/origin-client";
     import {
         $clients as clientsStore,
         $projects as projectsStore,
         addClient,
         updateClient,
-        removeClient,
     } from "../../stores/projectStore";
+    import { deleteClientCascade } from "../../lib/taskActions";
     import { $tasks as tasksStore } from "../../stores/taskStore";
     import { $bridgeTimeEntries as timeEntriesStore, $bridgeInvoices as invoicesStore } from "../../stores/coreBridge";
     import { PROJECT_COLORS } from "../../domain/types";
     import type { Client } from "../../domain/types";
     import { isTauriAvailable } from "../../lib/platform";
+    import { $appConfig as appConfigStore } from "../../stores/configStore";
 
     export let onProjectOpen: ((projectId: string) => void) | undefined =
         undefined;
@@ -27,7 +29,8 @@
     let selectedClientId: string | null = null;
     let addingClient = false;
     let newClientName = "";
-    let clientFieldDebounce: ReturnType<typeof setTimeout> | null = null;
+    // One pending save per client and field; the client id is bound when the edit happens.
+    const pendingClientSaves = new Map<string, { timer: ReturnType<typeof setTimeout>; run: () => void }>();
     let editingClientName = false;
     let editClientNameVal = "";
     let csvExporting = false;
@@ -71,15 +74,43 @@
 
     function handleDeleteClient() {
         if (!selectedClient) return;
+        const clientProjectIds = new Set(
+            projects.filter((p) => p.clientId === selectedClient!.id).map((p) => p.id),
+        );
+        const taskCount = tasks.filter((t) => t.projectId && clientProjectIds.has(t.projectId)).length;
+        const invoiceCount = invoices.filter((i) => i.clientId === selectedClient!.id).length;
         if (
             confirm(
-                `Kunden "${selectedClient.name}" und alle Projekte löschen?`,
+                `Kunden "${selectedClient.name}" löschen?\n\nGelöscht werden ${clientProjectIds.size} Projekt(e) mit ${taskCount} Aufgabe(n), Rechnungspositionen, Zeiteinträgen und Terminen.` +
+                    (invoiceCount
+                        ? `\n${invoiceCount} Rechnung(en) bleiben erhalten und erscheinen unter „Ohne Kunde“.`
+                        : ""),
             )
         ) {
-            removeClient(selectedClient.id);
+            deleteClientCascade(selectedClient.id);
             selectedClientId = null;
         }
     }
+
+    function scheduleClientSave(clientId: string, field: keyof Client, value: unknown) {
+        const key = `${clientId}:${field}`;
+        const prev = pendingClientSaves.get(key);
+        if (prev) clearTimeout(prev.timer);
+        const run = () => {
+            pendingClientSaves.delete(key);
+            updateClient(clientId, { [field]: value } as Partial<Client>);
+        };
+        pendingClientSaves.set(key, { timer: setTimeout(run, 400), run });
+    }
+
+    function flushClientSaves() {
+        for (const { timer, run } of [...pendingClientSaves.values()]) {
+            clearTimeout(timer);
+            run();
+        }
+    }
+
+    onDestroy(flushClientSaves);
 
     function onClientStr(field: keyof Client) {
         return (e: Event) => {
@@ -87,14 +118,8 @@
             const value = (
                 e.currentTarget as HTMLInputElement | HTMLTextAreaElement
             ).value;
-            if (clientFieldDebounce) clearTimeout(clientFieldDebounce);
-            clientFieldDebounce = setTimeout(
-                () =>
-                    updateClient(selectedClientId!, {
-                        [field]: value,
-                    } as Partial<Client>),
-                400,
-            );
+            if (field === "name" && !value.trim()) return;
+            scheduleClientSave(selectedClientId, field, value);
         };
     }
 
@@ -102,15 +127,7 @@
         return (e: Event) => {
             if (!selectedClientId) return;
             const raw = (e.currentTarget as HTMLInputElement).value;
-            const value = parseFloat(raw) || undefined;
-            if (clientFieldDebounce) clearTimeout(clientFieldDebounce);
-            clientFieldDebounce = setTimeout(
-                () =>
-                    updateClient(selectedClientId!, {
-                        [field]: value,
-                    } as Partial<Client>),
-                400,
-            );
+            scheduleClientSave(selectedClientId, field, parseFloat(raw) || undefined);
         };
     }
 
@@ -176,20 +193,29 @@
                         entry.startAt,
                         entry.endAt ?? "",
                         minutes,
-                        Math.round((minutes / 60) * 100) / 100,
+                        (Math.round((minutes / 60) * 100) / 100)
+                            .toString()
+                            .replace(".", ","),
                         invoice?.invoiceNumber ?? "",
                         invoice?.status ?? "",
                     ];
                 }),
         ];
-        const csv = rows.map((row) => row.map(csvEscape).join(";")).join("\n");
+        // UTF-8 BOM so Excel reads umlauts correctly
+        const csv =
+            "\uFEFF" +
+            rows.map((row) => row.map(csvEscape).join(";")).join("\n");
         const filename = `etasks-${selectedClient.name.toLowerCase().replace(/[^a-z0-9]+/gi, "-")}-abrechnung.csv`;
 
         csvExporting = true;
         csvMessage = "";
         try {
             if (isTauriAvailable()) {
-                await command("export_to_file", { json: csv, filename });
+                await command("export_to_file", {
+                    json: csv,
+                    filename,
+                    directory: $appConfigStore?.default_export_dir ?? null,
+                });
             } else {
                 const blob = new Blob([csv], {
                     type: "text/csv;charset=utf-8",
@@ -343,7 +369,7 @@
                 {/each}
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 gap-3" on:focusout={flushClientSaves}>
                 <label class="flex flex-col gap-1 col-span-2">
                     <span class="text-xs text-muted font-medium"
                         >Kundenname</span
@@ -352,6 +378,10 @@
                         class="input"
                         value={selectedClient.name}
                         on:input={onClientStr("name")}
+                        on:blur={(e) => {
+                            if (!e.currentTarget.value.trim())
+                                e.currentTarget.value = selectedClient.name;
+                        }}
                     />
                 </label>
                 <label class="flex flex-col gap-1">

@@ -1,5 +1,6 @@
 <!-- @module:projects -->
 <script lang="ts">
+    import { onDestroy } from "svelte";
     import {
         $clients as clientsStore,
         $projects as projectsStore,
@@ -10,9 +11,9 @@
         updateClient,
         updateProject,
         assignClientToProject,
-        removeProject,
     } from "../../stores/projectStore";
     import { $tasks as tasksStore } from "../../stores/taskStore";
+    import { deleteProjectCascade } from "../../lib/taskActions";
     import { $timeEntries as timeEntriesStore } from "../../stores/timerStore";
     import { $projectsView as projectsViewStore } from "../../stores/uiStore";
     import {
@@ -40,7 +41,15 @@
     import { generateOffer, type OfferData } from "../../lib/offerService";
     import KanbanBoard from "./KanbanBoard.svelte";
     import { $termine as termineStore, addTermin, removeTermin } from "../../stores/terminStore";
-    import type { TerminType } from "../../domain/types";
+    import {
+        calcInvoiceTotals,
+        formatCents,
+        isValidQuantity,
+        isValidUnitPrice,
+        lineTotalCents,
+    } from "../../lib/invoiceMoney";
+    import type { BillingItem, TerminType } from "../../domain/types";
+    import { saveAsTemplate } from "../../stores/templateStore";
     import TemplatePickerModal from "../modals/TemplatePickerModal.svelte";
     import ClientManager from "../modals/ClientManager.svelte";
     import ServiceCatalog from "../modals/ServiceCatalog.svelte";
@@ -208,7 +217,7 @@
                       ? "Pauschal"
                       : "Einheit";
             const unitPrice = (item.unitPriceCents ?? 0) / 100;
-            const total = Math.round(quantity * unitPrice * 100) / 100;
+            const total = formatCents(lineTotalCents(unitPrice, quantity));
             return {
                 position: index + 1,
                 title: item.title,
@@ -219,14 +228,23 @@
                 quantity: item.billingType === "fixed" ? "1" : quantity,
                 unit,
                 unit_price: { amount: unitPrice.toFixed(2), currency: "EUR" },
-                total: { amount: total.toFixed(2), currency: "EUR" },
+                total: { amount: total, currency: "EUR" },
             };
         });
 
-        const subtotal = offerItems.reduce(
-            (sum, item) => sum + Number(item.total.amount),
-            0,
+        // Angebotspositionen haben keinen eigenen MwSt.-Satz: Profil-Standard, sonst 19 %.
+        const vatRate = profile.default_vat_rate ?? 19;
+        const offerTotals = calcInvoiceTotals(
+            offerItems.map((item) => ({
+                unitPrice: Number(item.total.amount),
+                quantity: 1,
+                vatRate,
+            })),
         );
+        const money = (cents: number) => ({
+            amount: formatCents(cents),
+            currency: "EUR",
+        });
         const additionalTerms = (profile.offer_additional_terms ?? "")
             .split("\n")
             .map((line) => line.trim())
@@ -256,8 +274,13 @@
             },
             items: offerItems,
             totals: {
-                subtotal: { amount: subtotal.toFixed(2), currency: "EUR" },
-                total: { amount: subtotal.toFixed(2), currency: "EUR" },
+                subtotal: money(offerTotals.nettoCents),
+                vat_breakdown: offerTotals.vatEntries.map((entry) => ({
+                    rate: { percentage: entry.rate },
+                    base: money(entry.baseCents),
+                    amount: money(entry.amountCents),
+                })),
+                total: money(offerTotals.totalCents),
             },
             terms: {
                 validity: `Dieses Angebot ist gueltig bis ${validUntil.toLocaleDateString("de-DE")}`,
@@ -340,16 +363,49 @@
     // Template picker
     let showTemplatePicker = false;
 
-    // Notes debounce
-    let notesDebounce: ReturnType<typeof setTimeout> | null = null;
+    // Save the project's tasks as a custom template
+    let savingTemplate = false;
+    $: if (selectedId) savingTemplate = false;
+    let templateName = "";
+    function handleSaveAsTemplate() {
+        const name = templateName.trim();
+        const projectTasks = allTasks.filter((t) => t.projectId === selectedId && !t.recurrence);
+        if (!name) return;
+        if (projectTasks.length === 0) {
+            toast("Das Projekt hat noch keine Aufgaben.", "error");
+            return;
+        }
+        saveAsTemplate(
+            name,
+            projectTasks.map((t) => ({
+                title: t.title,
+                estimatedMinutes: t.estimatedMinutes ?? 30,
+                kanbanStatus: "backlog" as const,
+                tags: t.tags,
+            })),
+        );
+        savingTemplate = false;
+        toast(`Template „${name}“ gespeichert`, "success");
+    }
+
+    // Notes debounce: the project id is bound when the edit happens; flushed on blur,
+    // when another project is selected and when the view is left.
+    let pendingNotes: { projectId: string; value: string; timer: ReturnType<typeof setTimeout> } | null = null;
+    function flushNotes() {
+        if (!pendingNotes) return;
+        const { projectId, value, timer } = pendingNotes;
+        clearTimeout(timer);
+        pendingNotes = null;
+        updateProject(projectId, { notes: value });
+    }
     function handleNotesChange(value: string) {
         if (!selectedId) return;
-        if (notesDebounce) clearTimeout(notesDebounce);
-        notesDebounce = setTimeout(
-            () => updateProject(selectedId!, { notes: value }),
-            600,
-        );
+        if (pendingNotes && pendingNotes.projectId !== selectedId) flushNotes();
+        if (pendingNotes) clearTimeout(pendingNotes.timer);
+        pendingNotes = { projectId: selectedId, value, timer: setTimeout(flushNotes, 600) };
     }
+    $: if (pendingNotes && pendingNotes.projectId !== selectedId) flushNotes();
+    onDestroy(flushNotes);
 
     function handleAddClient(e: Event) {
         e.preventDefault();
@@ -439,33 +495,84 @@
     let addingBillingItem = false;
     let expandedBillingItemId: string | null = null;
 
+    const BILLING_TYPE_LABELS = {
+        hourly: "Stundenbasiert",
+        fixed: "Festpreis",
+        unit: "Einheit",
+    } as const;
+
+    function formatEuro(cents: number): string {
+        return (
+            (cents / 100).toLocaleString("de-DE", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }) + " €"
+        );
+    }
+
     interface BillingItemDraft {
         title: string;
         billingType: "fixed" | "hourly" | "unit";
         unitPriceEuro: string;
+        quantity: string;
     }
 
     const emptyBillingDraft = (): BillingItemDraft => ({
         title: "",
         billingType: "hourly",
         unitPriceEuro: "",
+        quantity: "",
     });
     let billingDraft: BillingItemDraft = emptyBillingDraft();
+    let editingBillingItemId: string | null = null;
+
+    function editBillingItem(item: BillingItem) {
+        editingBillingItemId = item.id;
+        billingDraft = {
+            title: item.title,
+            billingType: item.billingType,
+            unitPriceEuro:
+                item.unitPriceCents != null ? String(item.unitPriceCents / 100) : "",
+            quantity: item.quantity != null ? String(item.quantity) : "",
+        };
+        addingBillingItem = true;
+    }
+
+    function closeBillingForm() {
+        addingBillingItem = false;
+        editingBillingItemId = null;
+        billingDraft = emptyBillingDraft();
+    }
 
     function saveBillingItem() {
         if (!billingDraft.title.trim() || !selectedId) return;
-        const unitPriceCents = billingDraft.unitPriceEuro
-            ? Math.round(parseFloat(billingDraft.unitPriceEuro) * 100)
+        const unitPrice = billingDraft.unitPriceEuro
+            ? parseFloat(billingDraft.unitPriceEuro)
             : null;
-        addBillingItem(selectedId, {
+        if (unitPrice != null && !isNaN(unitPrice) && !isValidUnitPrice(unitPrice)) {
+            toast("Der Einzelpreis darf nicht negativ sein.", "error", 3500);
+            return;
+        }
+        const quantity =
+            billingDraft.billingType === "unit" && billingDraft.quantity
+                ? parseFloat(billingDraft.quantity)
+                : null;
+        if (quantity != null && !isValidQuantity(quantity)) {
+            toast("Die Menge muss größer als 0 sein.", "error", 3500);
+            return;
+        }
+        const unitPriceCents = unitPrice != null ? Math.round(unitPrice * 100) : null;
+        const data = {
             title: billingDraft.title.trim(),
             billingType: billingDraft.billingType,
             unitPriceCents: isNaN(unitPriceCents ?? NaN)
                 ? null
                 : unitPriceCents,
-        });
-        billingDraft = emptyBillingDraft();
-        addingBillingItem = false;
+            quantity,
+        };
+        if (editingBillingItemId) updateBillingItem(editingBillingItemId, data);
+        else addBillingItem(selectedId, data);
+        closeBillingForm();
     }
 
     function toggleBillingItemExpand(id: string) {
@@ -757,6 +864,25 @@
                         on:click={() => (showTemplatePicker = true)}
                         >Template anwenden</button
                     >
+                    {#if savingTemplate}
+                        <form class="flex items-center gap-1" on:submit|preventDefault={handleSaveAsTemplate}>
+                            <!-- svelte-ignore a11y-autofocus -->
+                            <input
+                                class="border border-border rounded-md px-2 py-1 text-[12px] bg-bg outline-none focus:border-accent w-[140px]"
+                                placeholder="Template-Name"
+                                bind:value={templateName}
+                                autofocus
+                            />
+                            <button type="submit" class="px-2 py-1 bg-accent text-white rounded-lg text-[12px] font-medium hover:opacity-90">Speichern</button>
+                            <button type="button" class="px-2 py-1 text-secondary rounded-lg text-[12px] hover:bg-gray-100" on:click={() => (savingTemplate = false)}>Abbrechen</button>
+                        </form>
+                    {:else}
+                        <button
+                            class="px-3 py-1 text-secondary rounded-lg text-[13px] hover:bg-gray-100 transition-colors whitespace-nowrap"
+                            on:click={() => { templateName = selectedProject?.name ?? ""; savingTemplate = true; }}
+                            >Als Template speichern</button
+                        >
+                    {/if}
                     {#if isTauriAvailable()}
                         <button
                             class="px-3 py-1 text-secondary rounded-lg text-[13px] hover:bg-gray-100 transition-colors whitespace-nowrap"
@@ -816,6 +942,7 @@
                         class="w-full px-3 py-3 border border-border rounded-lg text-[13px] font-mono leading-relaxed resize-y outline-none bg-bg text-primary min-h-[80px] focus:border-accent focus:bg-surface"
                         value={selectedProject.notes ?? ""}
                         on:input={handleNotesInput}
+                        on:blur={flushNotes}
                         placeholder="Tech-Stack, Client-Zugänge, besondere Anforderungen, Code-Snippets..."
                         rows={4}
                     />
@@ -836,6 +963,7 @@
                             class="px-2 py-0.5 text-[11px] font-medium rounded-lg border border-border text-secondary hover:bg-bg hover:text-primary transition-colors"
                             on:click={() => {
                                 addingBillingItem = true;
+                                editingBillingItemId = null;
                                 billingDraft = emptyBillingDraft();
                             }}>+ Hinzufügen</button
                         >
@@ -854,9 +982,7 @@
                                 placeholder="Bezeichnung..."
                                 autofocus
                                 on:keydown={(e) => {
-                                    if (e.key === "Escape") {
-                                        addingBillingItem = false;
-                                    }
+                                    if (e.key === "Escape") closeBillingForm();
                                     if (e.key === "Enter") saveBillingItem();
                                 }}
                             />
@@ -864,29 +990,38 @@
                                 class="border border-border rounded-md px-2 py-1 text-[12px] bg-bg outline-none text-secondary"
                                 bind:value={billingDraft.billingType}
                             >
-                                <option value="hourly">Stunden</option>
-                                <option value="fixed">Pauschal</option>
-                                <option value="unit">Einheit</option>
+                                <option value="hourly">{BILLING_TYPE_LABELS.hourly}</option>
+                                <option value="fixed">{BILLING_TYPE_LABELS.fixed}</option>
+                                <option value="unit">{BILLING_TYPE_LABELS.unit}</option>
                             </select>
                             <input
                                 class="w-24 px-2 py-1 border border-border rounded-md text-[13px] outline-none bg-surface focus:border-accent"
                                 bind:value={billingDraft.unitPriceEuro}
-                                placeholder="€ 0.00"
+                                placeholder="Preis in €"
                                 type="number"
                                 step="0.01"
+                                min="0"
                             />
+                            {#if billingDraft.billingType === "unit"}
+                                <input
+                                    class="w-20 px-2 py-1 border border-border rounded-md text-[13px] outline-none bg-surface focus:border-accent"
+                                    bind:value={billingDraft.quantity}
+                                    placeholder="Menge"
+                                    type="number"
+                                    step="any"
+                                    min="0"
+                                />
+                            {/if}
                         </div>
                         <div class="flex gap-2">
                             <button
                                 class="px-3 py-1 rounded-lg bg-accent text-white text-[12px] font-medium hover:opacity-90 transition-opacity"
-                                on:click={saveBillingItem}>Hinzufügen</button
+                                on:click={saveBillingItem}
+                                >{editingBillingItemId ? "Speichern" : "Hinzufügen"}</button
                             >
                             <button
                                 class="px-3 py-1 rounded-lg border border-border text-secondary text-[12px] hover:bg-bg transition-colors"
-                                on:click={() => {
-                                    addingBillingItem = false;
-                                    billingDraft = emptyBillingDraft();
-                                }}>Abbrechen</button
+                                on:click={closeBillingForm}>Abbrechen</button
                             >
                         </div>
                     </div>
@@ -927,16 +1062,12 @@
                                       ? 'border-purple-200 text-purple-600 bg-purple-50'
                                       : 'border-orange-200 text-orange-600 bg-orange-50'}"
                             >
-                                {item.billingType === "hourly"
-                                    ? "Stundenbasiert"
-                                    : item.billingType === "fixed"
-                                      ? "Festpreis"
-                                      : "Pauschal"}
+                                {BILLING_TYPE_LABELS[item.billingType]}
                             </span>
                             {#if item.unitPriceCents != null}
                                 <span
                                     class="text-[12px] text-secondary font-mono"
-                                    >{(item.unitPriceCents / 100).toFixed(2)} €</span
+                                    >{#if item.billingType === "unit" && item.quantity != null}{item.quantity.toLocaleString("de-DE")} × {/if}{formatEuro(item.unitPriceCents)}</span
                                 >
                             {/if}
                             {#if isUnlocked}
@@ -1012,7 +1143,12 @@
                                         {/each}
                                     </div>
                                 {/if}
-                                <div class="flex justify-end pt-1">
+                                <div class="flex justify-end gap-2 pt-1">
+                                    <button
+                                        class="px-2 py-0.5 text-[11px] text-secondary border border-border rounded-md hover:bg-surface transition-colors"
+                                        on:click={() => editBillingItem(item)}
+                                        >Position bearbeiten</button
+                                    >
                                     <button
                                         class="px-2 py-0.5 text-[11px] text-red-500 border border-red-200 rounded-md hover:bg-red-50 transition-colors"
                                         on:click={() => {
@@ -1112,10 +1248,10 @@
                     on:click={() => {
                         if (
                             confirm(
-                                `Projekt „${selectedProject?.name}" wirklich löschen?`,
+                                `Projekt „${selectedProject?.name}" wirklich löschen?\n\nGelöscht werden auch ${allTasks.filter((t) => t.projectId === selectedProject?.id).length} Aufgabe(n), Rechnungspositionen, Zeiteinträge und Termine des Projekts. Rechnungen bleiben erhalten.`,
                             )
                         )
-                            removeProject(selectedProject.id);
+                            deleteProjectCascade(selectedProject.id);
                     }}>Projekt löschen</button
                 >
             </div>

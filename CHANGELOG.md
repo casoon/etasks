@@ -7,6 +7,7 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Added
 
+- **Project templates:** "Als Template speichern" on a project saves its tasks as a custom template; custom templates can be deleted in the template picker.
 - **Releases:** every installer ships with a `.sha256` file and a signed build provenance
   attestation. Details: [Verify a download](https://github.com/casoon/etasks#verify-a-download).
 
@@ -46,3 +47,13 @@ All notable changes to eTasks are listed here. eTasks follows
 - **Settings:** saving the "Arbeitsbereich" tab no longer resets the invoice prefix and payment term of the profile; both fields now read and write the profile only.
 - **Workspaces:** switching to a workspace whose database file is gone shows an error instead of silently creating an empty one; "Neuen Arbeitsbereich hinzufügen" creates its own subfolder and never reopens or renames an existing workspace.
 - **Setup:** "Vorhandene Arbeitsbereiche" also finds workspaces created by the wizard (`Documents/<name>/` and the default workspace folder) and lists them by folder name; the path preview updates while typing the name or changing the location.
+- **Invoices:** the net amount is the sum of the rounded line totals; net, VAT per rate and gross are calculated in cents, so the editor and the PDF show the same figures.
+- **Invoices:** "PDF erzeugen" produces a PDF again: the invoice dates and the VAT rate per breakdown row are sent in the shape the template reads, the VAT base is the net of that rate, decimal VAT rates are accepted, and a missing bank name or BIC in the profile no longer aborts the PDF.
+- **Offers:** the offer PDF shows net, VAT and total; the VAT rate is the profile default (19 % if unset), since project positions have no VAT rate of their own.
+- **Invoices:** the invoice editor takes the customer number from the selected client (also when empty) and drops task links when the client changes; "Als gesendet markieren" needs a client and a position; price, quantity and VAT rate are range-checked in the editor, service catalog and project positions; an empty client name is not saved; the header fields have labels.
+- **Invoices:** the invoice number counter is kept per workspace (existing workspaces continue from the profile counter, never below an existing number) and handed out one at a time, so a double click no longer creates two invoices with the same number; a duplicate or empty number in the editor blocks PDF and sending; a PDF never overwrites another invoice's file (suffix `-2`, `-3`, …); the number field shows the real format; "Rechnungszähler zurücksetzen" only resets the current workspace.
+- **Reports:** the completion date comes from `completedAt` (`updatedAt` only for old tasks without it); tracked time is attributed by the day of the time entry, time on open tasks and on deleted tasks appears, and estimates are shown in their own "Geschätzt" column instead of counting as tracked time. The project PDF lists tracked time per task and counts time of deleted tasks.
+- **Clients and projects:** deleting a project or client also deletes its tasks (with calendar blocks), their time entries, billing items with links and appointments, in the database as well; the confirmation lists what goes, invoices are kept (shown under "Ohne Kunde"). Deleting a task removes its billing item links, so the item can become "Abrechenbar"; links to already deleted tasks are ignored. The invoice list no longer fails on invoices of a deleted client.
+- **Clients, project notes, invoices:** delayed saves no longer lose input or write into another record: the client form keeps one timer per client and field, project notes and invoice line item texts are bound to their record and saved on blur, when switching and when leaving the view.
+- **Project positions:** type labels are the same in the dropdown and the badge (Stundenbasiert, Festpreis, Einheit); positions can be edited after creating them, unit positions take a quantity, and prices show with a decimal comma.
+- **Export:** the client CSV uses a decimal comma for hours, starts with a UTF-8 BOM so Excel shows umlauts, and goes to the configured export folder; the project report creates the export folder if it is missing.

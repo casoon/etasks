@@ -43,6 +43,11 @@ export interface OfferData {
   items: OfferItem[];
   totals: {
     subtotal: { amount: string | number; currency?: string };
+    vat_breakdown: {
+      rate: { percentage: number };
+      base: { amount: string | number; currency?: string };
+      amount: { amount: string | number; currency?: string };
+    }[];
     total: { amount: string | number; currency?: string };
   };
   terms: {
