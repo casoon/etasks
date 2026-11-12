@@ -62,7 +62,7 @@ fn build_pdf(project: ProjectReportInput) -> Result<PdfResult, String> {
     let mut task_table = AuditTable::new(vec![
         TableColumn::new("Aufgabe").with_width("55%"),
         TableColumn::new("Status").with_width("25%"),
-        TableColumn::new("Dauer").with_width("20%"),
+        TableColumn::new("Erfasst").with_width("20%"),
     ])
     .with_title("Aufgaben");
 
