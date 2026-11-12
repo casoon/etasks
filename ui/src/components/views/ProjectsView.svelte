@@ -22,7 +22,7 @@
         missingProfileMessage,
     } from "../../stores/configStore";
     import { toast } from "../../stores/toastStore";
-    import { today as todayKey, toDateKey } from "../../domain/dateUtils";
+    import { entrySeconds, today as todayKey, toDateKey } from "../../domain/dateUtils";
     import { PROJECT_COLORS, type Task } from "../../domain/types";
     import {
         $billingItems as billingItemsStore,
@@ -480,9 +480,9 @@
             .length;
     const projectTrackedMinutes = (pid: string) => {
         const taskIds = new Set(allTasks.filter(t => t.projectId === pid).map(t => t.id));
-        return allTimeEntries
-            .filter(e => taskIds.has(e.taskId) && e.durationMinutes)
-            .reduce((sum, e) => sum + (e.durationMinutes ?? 0), 0);
+        return Math.round(allTimeEntries
+            .filter(e => taskIds.has(e.taskId))
+            .reduce((sum, e) => sum + entrySeconds(e), 0) / 60);
     };
     function fmtMinutes(min: number): string {
         if (min < 60) return `${min} min`;

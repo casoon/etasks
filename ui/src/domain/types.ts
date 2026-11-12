@@ -43,7 +43,8 @@ export interface TimeEntry {
   projectId?: string;
   startAt: string; // ISO
   endAt?: string | null; // ISO, null = läuft noch
-  durationMinutes?: number | null; // null solange läuft, gesetzt beim Stopp
+  durationMinutes?: number | null; // gerundet aus durationSeconds; null solange läuft
+  durationSeconds?: number | null; // sekundengenau; fehlt bei Altdaten (dann durationMinutes * 60)
   isRunning: boolean;
   updatedAt: string;
 }

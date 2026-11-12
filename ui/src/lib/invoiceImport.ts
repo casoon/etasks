@@ -1,7 +1,7 @@
 // @module:billing
 // Rechnungspositionen aus Abrechnungsdaten: Projekt-Positionen und erfasste Zeit.
 import type { BillingItem, InvoiceLineItem, Project, TimeEntry } from "../domain/types";
-import { formatDateDe, toDateKeyFromIso } from "../domain/dateUtils";
+import { entrySeconds, formatDateDe, toDateKeyFromIso } from "../domain/dateUtils";
 
 const UNIT_BY_TYPE = { hourly: "Stunde", fixed: "Pauschal", unit: "Einheit" } as const;
 
@@ -42,7 +42,8 @@ export function trackedTimeByProject(
 ): TrackedProject[] {
   const byProject = new Map<string, TrackedProject>();
   for (const entry of entries) {
-    if (!entry.durationMinutes || entry.durationMinutes <= 0) continue;
+    const minutes = entrySeconds(entry) / 60;
+    if (minutes <= 0) continue;
     const day = toDateKeyFromIso(entry.startAt);
     if (!day || (from && day < from) || (to && day > to)) continue;
     const projectId = entry.projectId ?? taskProjectId(entry.taskId);
@@ -54,11 +55,16 @@ export function trackedTimeByProject(
       minutes: 0,
       tasks: [],
     };
-    row.minutes += entry.durationMinutes;
+    row.minutes += minutes;
     const taskRow = row.tasks.find((t) => t.taskId === entry.taskId);
-    if (taskRow) taskRow.minutes += entry.durationMinutes;
-    else row.tasks.push({ taskId: entry.taskId, minutes: entry.durationMinutes });
+    if (taskRow) taskRow.minutes += minutes;
+    else row.tasks.push({ taskId: entry.taskId, minutes });
     byProject.set(project.id, row);
+  }
+  // Sum exact seconds first, round to whole minutes only once per row.
+  for (const row of byProject.values()) {
+    row.minutes = Math.round(row.minutes);
+    for (const t of row.tasks) t.minutes = Math.round(t.minutes);
   }
   return [...byProject.values()].sort((a, b) => a.projectName.localeCompare(b.projectName));
 }
