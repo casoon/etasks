@@ -3,6 +3,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { $quickAddOpen as openStore, $quickAddProjectId as projectIdStore } from '../../stores/uiStore';
   import { $projects as projectsStore } from '../../stores/projectStore';
+  import { quickAddShortcutLabel } from '../../lib/platform';
   import { addTask } from '../../stores/taskStore';
 
   let title = '';
@@ -34,7 +35,6 @@
   }
 
   function onKey(e: KeyboardEvent) {
-    if (e.metaKey && e.key === 'k') { e.preventDefault(); openStore.set(true); }
     if (e.key === 'Escape') openStore.set(false);
   }
 
@@ -54,7 +54,7 @@
     aria-modal="true"
     aria-label="Aufgabe hinzufügen"
   >
-    <p class="text-[11px] font-bold uppercase tracking-[0.06em] text-muted px-4 py-2 border-b border-border-subtle">⌘K — Neue Aufgabe</p>
+    <p class="text-[11px] font-bold uppercase tracking-[0.06em] text-muted px-4 py-2 border-b border-border-subtle">{quickAddShortcutLabel()} — Neue Aufgabe</p>
     <form on:submit={handleSubmit}>
       <input
         bind:this={inputEl}

@@ -23,3 +23,4 @@ All notable changes to eTasks are listed here. eTasks follows
 ### Fixed
 
 - **UI:** primary buttons (`bg-accent`) are visible again; the global button reset no longer overrides Tailwind background utilities.
+- **Quick add:** opens with Ctrl+K as well as Cmd+K, shows the shortcut for the current platform, and has a "Neue Aufgabe" button in the top bar.

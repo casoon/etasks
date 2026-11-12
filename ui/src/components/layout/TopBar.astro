@@ -5,6 +5,11 @@
   <div id="topbar-date" class="text-[15px] font-semibold text-primary"></div>
 
   <div class="flex items-center gap-3">
+    <button
+      id="quick-add-btn"
+      class="px-3 py-1 rounded-md border border-border text-[13px] font-medium text-secondary transition-colors hover:text-primary hover:bg-bg"
+      title="Neue Aufgabe"
+    >+ Neue Aufgabe <span id="quick-add-hint" class="ml-1 text-[11px] text-muted"></span></button>
     <!-- Projekte/Kunden/Leistungen switch (nur bei Projekte) -->
     <div id="projects-switch" class="flex bg-bg rounded-lg p-0.5 gap-0.5" role="group" aria-label="Projektansicht" style="display:none">
       <button
@@ -24,10 +29,16 @@
 </header>
 
 <script>
-  import { $navItem, $projectsView } from '../../stores/uiStore';
+  import { $navItem, $projectsView, $quickAddOpen } from '../../stores/uiStore';
   import { $selectedProjectId } from '../../stores/projectStore';
   import { formatDate } from '../../domain/dateUtils';
   import { $activeDate } from '../../stores/taskStore';
+
+  import { quickAddShortcutLabel } from '../../lib/platform';
+
+  // Quick-add entry point
+  document.getElementById('quick-add-hint')!.textContent = quickAddShortcutLabel();
+  document.getElementById('quick-add-btn')!.addEventListener('click', () => $quickAddOpen.set(true));
 
   // Update date display
   function updateDate() {

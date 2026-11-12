@@ -455,7 +455,7 @@
         </div>
         <div class="info-card">
             <span class="info-card__label">Kurzbefehle</span>
-            <strong class="info-card__value">Cmd/Ctrl + K</strong>
+            <strong class="info-card__value">Cmd/Strg + K</strong>
             <p class="info-card__text">
                 Öffnet die Schnellanlage für Aufgaben und Einträge.
             </p>

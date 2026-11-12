@@ -17,6 +17,16 @@ export function isTauriAvailable(): boolean {
   );
 }
 
+/** True on macOS, where the quick-add shortcut is Cmd instead of Ctrl. */
+export function isMac(platform: string = typeof navigator !== "undefined" ? navigator.platform : ""): boolean {
+  return /^Mac/i.test(platform);
+}
+
+/** Label of the quick-add shortcut for the current platform. */
+export function quickAddShortcutLabel(mac: boolean = isMac()): string {
+  return mac ? "⌘K" : "Strg+K";
+}
+
 /**
  * Turn an absolute file path into an asset-protocol URL the webview may load.
  *
