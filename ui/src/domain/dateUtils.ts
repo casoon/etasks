@@ -47,6 +47,11 @@ export function formatTrackedTime(seconds: number): string {
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
+/** Dauer eines Zeiteintrags in Sekunden; Altdaten kennen nur ganze Minuten. */
+export function entrySeconds(e: { durationSeconds?: number | null; durationMinutes?: number | null }): number {
+  return e.durationSeconds ?? (e.durationMinutes ?? 0) * 60;
+}
+
 export function toDateKeyFromIso(value: string | null | undefined): string | null {
   if (!value) return null;
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;

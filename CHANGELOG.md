@@ -7,6 +7,9 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Added
 
+- **Time tracking:** time entries can be edited (task, day, start, end) and deleted in the Zeiterfassung list, and added by hand with "Eintrag hinzufügen".
+- **Time tracking:** if a timer was left running (started on an earlier day or open for over 12 hours), the app asks at start whether to stop it now, stop it at a time you enter, or discard it.
+- **Time tracking:** the timer button (▶/⏹) is available in Heute, in the Tagesplanung rows and on project board cards. A finished Pomodoro work session records a time entry for the focus task.
 - **Invoices:** "Aus Projekt übernehmen" adds a client's project billing items as line items; "Erfasste Zeit übernehmen" adds tracked time per project for a date range, priced with the client's hourly rate (fallback: profile rate) and rounded to quarter hours. The task picker shows tracked time instead of estimates.
 - **Project templates:** "Als Template speichern" on a project saves its tasks as a custom template; custom templates can be deleted in the template picker.
 - **Releases:** every installer ships with a `.sha256` file and a signed build provenance
@@ -24,6 +27,10 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Fixed
 
+- **Time tracking:** entries are stored to the second; short sessions no longer round to 0 min and sums, reports, invoices import and CSV add up exact seconds. The running timer shows a live clock, appears as "läuft" in the day list and counts in the totals.
+- **Time tracking:** switching the timer to another task refreshes the task times; marking a task done stops its running timer.
+- **Daily close:** "Zeit heute" uses the local day and includes the running timer.
+- **Analytics:** the week's tracked time follows the local week start.
 - **UI:** primary buttons (`bg-accent`) are visible again; the global button reset no longer overrides Tailwind background utilities.
 - **Quick add:** opens with Ctrl+K as well as Cmd+K, shows the shortcut for the current platform, and has a "Neue Aufgabe" button in the top bar.
 - **Daily close:** Escape and a close button dismiss the dialog without saving, and the summary updates after moving a task to tomorrow.

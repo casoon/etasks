@@ -1,7 +1,7 @@
 // @module:reporting
 import { command } from '@casoon/origin-client';
 import type { Task, Project, TimeEntry } from '../domain/types';
-import { toDateKeyFromIso } from '../domain/dateUtils';
+import { entrySeconds, toDateKeyFromIso } from '../domain/dateUtils';
 import { $appConfig } from '../stores/configStore';
 
 export interface ProjectReportInput {
@@ -35,13 +35,13 @@ export function buildReportRows(
   inScope: (projectId: string | undefined) => boolean,
 ): ReportRow[] {
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
-  const tracked = new Map<string, { minutes: number; lastDay: string; projectId?: string }>();
+  const tracked = new Map<string, { seconds: number; lastDay: string; projectId?: string }>();
   for (const e of timeEntries) {
-    if (!e.durationMinutes) continue;
+    if (!entrySeconds(e)) continue;
     const day = toDateKeyFromIso(e.startAt);
     if (!day || day < from || day > to) continue;
-    const cur = tracked.get(e.taskId) ?? { minutes: 0, lastDay: '', projectId: e.projectId };
-    cur.minutes += e.durationMinutes;
+    const cur = tracked.get(e.taskId) ?? { seconds: 0, lastDay: '', projectId: e.projectId };
+    cur.seconds += entrySeconds(e);
     if (day > cur.lastDay) cur.lastDay = day;
     tracked.set(e.taskId, cur);
   }
@@ -59,7 +59,7 @@ export function buildReportRows(
       task,
       completedDate: doneInRange ? doneDay! : t!.lastDay,
       done: doneInRange,
-      trackedMinutes: t?.minutes ?? 0,
+      trackedMinutes: Math.round((t?.seconds ?? 0) / 60),
       estimatedMinutes: task.estimatedMinutes ?? 0,
     });
   }
@@ -70,7 +70,7 @@ export function buildReportRows(
       task: null,
       completedDate: t.lastDay,
       done: false,
-      trackedMinutes: t.minutes,
+      trackedMinutes: Math.round(t.seconds / 60),
       estimatedMinutes: 0,
     });
   }
@@ -92,7 +92,7 @@ export function buildProjectReportInput(
     const task = tasks.find((t) => t.id === e.taskId);
     return task ? task.projectId === project.id : e.projectId === project.id;
   });
-  const trackedSeconds = projectEntries.reduce((s, e) => s + (e.durationMinutes ?? 0) * 60, 0);
+  const trackedSeconds = projectEntries.reduce((s, e) => s + entrySeconds(e), 0);
 
   const plannedMinutes = projectTasks.reduce((s, t) => s + (t.estimatedMinutes ?? 0), 0);
   const completionRate =
@@ -111,9 +111,9 @@ export function buildProjectReportInput(
     tasks: projectTasks.map((t) => ({
       title: t.title,
       status: t.status,
-      duration_minutes: projectEntries
-        .filter((e) => e.taskId === t.id)
-        .reduce((s, e) => s + (e.durationMinutes ?? 0), 0),
+      duration_minutes: Math.round(
+        projectEntries.filter((e) => e.taskId === t.id).reduce((s, e) => s + entrySeconds(e), 0) / 60,
+      ),
     })),
   };
 }

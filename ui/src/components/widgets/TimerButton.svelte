@@ -2,7 +2,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { $activeTaskId as activeTaskIdStore, $activeEntry as activeEntryStore, startTaskTimer, stopActiveTimer } from '../../stores/timerStore';
-  import { formatTrackedTime, formatElapsed } from '../../domain/dateUtils';
+  import { formatTrackedTime, formatElapsed, entrySeconds } from '../../domain/dateUtils';
   import { $timeEntries as timeEntriesStore } from '../../stores/timerStore';
 
   export let taskId: string;
@@ -26,7 +26,7 @@
   onDestroy(() => { if (interval) clearInterval(interval); });
 
   function getTaskTrackedSeconds(id: string): number {
-    return $timeEntriesStore.filter(e => e.taskId === id && e.endAt).reduce((s, e) => s + (e.durationMinutes ?? 0) * 60, 0);
+    return $timeEntriesStore.filter(e => e.taskId === id && e.endAt).reduce((s, e) => s + entrySeconds(e), 0);
   }
 
   $: trackedSeconds = getTaskTrackedSeconds(taskId);

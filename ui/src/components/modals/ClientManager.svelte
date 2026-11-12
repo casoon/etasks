@@ -12,6 +12,7 @@
     import { $tasks as tasksStore } from "../../stores/taskStore";
     import { $bridgeTimeEntries as timeEntriesStore, $bridgeInvoices as invoicesStore } from "../../stores/coreBridge";
     import { PROJECT_COLORS } from "../../domain/types";
+    import { entrySeconds } from "../../domain/dateUtils";
     import type { Client } from "../../domain/types";
     import { isTauriAvailable } from "../../lib/platform";
     import { $appConfig as appConfigStore } from "../../stores/configStore";
@@ -185,15 +186,15 @@
                         ? projectsById.get(entry.projectId)
                         : null;
                     const invoice = invoiceByTaskId.get(entry.taskId);
-                    const minutes = entry.durationMinutes ?? 0;
+                    const seconds = entrySeconds(entry);
                     return [
                         selectedClient.name,
                         project?.name ?? "",
                         task?.title ?? "",
                         entry.startAt,
                         entry.endAt ?? "",
-                        minutes,
-                        (Math.round((minutes / 60) * 100) / 100)
+                        Math.round(seconds / 60),
+                        (Math.round((seconds / 3600) * 100) / 100)
                             .toString()
                             .replace(".", ","),
                         invoice?.invoiceNumber ?? "",

@@ -12,8 +12,9 @@
   import { $focusTaskId as focusTaskIdStore } from '../../stores/uiStore';
   import { $todayBlocks as todayBlocksStore, moveBlock } from '../../stores/calendarStore';
   import { $bridgeTimeEntries as timeEntriesStore } from '../../stores/coreBridge';
-  import { toDateKeyFromIso } from '../../domain/dateUtils';
+  import { entrySeconds, toDateKeyFromIso } from '../../domain/dateUtils';
   import type { Task } from '../../domain/types';
+  import TimerButton from '../widgets/TimerButton.svelte';
   import { onMount, onDestroy } from 'svelte';
 
   $: tasks = $todayTasksStore;
@@ -159,7 +160,7 @@
 
   // Actual time entries for today within calendar range
   $: todayEntries = allTimeEntries.filter(e => {
-    if (!e.startAt || !e.durationMinutes) return false;
+    if (!e.startAt || !entrySeconds(e)) return false;
     const entryDate = toDateKeyFromIso(e.startAt);
     const m = parseTimeToMinutes(e.startAt);
     return entryDate === activeDate && m >= CAL_START_H * 60 && m < CAL_END_H * 60;
@@ -299,6 +300,7 @@
                       <span class="text-[12px] text-muted">{task.estimatedMinutes < 60 ? task.estimatedMinutes + 'min' : (task.estimatedMinutes / 60) + 'h'}</span>
                     {/if}
                     {#if task.status !== 'done'}
+                      <TimerButton taskId={task.id} />
                       <button
                         class="w-8 h-8 flex items-center justify-center rounded-xl bg-accent text-white text-[12px] opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent/80"
                         on:click={() => startFocus(task)}
@@ -343,6 +345,7 @@
                   <span class="text-[11px] text-muted flex-shrink-0">{task.estimatedMinutes < 60 ? task.estimatedMinutes + 'min' : (task.estimatedMinutes / 60) + 'h'}</span>
                 {/if}
                 {#if task.status !== 'done'}
+                  <TimerButton taskId={task.id} />
                   <button
                     class="w-6 h-6 flex items-center justify-center rounded-lg text-muted opacity-0 group-hover:opacity-100 hover:text-accent transition-all text-[10px]"
                     on:click={() => startFocus(task)}
@@ -460,11 +463,12 @@
         {#each todayEntries as entry (entry.id)}
           {@const startMin = parseTimeToMinutes(entry.startAt)}
           {@const top = minutesToTop(startMin)}
-          {@const height = blockHeight(top, entry.durationMinutes)}
+          {@const entryMin = Math.round(entrySeconds(entry) / 60)}
+          {@const height = blockHeight(top, entryMin)}
           {@const taskForEntry = tasks.find(t => t.id === entry.taskId)}
           {@const col = (taskForEntry?.projectId ? (projectMap.get(taskForEntry.projectId)?.color ?? null) : null) ?? 'var(--color-accent)'}
-          {@const durLabel = entry.durationMinutes
-            ? (entry.durationMinutes < 60 ? entry.durationMinutes + 'min' : Math.floor(entry.durationMinutes / 60) + 'h' + (entry.durationMinutes % 60 > 0 ? '\u202f' + entry.durationMinutes % 60 + 'min' : ''))
+          {@const durLabel = entryMin
+            ? (entryMin < 60 ? entryMin + 'min' : Math.floor(entryMin / 60) + 'h' + (entryMin % 60 > 0 ? '\u202f' + entryMin % 60 + 'min' : ''))
             : null}
           <div
             class="absolute rounded-lg px-2 py-1 overflow-hidden cursor-default select-none"

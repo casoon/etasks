@@ -1,5 +1,6 @@
 <!-- @module:projects -->
 <script lang="ts">
+  import TimerButton from '../widgets/TimerButton.svelte';
   import { onMount } from 'svelte';
   import { $tasks as tasksStore, addTask, updateTask } from '../../stores/taskStore';
   import type { Task, KanbanStatus } from '../../domain/types';
@@ -231,7 +232,7 @@
 
           <!-- svelte-ignore a11y-no-static-element-interactions -->
           <div
-            class="bg-surface rounded-lg p-3 border-l-[3px] shadow-card cursor-grab select-none flex flex-col gap-2
+            class="group bg-surface rounded-lg p-3 border-l-[3px] shadow-card cursor-grab select-none flex flex-col gap-2
               transition-all hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)] active:scale-[0.98] min-w-0
               {task.kanbanStatus === 'done' ? 'opacity-55' : ''}
               {draggingId === task.id ? 'opacity-30 scale-95' : ''}
@@ -289,6 +290,7 @@
               </div>
               <div class="flex gap-1">
                 {#if task.kanbanStatus !== 'done'}
+                  <TimerButton taskId={task.id} />
                   <button
                     class="text-[13px] text-muted px-1 py-0.5 rounded transition-colors hover:bg-bg hover:text-accent"
                     title="Heute einplanen"

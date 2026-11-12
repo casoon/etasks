@@ -4,7 +4,7 @@
     import { $bridgeTimeEntries as timeEntriesStore } from "../../stores/coreBridge";
     import { $projects as projectsStore } from "../../stores/projectStore";
     import { TAG_COLORS } from "../../domain/types";
-    import { diffDays, getWeekStart, today, toDateKey, toDateKeyFromIso } from "../../domain/dateUtils";
+    import { diffDays, entrySeconds, getWeekStart, today, toDateKey, toDateKeyFromIso } from "../../domain/dateUtils";
 
     $: tasks = $tasksStore;
     $: timeEntries = $timeEntriesStore;
@@ -30,8 +30,8 @@
     $: completion =
         recent.length > 0 ? Math.round((done / recent.length) * 100) : 0;
     $: trackedThisWeek = timeEntries
-        .filter((entry) => entry.startAt >= weekStartIso())
-        .reduce((sum, entry) => sum + (entry.durationMinutes ?? 0), 0);
+        .filter((entry) => (toDateKeyFromIso(entry.startAt) ?? "") >= weekStartIso())
+        .reduce((sum, entry) => sum + entrySeconds(entry) / 60, 0);
     $: plannedThisWeek = recent.reduce(
         (sum, task) => sum + (task.estimatedMinutes ?? 0),
         0,
@@ -43,18 +43,18 @@
     $: projectMinutes = (() => {
         const byProject: Record<string, number> = {};
         for (const entry of timeEntries.filter(
-            (item) => item.startAt >= weekStartIso(),
+            (item) => (toDateKeyFromIso(item.startAt) ?? "") >= weekStartIso(),
         )) {
             const projectId = entry.projectId ?? "ohne-projekt";
             byProject[projectId] =
-                (byProject[projectId] ?? 0) + (entry.durationMinutes ?? 0);
+                (byProject[projectId] ?? 0) + entrySeconds(entry) / 60;
         }
         return Object.entries(byProject)
             .map(([projectId, minutes]) => ({
                 name:
                     projects.find((project) => project.id === projectId)
                         ?.name ?? "Ohne Projekt",
-                minutes,
+                minutes: Math.round(minutes),
             }))
             .sort((a, b) => b.minutes - a.minutes)
             .slice(0, 4);
@@ -103,20 +103,20 @@
     // Heute-Ansicht: Zeiterfassung heute nach Projekt
     $: todayStr = today();
     $: todayEntries = timeEntries.filter(
-        (e) => toDateKeyFromIso(e.startAt) === todayStr && (e.durationMinutes ?? 0) > 0,
+        (e) => toDateKeyFromIso(e.startAt) === todayStr && entrySeconds(e) > 0,
     );
     $: todayByProject = (() => {
         const m: Record<string, number> = {};
         for (const e of todayEntries) {
             const pid = e.projectId ?? 'ohne-projekt';
-            m[pid] = (m[pid] ?? 0) + (e.durationMinutes ?? 0);
+            m[pid] = (m[pid] ?? 0) + entrySeconds(e) / 60;
         }
         return Object.entries(m)
             .map(([pid, minutes]) => ({
                 pid,
                 name: pid === 'ohne-projekt' ? 'Ohne Projekt' : (projects.find(p => p.id === pid)?.name ?? pid),
                 color: pid === 'ohne-projekt' ? '#d1d5db' : (projects.find(p => p.id === pid)?.color ?? '#e5e7eb'),
-                minutes,
+                minutes: Math.round(minutes),
             }))
             .sort((a, b) => b.minutes - a.minutes);
     })();
@@ -141,14 +141,13 @@
     // entries in current week
     $: weekEntries = timeEntries.filter(
         (e) =>
-            e.startAt >= weekStartIso() &&
-            e.durationMinutes != null &&
-            (e.durationMinutes ?? 0) > 0,
+            (toDateKeyFromIso(e.startAt) ?? "") >= weekStartIso() &&
+            entrySeconds(e) > 0,
     );
 
     // total minutes tracked this week (for headline)
     $: totalWeekMinutes = weekEntries.reduce(
-        (s, e) => s + (e.durationMinutes ?? 0),
+        (s, e) => s + entrySeconds(e) / 60,
         0,
     );
 
@@ -169,7 +168,7 @@
             const dayIdx = weekDayIsos.indexOf(dayIso ?? "");
             if (dayIdx < 0) continue;
             const pid = e.projectId ?? "ohne-projekt";
-            data[dayIdx][pid] = (data[dayIdx][pid] ?? 0) + (e.durationMinutes ?? 0);
+            data[dayIdx][pid] = (data[dayIdx][pid] ?? 0) + entrySeconds(e) / 60;
         }
         return data;
     })();
