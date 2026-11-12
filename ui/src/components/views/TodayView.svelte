@@ -9,12 +9,13 @@
   } from '../../stores/taskStore';
   import { $mitTaskIds as mitTaskIdsStore } from '../../stores/planningStore';
   import { $projects as projectsStore } from '../../stores/projectStore';
-  import { $focusTaskId as focusTaskIdStore, $navItem as navItemStore } from '../../stores/uiStore';
+  import { $focusTaskId as focusTaskIdStore, $navItem as navItemStore, $showShutdown as showShutdownStore } from '../../stores/uiStore';
   import { $todayBlocks as todayBlocksStore, moveBlock } from '../../stores/calendarStore';
   import { $termine as termineStore } from '../../stores/terminStore';
   import { dayHourRange } from '../../domain/calendarService';
   import { $bridgeTimeEntries as timeEntriesStore } from '../../stores/coreBridge';
   import { entrySeconds, toDateKeyFromIso } from '../../domain/dateUtils';
+  import { loadNotes } from '../../lib/db';
   import type { Task } from '../../domain/types';
   import TimerButton from '../widgets/TimerButton.svelte';
   import { onMount, onDestroy } from 'svelte';
@@ -30,6 +31,10 @@
   $: todayTermine = $termineStore
     .filter(t => t.date === activeDate)
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+  // Highlight des Tages from the Tagesabschluss; re-read when that dialog closes
+  const highlightFor = (date: string, _dialogOpen: boolean) => loadNotes().find(n => n.date === date)?.highlight ?? '';
+  $: todayHighlight = highlightFor(activeDate, $showShutdownStore);
 
   $: mitTasks = mitIds
     .map(id => tasks.find(t => t.id === id))
@@ -202,6 +207,9 @@
       <!-- ── Seitenheader ── -->
       <div>
         <h1 class="text-[22px] font-bold text-primary leading-tight">Dein Überblick für heute</h1>
+        {#if todayHighlight}
+          <p class="mt-1.5 text-[12px] text-secondary">★ Highlight: {todayHighlight}</p>
+        {/if}
         {#if tasks.length > 0}
           <div class="flex items-center gap-2 mt-3 flex-wrap">
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-bg rounded-full text-[12px] font-medium text-secondary border border-border">

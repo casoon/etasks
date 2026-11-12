@@ -1,7 +1,6 @@
 // @core
 import { initTasks } from '../stores/taskStore';
 import { initBlocks } from '../stores/calendarStore';
-import { initGoals } from '../stores/weeklyGoalStore';
 import { initProjects } from '../stores/projectStore';
 import { initTimeEntries } from '../stores/timerStore';
 import { initTemplates } from '../stores/templateStore';
@@ -20,7 +19,6 @@ export function reinitStores(): void {
   initTasks();
   initBlocks();
   removeOrphanedBlocks();
-  initGoals();
   initProjects();
   initTimeEntries();
   initTemplates();

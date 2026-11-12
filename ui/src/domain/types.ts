@@ -212,7 +212,6 @@ export interface Invoice {
   createdAt: string;
 }
 
-export type ViewMode = "day" | "board";
 export type NavItem =
   | "today"
   | "focus"

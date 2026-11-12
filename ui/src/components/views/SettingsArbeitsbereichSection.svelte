@@ -35,8 +35,6 @@
     let config = appConfigStore.get();
     let appPaths: AppPaths = {};
     let workspaceName = "";
-    let workspaceType = "";
-    let workspaceCurrency = "EUR";
     let workspacePaymentDays = "14";
     let workspaceInvoicePrefix = "RE";
     let workspaceCreatedAt = "";
@@ -91,8 +89,6 @@
         workspaceInvoicePrefix = config.profile.invoice_number_prefix ?? "";
 
         if (!isTauriAvailable() || !config.active_tenant) {
-            workspaceType = "browser";
-            workspaceCurrency = "EUR";
             workspaceCreatedAt = "";
             defaultWorkspaceDir = config.default_workspace_dir ?? "";
             defaultExportDir = config.default_export_dir ?? "";
@@ -102,8 +98,6 @@
 
         workspaceName =
             (await metaGet("tenant.display_name")) ?? activeTenant?.name ?? "";
-        workspaceType = (await metaGet("tenant.type")) ?? "";
-        workspaceCurrency = (await metaGet("defaults.currency")) ?? "EUR";
         workspaceCreatedAt = (await metaGet("app.created_at")) ?? "";
         defaultWorkspaceDir =
             config.default_workspace_dir ??
@@ -177,13 +171,6 @@
                 await metaSet(
                     "tenant.display_name",
                     workspaceName.trim() || activeTenant?.name || "Workspace",
-                );
-                if (workspaceType.trim()) {
-                    await metaSet("tenant.type", workspaceType.trim());
-                }
-                await metaSet(
-                    "defaults.currency",
-                    workspaceCurrency.trim() || "EUR",
                 );
             }
 
@@ -323,23 +310,6 @@
                 class="input"
                 bind:value={workspaceName}
                 placeholder="z. B. Freelance 2026"
-            />
-        </label>
-        <label class="flex flex-col gap-1">
-            <span class="text-xs text-muted font-medium">Typ</span>
-            <input
-                class="input"
-                bind:value={workspaceType}
-                placeholder="z. B. freelance"
-            />
-        </label>
-        <label class="flex flex-col gap-1">
-            <span class="text-xs text-muted font-medium">Währung</span>
-            <input
-                class="input font-mono"
-                bind:value={workspaceCurrency}
-                maxlength="3"
-                placeholder="EUR"
             />
         </label>
         <label class="flex flex-col gap-1">

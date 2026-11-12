@@ -2,7 +2,6 @@ use rusqlite::params;
 use serde::Deserialize;
 use serde_json::Value;
 use tauri::Manager;
-use tauri_plugin_dialog::DialogExt;
 
 use crate::state::DbState;
 
@@ -75,27 +74,6 @@ pub async fn save_to_icloud(
     std::fs::create_dir_all(&icloud_base).map_err(|e| e.to_string())?;
     std::fs::write(icloud_base.join(&filename), &json).map_err(|e| e.to_string())?;
     Ok(())
-}
-
-#[tauri::command]
-pub fn open_ics_file(app: tauri::AppHandle) -> Result<Option<String>, String> {
-    let result = app
-        .dialog()
-        .file()
-        .add_filter("iCalendar", &["ics"])
-        .blocking_pick_file();
-
-    match result {
-        Some(file_path) => {
-            let path = match file_path {
-                tauri_plugin_dialog::FilePath::Path(p) => p,
-                tauri_plugin_dialog::FilePath::Url(url) => std::path::PathBuf::from(url.path()),
-            };
-            let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
-            Ok(Some(content))
-        }
-        None => Ok(None),
-    }
 }
 
 #[tauri::command]

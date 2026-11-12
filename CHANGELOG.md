@@ -7,6 +7,7 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Added
 
+- **Daily close:** the "Highlight des Tages" is pre-filled when the dialog is opened again and shown in Heute.
 - **Tasks:** tags can be set when editing a task (double-click, comma-separated); Analytics groups the week's tracked time by the first tag.
 - **Appointments:** today's Termine appear in the Tagesplan of Heute and can be edited (title, date, time, duration, type, project, billable) in the Tagesplanung. Billable Termine are listed in Berichte (as "Termin: …") and can be added as one line to an invoice via "Erfasste Zeit übernehmen", priced with the client's hourly rate.
 - **Time tracking:** time entries can be edited (task, day, start, end) and deleted in the Zeiterfassung list, and added by hand with "Eintrag hinzufügen".
@@ -25,6 +26,8 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Removed
 
+- **Settings:** the unused workspace fields "Typ" and "Währung" (documents are always in EUR).
+- **Cleanup:** the unused energy check log, the unmounted weekly objectives widget, the unused `open_ics_file` command and the dead card drag in Fokus.
 - **Releases:** the macOS Intel (`x64`) build; macOS installers are Apple Silicon only.
 
 ### Fixed

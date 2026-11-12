@@ -2,23 +2,6 @@
 <script lang="ts">
   import { $energyCheckPending as pendingStore } from '../../stores/uiStore';
   import { resetBreakTimer } from '../../lib/notificationScheduler';
-  import { today } from '../../domain/dateUtils';
-
-  const ENERGY_KEY = 'etasks.energy-log';
-
-  type EnergyLevel = 'low' | 'medium' | 'high';
-
-  function saveEnergy(level: EnergyLevel) {
-    try {
-      const raw = localStorage.getItem(ENERGY_KEY);
-      const log: { date: string; time: string; level: EnergyLevel }[] = raw ? JSON.parse(raw) : [];
-      log.push({ date: today(), time: new Date().toTimeString().slice(0, 5), level });
-      // Keep last 30 entries
-      localStorage.setItem(ENERGY_KEY, JSON.stringify(log.slice(-30)));
-    } catch {}
-    resetBreakTimer();
-    pendingStore.set(false);
-  }
 
   function dismiss() {
     resetBreakTimer();
@@ -44,7 +27,7 @@
     <div class="flex gap-2">
       <button
         class="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl border border-border hover:bg-bg transition-colors"
-        on:click={() => saveEnergy('low')}
+        on:click={dismiss}
         title="Müde"
       >
         <span class="text-xl">😴</span>
@@ -52,7 +35,7 @@
       </button>
       <button
         class="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl border border-border hover:bg-bg transition-colors"
-        on:click={() => saveEnergy('medium')}
+        on:click={dismiss}
         title="OK"
       >
         <span class="text-xl">😐</span>
@@ -60,7 +43,7 @@
       </button>
       <button
         class="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl border border-border hover:bg-bg transition-colors"
-        on:click={() => saveEnergy('high')}
+        on:click={dismiss}
         title="Top"
       >
         <span class="text-xl">⚡</span>

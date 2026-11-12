@@ -11,7 +11,6 @@ import { deleteTaskCascade } from '../../lib/taskActions';
   import RecurringBadge from './RecurringBadge.svelte';
 
   export let task: Task;
-  export let onDragStart: ((task: Task, e: PointerEvent) => void) | undefined = undefined;
 
   $: isDone = task.status === 'done';
   $: projects = $projectsStore;
@@ -85,17 +84,11 @@ import { deleteTaskCascade } from '../../lib/taskActions';
     navItemStore.set('focus');
   }
 
-  function handlePointerDown(e: PointerEvent) {
-    if ((e.target as HTMLElement).closest('button, input, select')) return;
-    if (editing) return;
-    onDragStart?.(task, e);
-  }
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-  class="task-card group flex items-center gap-2 px-2 py-[7px] rounded-lg cursor-grab transition-colors hover:bg-bg select-none min-w-0 border-l-[3px] {isDone ? 'task-card--done' : ''} {recentMarkerClass}"
-  on:pointerdown={handlePointerDown}
+  class="task-card group flex items-center gap-2 px-2 py-[7px] rounded-lg transition-colors hover:bg-bg select-none min-w-0 border-l-[3px] {isDone ? 'task-card--done' : ''} {recentMarkerClass}"
   data-task-id={task.id}
   title={recentMarkerTitle}
   style="border-left-color:{accentColor};"

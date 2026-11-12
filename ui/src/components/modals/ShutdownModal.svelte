@@ -4,7 +4,7 @@
   import { $todayTasks as todayTasksStore, updateTask } from '../../stores/taskStore';
   import { removeBlockForTask } from '../../stores/calendarStore';
   import { entrySeconds, today, toDateKey, toDateKeyFromIso } from '../../domain/dateUtils';
-  import { upsertNote, loadTimeEntries, loadProjects } from '../../lib/db';
+  import { upsertNote, loadNotes, loadTimeEntries, loadProjects } from '../../lib/db';
 
   $: show = $showStore;
   $: tasks = $todayTasksStore;
@@ -12,6 +12,8 @@
   $: doneTasks = tasks.filter(t => t.status === 'done');
 
   let highlight = '';
+  // Pre-fill with the highlight already saved for today
+  $: if (show) highlight = loadNotes().find(n => n.date === today())?.highlight ?? '';
   let showSummary = false;
 
   interface ProjectTime { name: string; color: string; minutes: number; seconds: number }
