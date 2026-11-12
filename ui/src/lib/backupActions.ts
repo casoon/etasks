@@ -13,8 +13,8 @@ import { isTauriAvailable } from "./platform";
 
 export async function runExportWithFeedback(): Promise<void> {
   try {
-    await exportToFile();
-    toast("Backup exportiert.", "success");
+    const path = await exportToFile();
+    toast(path ? `Backup exportiert: ${path}` : "Backup exportiert.", "success", path ? 6000 : 3000);
   } catch (error) {
     toast(`Export fehlgeschlagen: ${String(error)}`, "error", 4500);
   }

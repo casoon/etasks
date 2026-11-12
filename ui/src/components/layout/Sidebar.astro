@@ -99,7 +99,7 @@ const navItems = [
 <script>
     import { $navItem, $showShutdown } from "../../stores/uiStore";
     import { $appConfig, tenantNameFromPath } from "../../stores/configStore";
-    import { exportToFile } from "../../lib/exportService";
+    import { runExportWithFeedback } from "../../lib/backupActions";
     import { activateTenant, tenantDbExists } from "../../lib/appBootstrap";
     import { toast } from "../../stores/toastStore";
 
@@ -207,7 +207,7 @@ const navItems = [
     document
         .querySelector('[data-action="export"]')
         ?.addEventListener("click", () => {
-            exportToFile();
+            runExportWithFeedback();
         });
 
     // Follow every navigation, also programmatic ones (e.g. "Fokus starten")

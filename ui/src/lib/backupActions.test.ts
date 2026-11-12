@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const parseBackup = vi.fn();
 const applyBackup = vi.fn();
 const writePreImportBackup = vi.fn();
+const exportToFile = vi.fn();
 const toast = vi.fn();
 const reinitStores = vi.fn();
 const confirmFn = vi.fn();
@@ -12,7 +13,7 @@ vi.mock("./exportService", () => ({
   importSummary: () => [{ name: "tasks", current: 2, incoming: 1 }],
   applyBackup,
   writePreImportBackup,
-  exportToFile: vi.fn(),
+  exportToFile,
   saveDailySnapshot: vi.fn(),
 }));
 vi.mock("./storeInit", () => ({ reinitStores }));
@@ -26,7 +27,7 @@ const file = { name: "b.json", text: async () => "{}" } as unknown as File;
 
 describe("restoreFromBackupFile", () => {
   beforeEach(() => {
-    for (const m of [parseBackup, applyBackup, writePreImportBackup, toast, reinitStores, confirmFn]) m.mockReset();
+    for (const m of [exportToFile, parseBackup, applyBackup, writePreImportBackup, toast, reinitStores, confirmFn]) m.mockReset();
     vi.stubGlobal("confirm", confirmFn);
     parseBackup.mockReturnValue({ lists: { tasks: [{ id: "x" }] } });
     confirmFn.mockReturnValue(true);
@@ -64,5 +65,27 @@ describe("restoreFromBackupFile", () => {
     expect(confirmFn.mock.calls[0][0]).toContain("Aufgaben: 2 vorhanden, 1 in der Datei");
     expect(writePreImportBackup.mock.invocationCallOrder[0]).toBeLessThan(applyBackup.mock.invocationCallOrder[0]);
     expect(reinitStores).toHaveBeenCalled();
+  });
+});
+
+describe("runExportWithFeedback", () => {
+  beforeEach(() => {
+    exportToFile.mockReset();
+    toast.mockReset();
+  });
+
+  it("reports the written path", async () => {
+    exportToFile.mockResolvedValue("/exports/x.json");
+    const { runExportWithFeedback } = await import("./backupActions");
+    await runExportWithFeedback();
+    expect(toast).toHaveBeenCalledWith("Backup exportiert: /exports/x.json", "success", 6000);
+  });
+
+  it("reports a failing write as error instead of success", async () => {
+    exportToFile.mockRejectedValue(new Error("Ordner nicht erreichbar"));
+    const { runExportWithFeedback } = await import("./backupActions");
+    await runExportWithFeedback();
+    expect(toast).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledWith(expect.stringContaining("Ordner nicht erreichbar"), "error", 4500);
   });
 });
