@@ -601,30 +601,46 @@ pub fn list_workspace_files(app: tauri::AppHandle) -> Result<Vec<String>, String
     Ok(found)
 }
 
-/// Schreibt einen Log-Eintrag in die angegebene Datei.
-/// Rolling: Datei > 512 KB → die älteste Hälfte der Zeilen wird verworfen.
+/// Schreibt einen Log-Eintrag in `app.log` neben der geöffneten Datenbank.
 #[tauri::command]
-pub fn write_log(path: String, level: String, message: String) -> Result<(), String> {
+pub fn write_log(
+    state: tauri::State<crate::state::DbState>,
+    level: String,
+    message: String,
+) -> Result<(), String> {
+    let log_path = {
+        let guard = state.lock();
+        let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
+        let db_path = conn.path().filter(|p| !p.is_empty()).ok_or("Datenbank ohne Dateipfad")?;
+        Path::new(db_path)
+            .parent()
+            .ok_or("Datenbankordner nicht ermittelbar")?
+            .join("app.log")
+    };
+    append_log(&log_path, &level, &message)
+}
+
+/// Rolling: Datei > 512 KB → die älteste Hälfte der Zeilen wird verworfen.
+fn append_log(log_path: &Path, level: &str, message: &str) -> Result<(), String> {
     use std::io::Write;
-    let log_path = std::path::PathBuf::from(&path);
     if let Some(parent) = log_path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     // Rolling: bei > 512 KB die ältere Hälfte der Zeilen verwerfen
     if log_path.exists() {
-        let meta = std::fs::metadata(&log_path).map_err(|e| e.to_string())?;
+        let meta = std::fs::metadata(log_path).map_err(|e| e.to_string())?;
         if meta.len() > 512 * 1024 {
-            let content = std::fs::read_to_string(&log_path).unwrap_or_default();
+            let content = std::fs::read_to_string(log_path).unwrap_or_default();
             let lines: Vec<&str> = content.lines().collect();
             let keep_from = lines.len() / 2;
             let trimmed = lines[keep_from..].join("\n") + "\n";
-            std::fs::write(&log_path, trimmed).map_err(|e| e.to_string())?;
+            std::fs::write(log_path, trimmed).map_err(|e| e.to_string())?;
         }
     }
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
-        .open(&log_path)
+        .open(log_path)
         .map_err(|e| e.to_string())?;
     let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
     writeln!(file, "[{now}] [{level}] {message}").map_err(|e| e.to_string())
@@ -828,6 +844,24 @@ mod tests {
         let loaded = read_config_file(&path);
         assert_eq!(loaded.status, ConfigStatus::Ok);
         assert_eq!(loaded.config.profile.country, "Deutschland");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn log_lines_are_appended_and_old_halves_are_rolled_off() {
+        let dir = temp_dir("log");
+        let log = dir.join("app.log");
+        append_log(&log, "INFO", "first").unwrap();
+        append_log(&log, "ERROR", "second").unwrap();
+        let text = std::fs::read_to_string(&log).unwrap();
+        assert!(text.contains("[INFO] first") && text.contains("[ERROR] second"));
+
+        let line = format!("{}\n", "x".repeat(1023));
+        std::fs::write(&log, line.repeat(600)).unwrap();
+        append_log(&log, "INFO", "after roll").unwrap();
+        let rolled = std::fs::read_to_string(&log).unwrap();
+        assert!(rolled.len() < 400 * 1024);
+        assert!(rolled.trim_end().ends_with("after roll"));
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
