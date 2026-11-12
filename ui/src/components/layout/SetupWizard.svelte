@@ -292,7 +292,7 @@
                     <div class="text-xs font-medium text-muted uppercase tracking-wide">Schritt 1 von 2</div>
                     <h2 class="text-xl font-semibold text-primary">Speicherorte festlegen</h2>
                     <p class="text-sm text-secondary">
-                        eTasks legt pro Testnutzer einen eigenen Arbeitsbereichsordner an. Darin liegen die SQLite-Datenbank und spaeter auch Zusatzdateien wie Logos.
+                        eTasks legt pro Testnutzer einen eigenen Arbeitsbereichsordner an. Darin liegen die SQLite-Datenbank und später auch Zusatzdateien wie Logos.
                     </p>
                 </div>
 
@@ -313,7 +313,7 @@
                         <div class="text-xs font-medium text-secondary">Arbeitsbereichsordner</div>
                         <label class="flex items-center gap-2 text-sm text-secondary">
                             <input type="radio" bind:group={workspaceLocation} value="documents" />
-                            <span>Dokumente <span class="text-muted">(empfohlen fuer Testnutzer)</span></span>
+                            <span>Dokumente <span class="text-muted">(empfohlen für Testnutzer)</span></span>
                         </label>
                         {#if appPaths.documentsDir}
                             <p class="text-[11px] text-muted ml-6 break-all">{appPaths.documentsDir}</p>
@@ -338,7 +338,7 @@
                     </div>
 
                     <div class="rounded-xl border border-border bg-bg/60 p-4 flex flex-col gap-3">
-                        <div class="text-xs font-medium text-secondary">Standardordner fuer Exporte und PDFs</div>
+                        <div class="text-xs font-medium text-secondary">Standardordner für Exporte und PDFs</div>
                         <label class="flex items-center gap-2 text-sm text-secondary">
                             <input type="radio" bind:group={exportLocation} value="downloads" />
                             <span>Downloads</span>

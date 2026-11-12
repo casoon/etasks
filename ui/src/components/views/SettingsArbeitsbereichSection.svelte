@@ -271,7 +271,7 @@
                 Aktiver Arbeitsbereich
             </h2>
             <p class="mt-1 text-sm text-secondary">
-                Standardwerte und Metadaten fuer Rechnungen und
+                Standardwerte und Metadaten für Rechnungen und
                 Restore-Ziele.
             </p>
         </div>
@@ -300,7 +300,7 @@
             />
         </label>
         <label class="flex flex-col gap-1">
-            <span class="text-xs text-muted font-medium">Waehrung</span>
+            <span class="text-xs text-muted font-medium">Währung</span>
             <input
                 class="input font-mono"
                 bind:value={workspaceCurrency}
@@ -321,7 +321,7 @@
         </label>
         <label class="flex flex-col gap-1">
             <span class="text-xs text-muted font-medium">
-                Standard-Rechnungspraefix
+                Standard-Rechnungspräfix
             </span>
             <input
                 class="input font-mono"
@@ -350,7 +350,7 @@
                     Datenbank
                 </span>
                 <span class="text-primary break-all">
-                    {workspaceFs?.databasePath ?? activeTenant?.path ?? "Nicht verfuegbar"}
+                    {workspaceFs?.databasePath ?? activeTenant?.path ?? "Nicht verfügbar"}
                 </span>
             </div>
             <div class="flex flex-col gap-1">
@@ -364,7 +364,7 @@
                         ? new Date(workspaceCreatedAt).toLocaleString(
                               "de-DE",
                           )
-                        : "Nicht verfuegbar"}
+                        : "Nicht verfügbar"}
                 </span>
             </div>
             <div class="flex flex-col gap-1">
@@ -374,7 +374,7 @@
                     Assets
                 </span>
                 <span class="text-primary break-all">
-                    {workspaceFs?.assetsDir ?? "Nicht verfuegbar"}
+                    {workspaceFs?.assetsDir ?? "Nicht verfügbar"}
                 </span>
             </div>
         </div>
@@ -388,7 +388,7 @@
             <div class="flex items-center gap-2">
                 <input class="input" bind:value={defaultWorkspaceDir} placeholder={appPaths.documentsDir ?? "Ordner"} />
                 <button class="secondary-button whitespace-nowrap" on:click={pickDefaultWorkspaceDirectory} disabled={!isTauriAvailable()}>
-                    Ordner waehlen
+                    Ordner wählen
                 </button>
             </div>
         </label>
@@ -399,7 +399,7 @@
             <div class="flex items-center gap-2">
                 <input class="input" bind:value={defaultExportDir} placeholder={appPaths.downloadsDir ?? "Ordner"} />
                 <button class="secondary-button whitespace-nowrap" on:click={pickDefaultExportDirectory} disabled={!isTauriAvailable()}>
-                    Ordner waehlen
+                    Ordner wählen
                 </button>
             </div>
         </label>
@@ -410,7 +410,7 @@
     >
         <input type="checkbox" bind:checked={invoiceCounterReset} />
         <span
-            >Rechnungszaehler beim Speichern auf `1` zuruecksetzen</span
+            >Rechnungszähler beim Speichern auf `1` zurücksetzen</span
         >
     </label>
 
@@ -457,7 +457,7 @@
             <span class="info-card__label">Kurzbefehle</span>
             <strong class="info-card__value">Cmd/Ctrl + K</strong>
             <p class="info-card__text">
-                Oeffnet die Schnellanlage fuer Aufgaben und Eintraege.
+                Öffnet die Schnellanlage für Aufgaben und Einträge.
             </p>
         </div>
         <div class="info-card">

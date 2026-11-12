@@ -680,7 +680,7 @@
         {/if}
         {#if unscheduledCount > 0}
           <div class="mt-2 flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-900">
-            <span>{unscheduledCount} Task{unscheduledCount === 1 ? '' : 's'} sind fuer heute entschieden, aber noch ohne Zeitslot.</span>
+            <span>{unscheduledCount} Task{unscheduledCount === 1 ? '' : 's'} sind für heute entschieden, aber noch ohne Zeitslot.</span>
             <button
               class="font-semibold text-amber-800 hover:text-amber-950 whitespace-nowrap"
               on:click={autoPlanRemainingTasks}
@@ -725,7 +725,7 @@
               <span class="text-[10px] font-bold uppercase tracking-[0.07em] text-muted">Noch einplanen</span>
               <span class="text-[10px] text-muted bg-surface px-1.5 py-0.5 rounded-md">{unscheduledCount}</span>
             </div>
-            <p class="text-[11px] text-muted mt-1">Diese Tasks sind fuer heute entschieden, haben aber noch keinen Zeitslot.</p>
+            <p class="text-[11px] text-muted mt-1">Diese Tasks sind für heute entschieden, haben aber noch keinen Zeitslot.</p>
           </div>
         {/if}
 
@@ -788,7 +788,7 @@
               <button
                 class="px-1.5 py-0.5 rounded text-[10px] text-accent hover:bg-accent-subtle"
                 on:click={() => autoPlanTask(task)}
-                title="Naechsten freien Slot finden"
+                title="Nächsten freien Slot finden"
               >Auto</button>
               <button
                 class="px-1.5 py-0.5 rounded text-[10px] text-muted hover:bg-bg hover:text-accent"
@@ -817,7 +817,7 @@
               <span class="text-[10px] font-bold uppercase tracking-[0.07em] text-accent">Terminiert</span>
               <span class="text-[10px] text-accent bg-surface px-1.5 py-0.5 rounded-md">{scheduledCount}</span>
             </div>
-            <p class="text-[11px] text-muted mt-1">Diese Tasks haben bereits einen Slot im Kalender und koennen dort per Drag verschoben werden.</p>
+            <p class="text-[11px] text-muted mt-1">Diese Tasks haben bereits einen Slot im Kalender und können dort per Drag verschoben werden.</p>
           </div>
         {/if}
 
@@ -854,7 +854,7 @@
             <button
               on:click={() => unscheduleTask(task)}
               class="px-1.5 py-0.5 rounded text-[10px] text-muted hover:bg-bg hover:text-accent flex-shrink-0"
-              title="Zeitslot loesen"
+              title="Zeitslot lösen"
             >Zeit lösen</button>
             <button
               on:click={() => removeFromToday(task)}
