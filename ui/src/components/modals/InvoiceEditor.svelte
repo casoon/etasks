@@ -19,6 +19,7 @@
         lineTotalCents,
     } from "../../lib/invoiceMoney";
     import { isInvoiceNumberTaken } from "../../lib/invoiceNumber";
+    import { statusBlockedReason } from "../../lib/invoiceStatus";
     import { toast } from "../../stores/toastStore";
 
     export let invoice: Invoice;
@@ -39,8 +40,7 @@
     ) => void;
     export let onDelete: () => void;
     export let onGeneratePdf: () => void | Promise<void>;
-    export let onMarkSent: () => void;
-    export let onMarkPaid: () => void;
+    export let onSetStatus: (status: InvoiceStatus) => void;
 
     let newItemInput = "";
     let showNewItemSuggestions = false;
@@ -78,13 +78,8 @@
         : isInvoiceNumberTaken(invoice.invoiceNumber, otherInvoiceNumbers)
           ? "Diese Rechnungsnummer ist bereits vergeben."
           : "";
-    $: sendBlockedReason = numberProblem
-        ? numberProblem
-        : !invoice.clientId
-        ? "Wähle zuerst einen Kunden."
-        : invoice.lineItems.length === 0
-          ? "Füge mindestens eine Position hinzu."
-          : "";
+    $: sendBlockedReason = numberProblem || statusBlockedReason(invoice, "sent");
+    $: paidBlockedReason = statusBlockedReason(invoice, "paid");
 
     function patchLineItem(
         lineItemId: string,
@@ -270,10 +265,10 @@
     }
 
     function handleStatusChange(e: Event) {
-        onUpdate({
-            status: (e.currentTarget as HTMLSelectElement)
-                .value as InvoiceStatus,
-        });
+        const select = e.currentTarget as HTMLSelectElement;
+        onSetStatus(select.value as InvoiceStatus);
+        // Bei abgelehntem Wechsel zeigt das Dropdown weiter den echten Status.
+        select.value = invoice.status;
     }
 
     function handleNotesChange(e: Event) {
@@ -355,7 +350,11 @@
                     disabled={Boolean(sendBlockedReason) &&
                         invoice.status !== "sent"}>Gesendet</option
                 >
-                <option value="paid">Bezahlt</option>
+                <option
+                    value="paid"
+                    disabled={Boolean(paidBlockedReason) &&
+                        invoice.status !== "paid"}>Bezahlt</option
+                >
             </select>
             <button
                 class="ml-auto rounded-lg border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-bg disabled:opacity-50"
@@ -370,7 +369,7 @@
             {#if invoice.status === "draft"}
                 <button
                     class="rounded-lg border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-bg disabled:opacity-50"
-                    on:click={onMarkSent}
+                    on:click={() => onSetStatus("sent")}
                     disabled={Boolean(sendBlockedReason)}
                     title={sendBlockedReason}
                 >
@@ -379,8 +378,10 @@
             {/if}
             {#if invoice.status !== "paid"}
                 <button
-                    class="rounded-xl border border-green-200 bg-green-50 px-3 py-1.5 text-[12px] font-medium text-green-700 transition-colors hover:bg-green-100"
-                    on:click={onMarkPaid}
+                    class="rounded-xl border border-green-200 bg-green-50 px-3 py-1.5 text-[12px] font-medium text-green-700 transition-colors hover:bg-green-100 disabled:opacity-50"
+                    on:click={() => onSetStatus("paid")}
+                    disabled={Boolean(paidBlockedReason)}
+                    title={paidBlockedReason}
                 >
                     Als bezahlt markieren
                 </button>
@@ -394,6 +395,12 @@
                 „Als gesendet markieren“ ist noch nicht möglich. {sendBlockedReason}
             </p>
         {/if}
+        {#if invoice.status !== "draft"}
+            <p class="mt-2 text-[11px] text-muted">
+                Diese Rechnung ist bereits {invoice.status === "paid" ? "bezahlt" : "gesendet"}.
+                Änderungen an Nummer oder Datum stimmen dann nicht mehr mit dem ausgestellten Dokument überein.
+            </p>
+        {/if}
         <p class="mt-2 text-[11px] text-muted">
             {#if pdfAvailable}
                 PDF-Rechnungen werden im Standard-Exportordner der Desktop-App
@@ -405,7 +412,7 @@
         <div class="mt-2 flex flex-wrap gap-2 text-[11px] text-muted">
             <span class="rounded-full border border-border bg-surface px-2 py-1">1. Daten prüfen</span>
             <span class="rounded-full border border-border bg-surface px-2 py-1">2. PDF erzeugen</span>
-            <span class="rounded-full border border-border bg-surface px-2 py-1">3. Status setzen</span>
+            <span class="rounded-full border border-border bg-surface px-2 py-1">3. Als gesendet markieren</span>
         </div>
         <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
             <label class="flex flex-col gap-1">
