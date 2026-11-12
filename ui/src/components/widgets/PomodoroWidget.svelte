@@ -1,6 +1,6 @@
 <!-- @module:planning -->
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount } from 'svelte';
   import {
     $pomodoroRunning as runningStore,
     $pomodoroSeconds as secondsStore,
@@ -10,10 +10,9 @@
     $focusTaskId as focusIdStore,
   } from '../../stores/uiStore';
   import { $tasks as tasksStore } from '../../stores/taskStore';
-  import { notifyPomodoroComplete, requestPermission } from '../../lib/notifications';
+  import { requestPermission } from '../../lib/notifications';
+  import { togglePomodoro, startPomodoroBreak, cancelPomodoro, adjustPomodoroDuration } from '../../lib/pomodoroTimer';
   import { hoverLift, pageReveal } from '../../lib/motionActions';
-
-  const BREAK_DURATION = 5 * 60;
 
   $: running = $runningStore;
   $: seconds = $secondsStore;
@@ -34,58 +33,7 @@
   $: sessionDisplayMinutes = mode === 'break' ? 5 : sessionMinutes;
   $: sessionDisplaySecs = 0;
 
-  let interval: ReturnType<typeof setInterval> | null = null;
-
-  $: {
-    if (interval) clearInterval(interval);
-    if (running) {
-      interval = setInterval(() => {
-        const current = secondsStore.get();
-        const currentMode = modeStore.get();
-        if (current <= 1) {
-          secondsStore.set(0);
-          runningStore.set(false);
-          if (currentMode === 'work') {
-            sessionCountStore.set(sessionCountStore.get() + 1);
-            notifyPomodoroComplete(focusIdStore.get() ? tasksStore.get().find(t => t.id === focusIdStore.get())?.title : undefined);
-          } else {
-            // Break ended: return to work mode
-            modeStore.set('work');
-            secondsStore.set(sessionMinutesStore.get() * 60);
-          }
-        } else {
-          secondsStore.set(current - 1);
-        }
-      }, 1000);
-    }
-  }
-
   onMount(() => requestPermission());
-  onDestroy(() => { if (interval) clearInterval(interval); });
-
-  function toggle() { runningStore.set(!running); }
-
-  function startBreak() {
-    modeStore.set('break');
-    secondsStore.set(BREAK_DURATION);
-    runningStore.set(true);
-  }
-
-  function cancel() {
-    runningStore.set(false);
-    modeStore.set('work');
-    secondsStore.set(sessionMinutesStore.get() * 60);
-  }
-
-  function adjustDuration(delta: number) {
-    const current = sessionMinutesStore.get();
-    const next = Math.min(90, Math.max(5, current + delta));
-    sessionMinutesStore.set(next);
-    // Reset timer only if not running and in work mode
-    if (!runningStore.get() && modeStore.get() === 'work') {
-      secondsStore.set(next * 60);
-    }
-  }
 
   function selectTask(id: string) {
     focusIdStore.set(id || null);
@@ -130,14 +78,16 @@
         {#if mode === 'work'}
           <div class="flex items-center gap-1 mt-0.5">
             <button
-              class="text-[11px] text-muted hover:text-accent transition-colors px-1"
-              on:click={() => adjustDuration(5)}
+              class="text-[11px] text-muted hover:text-accent transition-colors px-1 disabled:opacity-40 disabled:pointer-events-none"
+              disabled={running}
+              on:click={() => adjustPomodoroDuration(5)}
               aria-label="+5 Minuten"
               title="+5 min"
             >+5</button>
             <button
-              class="text-[11px] text-muted hover:text-accent transition-colors px-1"
-              on:click={() => adjustDuration(-5)}
+              class="text-[11px] text-muted hover:text-accent transition-colors px-1 disabled:opacity-40 disabled:pointer-events-none"
+              disabled={running}
+              on:click={() => adjustPomodoroDuration(-5)}
               aria-label="-5 Minuten"
               title="-5 min"
             >-5</button>
@@ -161,7 +111,7 @@
     <div class="flex flex-col gap-1.5">
       <button
         class="px-3 py-1 bg-accent text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 transition-colors flex items-center gap-1.5 min-w-[80px] justify-center"
-        on:click={toggle}
+        on:click={togglePomodoro}
         aria-label={running ? 'Pausieren' : 'Starten'}
       >
         {#if running}
@@ -174,7 +124,7 @@
       {#if mode === 'work'}
         <button
           class="px-3 py-1 bg-surface border border-border text-secondary rounded-lg text-[12px] font-medium hover:border-success hover:text-success transition-colors min-w-[80px]"
-          on:click={startBreak}
+          on:click={startPomodoroBreak}
           aria-label="Pause starten"
         >
           ☕ Pause
@@ -183,7 +133,7 @@
 
       <button
         class="px-3 py-1 bg-surface border border-border text-muted rounded-lg text-[12px] font-medium hover:border-red-400 hover:text-red-500 transition-colors min-w-[80px]"
-        on:click={cancel}
+        on:click={cancelPomodoro}
         aria-label="Abbrechen"
       >
         × Abbruch
