@@ -181,9 +181,6 @@
         const client = clients.find(
             (entry) => entry.id === selectedInvoice.clientId,
         );
-        const clientProjects = projects.filter(
-            (project) => project.clientId === selectedInvoice.clientId,
-        );
         if (!client) {
             toast("Für die Rechnung ist kein Kunde ausgewählt.", "error", 4500);
             return;
@@ -234,9 +231,7 @@
                 performance_period:
                     selectedInvoice.performancePeriod?.trim() || undefined,
                 project_reference:
-                    selectedInvoice.projectReference?.trim() ||
-                    clientProjects[0]?.name ||
-                    undefined,
+                    selectedInvoice.projectReference?.trim() || undefined,
                 show_footer: true,
             },
             recipient: {
