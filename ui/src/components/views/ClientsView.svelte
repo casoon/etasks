@@ -194,8 +194,8 @@
         const invoicePayload: InvoiceData = {
             metadata: {
                 invoice_number: selectedInvoice.invoiceNumber,
-                invoice_date: selectedInvoice.date,
-                due_date: selectedInvoice.dueDate,
+                invoice_date: { date: selectedInvoice.date },
+                due_date: { date: selectedInvoice.dueDate },
                 customer_number:
                     selectedInvoice.customerNumber?.trim() ||
                     client.customerNumber?.trim() ||
@@ -237,14 +237,14 @@
             totals: {
                 subtotal: { amount: invoiceTotals.netto },
                 vat_breakdown: invoiceTotals.vatEntries.map((entry) => ({
-                    rate: entry.rate,
-                    base: { amount: invoiceTotals.netto },
+                    rate: { percentage: entry.rate },
+                    base: { amount: entry.base },
                     amount: { amount: entry.amount },
                 })),
                 total: { amount: invoiceTotals.total },
             },
             payment: {
-                due_date: selectedInvoice.dueDate,
+                due_date: { date: selectedInvoice.dueDate },
                 bank_transfer_note: selectedInvoice.invoiceNumber,
             },
             closing: {

@@ -29,8 +29,8 @@ export interface InvoiceRecipient {
 export interface InvoiceData {
   metadata: {
     invoice_number: string;
-    invoice_date: string;
-    due_date: string;
+    invoice_date: { date: string };
+    due_date: { date: string };
     customer_number?: string;
     performance_period?: string;
     project_reference?: string;
@@ -44,11 +44,11 @@ export interface InvoiceData {
   items: InvoiceItem[];
   totals: {
     subtotal: { amount: number };
-    vat_breakdown: { rate: number; base: { amount: number }; amount: { amount: number } }[];
+    vat_breakdown: { rate: { percentage: number }; base: { amount: number }; amount: { amount: number } }[];
     total: { amount: number };
   };
   payment: {
-    due_date: string;
+    due_date: { date: string };
     bank_transfer_note?: string;
   };
   closing?: {
@@ -100,7 +100,7 @@ export function calcTotals(items: InvoiceItem[]): InvoiceData['totals'] {
     subtotal: { amount: Math.round(subtotal * 100) / 100 },
     vat_breakdown: [
       {
-        rate: 19,
+        rate: { percentage: 19 },
         base: { amount: Math.round(subtotal * 100) / 100 },
         amount: { amount: vatAmount },
       },
