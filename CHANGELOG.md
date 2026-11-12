@@ -60,6 +60,7 @@ All notable changes to eTasks are listed here. eTasks follows
 - **Logo:** a configured logo now appears in invoice and offer PDFs (instead of failing with "file not found"), the settings preview shows it, and without a logo the PDF has no grey placeholder box. "Logo-Breite" is gone: the template draws the logo at a fixed width.
 - **Invoices:** the PDF footer with bank details, phone and email is always printed, the tax number appears under "USt-IdNr.", and the thank-you text from the profile is printed below the greeting; "Anmerkungen" is marked as internal.
 - **Profile:** a new profile starts empty instead of with sample data (Max Mustermann, sample IBAN); the examples are only input placeholders. Invoice and offer PDFs need a complete profile (name, email, company, address, tax number, IBAN) and say what is missing; old sample values still in a profile count as missing.
+- **Projects:** the internal project notes no longer appear in the offer PDF or the project report; the offer introduction comes from a separate optional "Angebotstext" field.
 
 ### Security
 

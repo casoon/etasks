@@ -160,7 +160,8 @@ export interface Project {
   description?: string;
   color: string;
   status: "active" | "paused" | "done";
-  notes?: string;
+  notes?: string; // intern, erscheint nie in Angebot oder Bericht
+  offerText?: string; // Einleitung im Angebots-PDF
   deadline?: string; // YYYY-MM-DD
   createdAt: string;
 }

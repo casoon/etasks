@@ -56,7 +56,6 @@ export interface OfferData {
     delivery_terms?: string;
     additional_terms?: string[];
   };
-  notes?: string;
 }
 
 export async function generateOffer(

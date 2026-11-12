@@ -277,7 +277,7 @@
                 greeting: selectedClient.contactPerson?.trim()
                     ? `Hallo ${selectedClient.contactPerson.trim()},`
                     : `Hallo ${selectedClient.name},`,
-                introduction: selectedProject.notes?.trim() || undefined,
+                introduction: selectedProject.offerText?.trim() || undefined,
             },
             items: offerItems,
             totals: {
@@ -297,7 +297,6 @@
                 additional_terms:
                     additionalTerms.length > 0 ? additionalTerms : undefined,
             },
-            notes: selectedProject.notes?.trim() || undefined,
         };
 
         offerGenerating = true;
@@ -942,7 +941,7 @@
             >
                 <span
                     class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted"
-                    >Notizen & Fähigkeiten</span
+                    >Notizen & Fähigkeiten (intern, nicht in Angebot oder Bericht)</span
                 >
                 {#key selectedProject.id}
                     <textarea
@@ -952,6 +951,28 @@
                         on:blur={flushNotes}
                         placeholder="Tech-Stack, Client-Zugänge, besondere Anforderungen, Code-Snippets..."
                         rows={4}
+                    />
+                {/key}
+            </div>
+
+            <div
+                class="px-6 py-4 border-b border-border-subtle flex-shrink-0 flex flex-col gap-2"
+            >
+                <span
+                    class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted"
+                    >Angebotstext (optional, steht unter der Anrede im Angebot)</span
+                >
+                {#key selectedProject.id}
+                    <textarea
+                        class="w-full px-3 py-3 border border-border rounded-lg text-[13px] leading-relaxed resize-y outline-none bg-bg text-primary min-h-[60px] focus:border-accent focus:bg-surface"
+                        value={selectedProject.offerText ?? ""}
+                        on:blur={(e) =>
+                            selectedProject &&
+                            updateProject(selectedProject.id, {
+                                offerText: e.currentTarget.value,
+                            })}
+                        placeholder="z. B. Vielen Dank für Ihre Anfrage. Gerne bieten wir Ihnen an:"
+                        rows={3}
                     />
                 {/key}
             </div>

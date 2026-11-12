@@ -63,4 +63,9 @@ describe('buildProjectReportInput', () => {
     expect(input.planned_hours).toBe(2);
     expect(input.tasks[0].duration_minutes).toBe(60);
   });
+
+  it('never carries the internal project notes into the report', () => {
+    const input = buildProjectReportInput({ ...project, notes: 'Zugang: geheim' } as Project, [], []);
+    expect(JSON.stringify(input)).not.toContain('geheim');
+  });
 });
