@@ -33,6 +33,44 @@ export function isInvoiceNumberTaken(number: string, otherNumbers: string[]): bo
   return otherNumbers.some((other) => other.trim().toLowerCase() === wanted);
 }
 
+/** Startwert ohne gespeicherten Zähler: Profil-Zähler nur, wenn der Arbeitsbereich schon Rechnungen hat. */
+function startCounter(
+  stored: number,
+  profileCounter: number | undefined,
+  existing: string[],
+): number {
+  if (Number.isFinite(stored)) return stored;
+  return existing.length > 0 ? (profileCounter ?? 1) : 1;
+}
+
+/** Nächste Rechnungszahl, ohne sie zu verbrauchen (Anzeige in den Einstellungen). */
+export async function peekInvoiceCounter(
+  prefix: string,
+  profileCounter: number | undefined,
+  existingNumbers: string[],
+): Promise<number> {
+  const stored = Number.parseInt((await metaGet(INVOICE_COUNTER_KEY)) ?? "", 10);
+  return nextFreeCounter(prefix, startCounter(stored, profileCounter, existingNumbers), existingNumbers);
+}
+
+/** Fehlermeldung für einen gewünschten Startwert; leer, wenn er zulässig ist. */
+export function validateInvoiceCounterStart(
+  prefix: string,
+  value: number,
+  existingNumbers: string[],
+): string {
+  if (!Number.isInteger(value) || value < 1) return "Bitte eine ganze Zahl ab 1 eingeben.";
+  const minimum = nextFreeCounter(prefix, 1, existingNumbers);
+  if (value < minimum) {
+    return `Zu niedrig: ${formatInvoiceNumber(prefix, minimum - 1)} ist bereits vergeben, die nächste Nummer ist frühestens ${formatInvoiceNumber(prefix, minimum)}.`;
+  }
+  return "";
+}
+
+export function setInvoiceCounter(next: number): Promise<void> {
+  return metaSet(INVOICE_COUNTER_KEY, String(next));
+}
+
 let allocationQueue: Promise<unknown> = Promise.resolve();
 
 /**
@@ -49,12 +87,7 @@ export function allocateInvoiceNumber(
   const run = allocationQueue.then(async () => {
     const existing = getExistingNumbers();
     const stored = Number.parseInt((await metaGet(INVOICE_COUNTER_KEY)) ?? "", 10);
-    const start = Number.isFinite(stored)
-      ? stored
-      : existing.length > 0
-        ? (profileCounter ?? 1)
-        : 1;
-    const counter = nextFreeCounter(prefix, start, existing);
+    const counter = nextFreeCounter(prefix, startCounter(stored, profileCounter, existing), existing);
     await metaSet(INVOICE_COUNTER_KEY, String(counter + 1));
     return formatInvoiceNumber(prefix, counter);
   });
