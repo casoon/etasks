@@ -34,6 +34,8 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Fixed
 
+- **Build:** the production UI starts again; the manual view/modal chunk split caused a circular chunk and the main view never rendered in release builds.
+- **Quick add:** the input field keeps typed text instead of being cleared immediately, so tasks can be added again.
 - **Backup:** a failing export is reported as an error with the reason instead of "Backup exportiert." (the silent download fallback inside the desktop app is gone), a successful one shows the file path, and the sidebar "Exportieren" now gives that feedback too.
 - **Weekly planning:** the outcome note is saved on blur and when leaving the view, for the week it was typed in.
 - **Backup:** the import in the right panel asks like the one in Settings, with the number of entries that get replaced; both use the same path. The file is checked first (version, lists, required fields) and an invalid file is rejected before anything is touched. Before importing, the current state is saved to the export folder as `etasks-vor-import-…json`; if that fails, nothing is imported.
