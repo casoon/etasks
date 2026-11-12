@@ -19,3 +19,7 @@ All notable changes to eTasks are listed here. eTasks follows
 ### Removed
 
 - **Releases:** the macOS Intel (`x64`) build; macOS installers are Apple Silicon only.
+
+### Fixed
+
+- **UI:** primary buttons (`bg-accent`) are visible again; the global button reset no longer overrides Tailwind background utilities.
