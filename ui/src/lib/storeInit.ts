@@ -11,6 +11,7 @@ import { initInvoices } from '../stores/invoiceStore';
 import { initWeekPlans } from '../stores/weekPlanStore';
 import { initTermine } from '../stores/terminStore';
 import { initRecurringTasks } from './recurrenceService';
+import { removeOrphanedBlocks } from './taskActions';
 import { loadDayPlans } from './db';
 import { $dayPlans } from '../stores/planningStore';
 
@@ -18,6 +19,7 @@ export function reinitStores(): void {
   initRecurringTasks();
   initTasks();
   initBlocks();
+  removeOrphanedBlocks();
   initGoals();
   initProjects();
   initTimeEntries();

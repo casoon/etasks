@@ -1,6 +1,6 @@
 // @core
 import { $tasks, removeTask } from '../stores/taskStore';
-import { removeBlockForTask } from '../stores/calendarStore';
+import { $blocks, removeBlock, removeBlockForTask } from '../stores/calendarStore';
 import { $activeEntry, stopActiveTimer, removeTimeEntriesWhere } from '../stores/timerStore';
 import { $billingItems, removeBillingItem, removeTaskLinks } from '../stores/billingStore';
 import { removeTermineWhere } from '../stores/terminStore';
@@ -14,6 +14,18 @@ export function deleteTaskCascade(id: string): void {
   removeBlockForTask(id);
   removeTaskLinks(id);
   removeTask(id);
+}
+
+// Remove calendar blocks of tasks that no longer exist or are not scheduled any more
+// (left over from before blocks were removed together with scheduledStart). Blocks without
+// a task are free entries and stay.
+export function removeOrphanedBlocks(): void {
+  const tasks = new Map($tasks.get().map((t) => [t.id, t]));
+  for (const block of $blocks.get()) {
+    if (!block.taskId) continue;
+    const task = tasks.get(block.taskId);
+    if (!task || !task.scheduledStart) removeBlock(block.id);
+  }
 }
 
 // Delete a project with everything that belongs to it: tasks, their time entries,

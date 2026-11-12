@@ -73,7 +73,8 @@ export function toggleTask(id: string): void {
   }));
 }
 
-export function updateTask(id: string, patch: Partial<Task>): void {
+// `touch: false` keeps updatedAt (pure reordering is not an edit of the task).
+export function updateTask(id: string, patch: Partial<Task>, options: { touch?: boolean } = {}): void {
   const task = $tasks.get().find((t) => t.id === id);
   if (!task) return;
   const now = new Date().toISOString();
@@ -82,7 +83,7 @@ export function updateTask(id: string, patch: Partial<Task>): void {
     patch.scheduledStart && !patch.plannedDate
       ? { ...patch, plannedDate: toDateKeyFromIso(patch.scheduledStart) ?? today() }
       : patch;
-  $tasks.set(upsertTask({ ...task, ...resolved, updatedAt: now }));
+  $tasks.set(upsertTask({ ...task, ...resolved, updatedAt: options.touch === false ? task.updatedAt : now }));
 }
 
 export function removeTask(id: string): void {

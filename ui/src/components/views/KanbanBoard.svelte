@@ -7,6 +7,7 @@
   import { KANBAN_COLUMNS } from '../../domain/types';
   import { daysSince, formatDuration, isToday, today } from '../../domain/dateUtils';
   import { deleteTaskCascade } from '../../lib/taskActions';
+  import { removeBlockForTask } from '../../stores/calendarStore';
   import { getTaskDragData, hasTaskDragData, setTaskDragData } from '../../lib/taskDrag';
 
   export let projectId: string;
@@ -182,7 +183,8 @@
         patch.status = targetColId === 'done' ? 'done' : 'todo';
         patch.completedAt = targetColId === 'done' ? new Date().toISOString() : null;
       }
-      if (Object.keys(patch).length > 0) updateTask(t.id, patch);
+      const keys = Object.keys(patch);
+      if (keys.length > 0) updateTask(t.id, patch, { touch: !(keys.length === 1 && keys[0] === 'sortOrder') });
     });
 
     onDragEnd();
@@ -294,7 +296,7 @@
                   <button
                     class="text-[13px] text-muted px-1 py-0.5 rounded transition-colors hover:bg-bg hover:text-accent"
                     title="Heute einplanen"
-                    on:click={() => updateTask(task.id, { plannedDate: today(), scheduledStart: null })}
+                    on:click={() => { removeBlockForTask(task.id); updateTask(task.id, { plannedDate: today(), scheduledStart: null, scheduledEnd: null }); }}
                   >☀</button>
                 {/if}
                 <button

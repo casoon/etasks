@@ -243,7 +243,13 @@
       showTodayLimitWarning();
       return false;
     }
-    updateTask(task.id, { plannedDate: activeDate });
+    if (task.scheduledStart) {
+      // a block on another day no longer applies
+      removeBlockForTask(task.id);
+      updateTask(task.id, { plannedDate: activeDate, scheduledStart: null, scheduledEnd: null });
+    } else {
+      updateTask(task.id, { plannedDate: activeDate });
+    }
     limitWarning = '';
     return true;
   }
