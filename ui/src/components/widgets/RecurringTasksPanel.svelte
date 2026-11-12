@@ -1,9 +1,10 @@
 <!-- @core -->
 <script lang="ts">
-  import { $tasks as tasksStore, addTask, updateTask, removeTask } from '../../stores/taskStore';
+  import { $tasks as tasksStore, addTask, updateTask } from '../../stores/taskStore';
   import { $projects as projectsStore } from '../../stores/projectStore';
   import { isRecurringDueOn } from '../../domain/dateUtils';
   import { today } from '../../domain/dateUtils';
+  import { deleteTaskCascade } from '../../lib/taskActions';
   import type { RecurrenceRule } from '../../domain/types';
 
   const DAYS = [
@@ -40,10 +41,8 @@
       startDate: startDate || undefined,
       endDate: endDate || undefined,
     };
-    addTask(title.trim(), duration, [], projectId || undefined);
-    const all = tasksStore.get();
-    const last = [...all].reverse().find(t => !t.recurrence && !t.sourceTaskId);
-    if (last) updateTask(last.id, { recurrence: rule, plannedDate: null });
+    const template = addTask(title.trim(), duration, [], projectId || undefined, undefined, null);
+    updateTask(template.id, { recurrence: rule });
 
     title = ''; weekdays = [1, 2, 3, 4, 5]; endDate = ''; adding = false;
   }
@@ -90,7 +89,7 @@
       </div>
       <button
         class="text-sm text-muted/50 px-[2px] leading-none hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-        on:click={() => removeTask(task.id)}
+        on:click={() => deleteTaskCascade(task.id)}
         aria-label="Löschen"
       >×</button>
     </div>

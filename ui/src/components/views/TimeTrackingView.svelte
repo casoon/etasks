@@ -47,7 +47,7 @@
     {@const activeTask = getTask(activeEntry.taskId)}
     <div class="flex items-center gap-3 px-6 py-2 bg-accent-subtle border-b border-border text-[13px] text-accent flex-shrink-0">
       <span class="w-2 h-2 rounded-full bg-accent flex-shrink-0 animate-pulse" />
-      <span class="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">Läuft: {activeTask?.title ?? 'Unbekannte Aufgabe'}</span>
+      <span class="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">Läuft: {activeTask?.title ?? 'Gelöschte Aufgabe'}</span>
       <button
         class="px-3 py-1 text-secondary rounded-lg text-[13px] hover:bg-gray-100 transition-colors flex-shrink-0"
         on:click={stopActiveTimer}
@@ -89,7 +89,7 @@
           {@const project = getProject(entry.projectId ?? task?.projectId)}
           <div class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-bg">
             {#if project}<span class="w-2 h-2 rounded-full flex-shrink-0" style="background:{project.color}" />{/if}
-            <span class="flex-1 text-[13px] text-primary overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{task?.title ?? '—'}</span>
+            <span class="flex-1 text-[13px] text-primary overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{task?.title ?? 'Gelöschte Aufgabe'}</span>
             {#if project}<span class="text-[11px] text-muted whitespace-nowrap">{project.name}</span>{/if}
             <span class="text-[11px] text-muted whitespace-nowrap">{formatTime(entry.startAt)} – {entry.endAt ? formatTime(entry.endAt) : '…'}</span>
             <span class="text-[12px] font-semibold text-secondary tabular-nums whitespace-nowrap">{formatTrackedTime((entry.durationMinutes ?? 0) * 60)}</span>

@@ -71,6 +71,31 @@ describe('isDue', () => {
     });
   });
 
+  describe('weekdays', () => {
+    const rule: RecurrenceRule = { weekdays: [1, 3] }; // Mo, Mi
+
+    it('is due on a configured weekday', () => {
+      // 2026-03-30 is a Monday, 2026-04-01 a Wednesday
+      expect(isDue(rule, '2026-03-27', '2026-03-30')).toBe(true);
+      expect(isDue(rule, '2026-03-27', '2026-04-01')).toBe(true);
+    });
+
+    it('is not due on other weekdays', () => {
+      expect(isDue(rule, '2026-03-27', '2026-03-31')).toBe(false);
+    });
+
+    it('is due without a last date', () => {
+      expect(isDue(rule, '', '2026-03-30')).toBe(true);
+    });
+
+    it('respects startDate and endDate', () => {
+      const ranged: RecurrenceRule = { weekdays: [1], startDate: '2026-04-06', endDate: '2026-04-13' };
+      expect(isDue(ranged, '', '2026-03-30')).toBe(false);
+      expect(isDue(ranged, '', '2026-04-06')).toBe(true);
+      expect(isDue(ranged, '', '2026-04-20')).toBe(false);
+    });
+  });
+
   describe('monthly', () => {
     const rule: RecurrenceRule = { weekdays: [], frequency: 'monthly', dayOfMonth: 15 };
 
@@ -152,5 +177,15 @@ describe('generateDueInstances', () => {
     expect(instance.estimatedMinutes).toBe(45);
     expect(instance.tags).toEqual(['work']);
     expect(instance.projectId).toBe('proj-1');
+  });
+
+  it('generates instances for templates using the weekdays format', () => {
+    const template = makeRecurringTemplate({
+      plannedDate: null,
+      recurrence: { weekdays: [1, 2, 3, 4, 5] },
+    });
+    // 2026-03-30 is a Monday, 2026-03-29 a Sunday
+    expect(generateDueInstances([template], '2026-03-30')).toHaveLength(1);
+    expect(generateDueInstances([template], '2026-03-29')).toHaveLength(0);
   });
 });

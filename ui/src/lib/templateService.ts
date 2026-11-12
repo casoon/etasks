@@ -1,7 +1,6 @@
 // @module:projects
 import type { ProjectTemplate, TemplateTask, KanbanStatus } from '../domain/types';
 import { loadCustomTemplates, upsertTemplate } from './db';
-import { today } from '../domain/dateUtils';
 import { createTask } from '../domain/taskService';
 import { upsertTask } from './db';
 
@@ -79,7 +78,6 @@ export function applyTemplate(templateId: string, projectId: string): void {
       title: def.title,
       estimatedMinutes: def.estimatedMinutes,
       tags: def.tags,
-      plannedDate: today(),
       projectId,
       kanbanStatus: def.kanbanStatus,
     });

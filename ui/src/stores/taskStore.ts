@@ -43,12 +43,13 @@ export function addTask(
   tags: string[] = [],
   projectId?: string,
   kanbanStatus?: KanbanStatus,
+  plannedDate: string | null = $activeDate.get(),
 ): Task {
   const task = createTask({
     title,
     estimatedMinutes,
     tags,
-    plannedDate: $activeDate.get(),
+    plannedDate,
     projectId,
     kanbanStatus: kanbanStatus ?? (projectId ? 'backlog' : undefined),
   });

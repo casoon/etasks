@@ -1,10 +1,11 @@
 <!-- @module:projects -->
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { $tasks as tasksStore, addTask, updateTask, removeTask } from '../../stores/taskStore';
+  import { $tasks as tasksStore, addTask, updateTask } from '../../stores/taskStore';
   import type { Task, KanbanStatus } from '../../domain/types';
   import { KANBAN_COLUMNS } from '../../domain/types';
   import { daysSince, formatDuration, isToday, today } from '../../domain/dateUtils';
+  import { deleteTaskCascade } from '../../lib/taskActions';
   import { getTaskDragData, hasTaskDragData, setTaskDragData } from '../../lib/taskDrag';
 
   export let projectId: string;
@@ -25,7 +26,7 @@
   const COLLAPSE_KEY_PREFIX = 'etasks:kanban:collapsed:';
 
   $: allTasks = $tasksStore;
-  $: tasks = allTasks.filter(t => t.projectId === projectId);
+  $: tasks = allTasks.filter(t => t.projectId === projectId && !t.recurrence);
   $: todayKey = today();
   $: boardCollapseKey = `${COLLAPSE_KEY_PREFIX}${projectId}`;
   let collapsedColumns: KanbanStatus[] = [];
@@ -45,29 +46,16 @@
     localStorage.setItem(boardCollapseKey, JSON.stringify(collapsedColumns));
   }
 
-  function tasksByColumn(col: KanbanStatus) {
-    return tasks
+  function tasksByColumn(list: Task[], col: KanbanStatus) {
+    return list
       .filter(t => (t.kanbanStatus ?? 'backlog') === col)
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   }
 
-  function isCollapsed(col: KanbanStatus): boolean {
-    return collapsedColumns.includes(col);
-  }
-
   function toggleColumn(col: KanbanStatus): void {
-    collapsedColumns = isCollapsed(col)
+    collapsedColumns = collapsedColumns.includes(col)
       ? collapsedColumns.filter(id => id !== col)
       : [...collapsedColumns, col];
-  }
-
-  function columnLimit(col: KanbanStatus): number | null {
-    return COLUMN_LIMITS[col] ?? null;
-  }
-
-  function isOverLimit(col: KanbanStatus): boolean {
-    const limit = columnLimit(col);
-    return limit != null && tasksByColumn(col).length > limit;
   }
 
   function cardAccent(task: Task): string {
@@ -85,7 +73,7 @@
     e.preventDefault();
     const title = addInput.trim();
     if (!title) return;
-    addTask(title, 30, [], projectId, col);
+    addTask(title, 30, [], projectId, col, null);
     addInput = '';
     addingCol = null;
   }
@@ -106,6 +94,11 @@
     const t = editTitle.trim();
     if (t) updateTask(editingId, { title: t, estimatedMinutes: editDuration });
     editingId = null;
+  }
+
+  function onEditFocusOut(e: FocusEvent) {
+    if ((e.currentTarget as HTMLElement).contains(e.relatedTarget as Node | null)) return;
+    saveEdit();
   }
 
   function handleEditKey(e: KeyboardEvent) {
@@ -165,7 +158,7 @@
     if (!task) { onDragEnd(); return; }
 
     // Build ordered list for target column, without the dragged card
-    const colTasks = tasksByColumn(targetColId).filter(t => t.id !== taskId);
+    const colTasks = tasksByColumn(tasks, targetColId).filter(t => t.id !== taskId);
 
     let insertIdx: number;
     if (dragOverCardId) {
@@ -181,11 +174,14 @@
 
     colTasks.splice(insertIdx, 0, task);
     colTasks.forEach((t, i) => {
-      updateTask(t.id, {
-        kanbanStatus: targetColId,
-        status: targetColId === 'done' ? 'done' : 'todo',
-        sortOrder: i,
-      });
+      const patch: Partial<Task> = {};
+      if (t.sortOrder !== i) patch.sortOrder = i;
+      if ((t.kanbanStatus ?? 'backlog') !== targetColId) {
+        patch.kanbanStatus = targetColId;
+        patch.status = targetColId === 'done' ? 'done' : 'todo';
+        patch.completedAt = targetColId === 'done' ? new Date().toISOString() : null;
+      }
+      if (Object.keys(patch).length > 0) updateTask(t.id, patch);
     });
 
     onDragEnd();
@@ -194,11 +190,11 @@
 
 <div class="grid flex-1 overflow-hidden gap-px bg-border" style="grid-template-columns: repeat(4, 1fr)">
   {#each KANBAN_COLUMNS as col (col.id)}
-    {@const colTasks = tasksByColumn(col.id)}
+    {@const colTasks = tasksByColumn(tasks, col.id)}
     {@const isColActive = dragOverColId === col.id}
-    {@const limit = columnLimit(col.id)}
+    {@const limit = COLUMN_LIMITS[col.id] ?? null}
     {@const overLimit = limit != null && colTasks.length > limit}
-    {@const collapsed = isCollapsed(col.id)}
+    {@const collapsed = collapsedColumns.includes(col.id)}
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div
       class="flex flex-col overflow-hidden transition-colors min-w-0 {isColActive ? 'bg-accent-subtle/40' : 'bg-bg'} {collapsed ? 'max-w-[68px]' : ''}"
@@ -248,13 +244,13 @@
             on:dragover={(e) => onCardDragOver(e, task.id)}
             title={createdToday ? 'Heute erstellt' : updatedToday ? 'Heute aktualisiert' : ''}
           >
-            <div class="flex flex-col gap-1 min-w-0">
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
+            <div class="flex flex-col gap-1 min-w-0" on:focusout={editingId === task.id ? onEditFocusOut : undefined}>
               {#if editingId === task.id}
                 <!-- svelte-ignore a11y-autofocus -->
                 <input
                   class="w-full px-2 py-2 border border-accent rounded-lg text-[13px] outline-none bg-surface"
                   bind:value={editTitle}
-                  on:blur={saveEdit}
                   on:keydown={handleEditKey}
                   autofocus
                 />
@@ -307,7 +303,7 @@
                 <button
                   class="text-[13px] text-muted px-1 py-0.5 rounded transition-colors hover:bg-bg hover:text-accent"
                   title="Löschen"
-                  on:click={() => removeTask(task.id)}
+                  on:click={() => deleteTaskCascade(task.id)}
                 >×</button>
               </div>
             </div>
