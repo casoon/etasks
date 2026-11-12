@@ -131,11 +131,12 @@ pub struct AppPaths {
     pub app_data_dir: Option<String>,
 }
 
-fn config_path(app: &tauri::AppHandle) -> PathBuf {
-    app.path()
+fn config_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    Ok(app
+        .path()
         .app_config_dir()
-        .expect("no config dir")
-        .join("config.json")
+        .map_err(|e| format!("Konfigurationsordner nicht verfügbar: {e}"))?
+        .join("config.json"))
 }
 
 fn tenant_slug(name: &str) -> String {
@@ -322,23 +323,25 @@ fn write_config_file(path: &Path, config: &AppConfig) -> Result<(), String> {
 
 /// Konfiguration für interne Aufrufer; bei Fehlern gelten Standardwerte.
 fn read_config(app: &tauri::AppHandle) -> AppConfig {
-    read_config_file(&config_path(app)).config
+    config_path(app)
+        .map(|path| read_config_file(&path).config)
+        .unwrap_or_default()
 }
 
 #[tauri::command]
-pub fn load_config(app: tauri::AppHandle) -> LoadedConfig {
-    read_config_file(&config_path(&app))
+pub fn load_config(app: tauri::AppHandle) -> Result<LoadedConfig, String> {
+    Ok(read_config_file(&config_path(&app)?))
 }
 
 #[tauri::command]
 pub fn save_config(app: tauri::AppHandle, config: AppConfig) -> Result<(), String> {
-    write_config_file(&config_path(&app), &config)
+    write_config_file(&config_path(&app)?, &config)
 }
 
 /// Legt eine beschädigte config.json zur Seite, damit der Nutzer neu einrichten kann.
 #[tauri::command]
 pub fn reset_config(app: tauri::AppHandle) -> Result<(), String> {
-    let path = config_path(&app);
+    let path = config_path(&app)?;
     if path.exists() && parse_config(&path).is_err() {
         let corrupt = sibling_path(&path, &format!(".corrupt-{}", timestamp()));
         std::fs::rename(&path, corrupt).map_err(|e| e.to_string())?;

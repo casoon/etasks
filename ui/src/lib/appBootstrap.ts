@@ -2,6 +2,7 @@
 import { command } from '@casoon/origin-client';
 import { openTenant } from '../stores/configStore';
 import { syncFromDatabase } from './storage';
+import { runWorkspaceSwitch } from './dbWrites';
 import { reinitStores } from './storeInit';
 import { startNotificationScheduler } from './notificationScheduler';
 import { scheduleDailySnapshot } from './exportService';
@@ -11,8 +12,10 @@ import { scheduleDailySnapshot } from './exportService';
  * This keeps tenant switching consistent across setup, settings, and sidebar UI.
  */
 export async function activateTenant(path: string, displayName?: string): Promise<void> {
-  await openTenant(path, displayName);
-  await syncFromDatabase();
+  await runWorkspaceSwitch(async () => {
+    await openTenant(path, displayName);
+    await syncFromDatabase();
+  });
   reinitStores();
   startNotificationScheduler();
   void scheduleDailySnapshot();

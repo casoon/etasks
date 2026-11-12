@@ -81,7 +81,7 @@ pub fn import_snapshot(
     state: tauri::State<DbState>,
     payload: SnapshotImportPayload,
 ) -> Result<(), String> {
-    let mut guard = state.conn.lock().unwrap();
+    let mut guard = state.lock();
     let conn = guard.as_mut().ok_or("Keine Datenbank geöffnet")?;
     let tx = conn.transaction().map_err(|e| e.to_string())?;
 

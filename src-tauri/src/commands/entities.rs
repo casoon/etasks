@@ -19,14 +19,20 @@ use crate::state::DbState;
 fn list_table(conn: &rusqlite::Connection, table: &str) -> Result<Vec<Value>, String> {
     let sql = format!("SELECT data FROM {table}");
     let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
-    let rows: rusqlite::Result<Vec<Value>> = stmt
+    let rows: rusqlite::Result<Vec<Option<Value>>> = stmt
         .query_map([], |row| {
             let data: String = row.get(0)?;
-            Ok(serde_json::from_str(&data).unwrap_or(Value::Null))
+            Ok(match serde_json::from_str(&data) {
+                Ok(value) => Some(value),
+                Err(e) => {
+                    eprintln!("[etasks] {table}: Zeile mit ungültigem JSON übersprungen ({e})");
+                    None
+                }
+            })
         })
         .map_err(|e| e.to_string())?
         .collect();
-    rows.map_err(|e| e.to_string())
+    Ok(rows.map_err(|e| e.to_string())?.into_iter().flatten().collect())
 }
 
 fn delete_by_id(conn: &rusqlite::Connection, table: &str, id: &str) -> Result<(), String> {
@@ -39,14 +45,14 @@ fn delete_by_id(conn: &rusqlite::Connection, table: &str, id: &str) -> Result<()
 
 #[tauri::command]
 pub fn list_tasks(state: State<DbState>) -> Result<Vec<Value>, String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     list_table(conn, "tasks")
 }
 
 #[tauri::command]
 pub fn upsert_task(state: State<DbState>, task: Value) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     let id = task["id"].as_str().ok_or("task: missing id")?;
     let data = serde_json::to_string(&task).map_err(|e| e.to_string())?;
@@ -72,7 +78,7 @@ pub fn upsert_task(state: State<DbState>, task: Value) -> Result<(), String> {
 
 #[tauri::command]
 pub fn delete_task(state: State<DbState>, id: String) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     delete_by_id(conn, "tasks", &id)
 }
@@ -81,14 +87,14 @@ pub fn delete_task(state: State<DbState>, id: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn list_projects(state: State<DbState>) -> Result<Vec<Value>, String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     list_table(conn, "projects")
 }
 
 #[tauri::command]
 pub fn upsert_project(state: State<DbState>, project: Value) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     let id = project["id"].as_str().ok_or("project: missing id")?;
     let data = serde_json::to_string(&project).map_err(|e| e.to_string())?;
@@ -112,7 +118,7 @@ pub fn upsert_project(state: State<DbState>, project: Value) -> Result<(), Strin
 
 #[tauri::command]
 pub fn delete_project(state: State<DbState>, id: String) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     delete_by_id(conn, "projects", &id)
 }
@@ -121,14 +127,14 @@ pub fn delete_project(state: State<DbState>, id: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn list_clients(state: State<DbState>) -> Result<Vec<Value>, String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     list_table(conn, "clients")
 }
 
 #[tauri::command]
 pub fn upsert_client(state: State<DbState>, client: Value) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     let id = client["id"].as_str().ok_or("client: missing id")?;
     let data = serde_json::to_string(&client).map_err(|e| e.to_string())?;
@@ -143,7 +149,7 @@ pub fn upsert_client(state: State<DbState>, client: Value) -> Result<(), String>
 
 #[tauri::command]
 pub fn delete_client(state: State<DbState>, id: String) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     delete_by_id(conn, "clients", &id)
 }
@@ -152,14 +158,14 @@ pub fn delete_client(state: State<DbState>, id: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn list_services(state: State<DbState>) -> Result<Vec<Value>, String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     list_table(conn, "services")
 }
 
 #[tauri::command]
 pub fn upsert_service(state: State<DbState>, service: Value) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     let id = service["id"].as_str().ok_or("service: missing id")?;
     let data = serde_json::to_string(&service).map_err(|e| e.to_string())?;
@@ -174,7 +180,7 @@ pub fn upsert_service(state: State<DbState>, service: Value) -> Result<(), Strin
 
 #[tauri::command]
 pub fn delete_service(state: State<DbState>, id: String) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     delete_by_id(conn, "services", &id)
 }
@@ -183,14 +189,14 @@ pub fn delete_service(state: State<DbState>, id: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn list_billing_items(state: State<DbState>) -> Result<Vec<Value>, String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     list_table(conn, "billing_items")
 }
 
 #[tauri::command]
 pub fn upsert_billing_item(state: State<DbState>, item: Value) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     let id = item["id"].as_str().ok_or("billing_item: missing id")?;
     let project_id = item["projectId"].as_str().ok_or("billing_item: missing projectId")?;
@@ -209,19 +215,25 @@ pub fn upsert_billing_item(state: State<DbState>, item: Value) -> Result<(), Str
 
 #[tauri::command]
 pub fn delete_billing_item(state: State<DbState>, id: String) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
-    let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
-    // cascade: also remove join rows
-    conn.execute("DELETE FROM billing_item_tasks WHERE billing_item_id = ?1", params![id])
+    let mut guard = state.lock();
+    let conn = guard.as_mut().ok_or("Keine Datenbank geöffnet")?;
+    delete_billing_item_in(conn, &id)
+}
+
+/// Löscht die Position und ihre Verknüpfungen in einer Transaktion.
+fn delete_billing_item_in(conn: &mut rusqlite::Connection, id: &str) -> Result<(), String> {
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    tx.execute("DELETE FROM billing_item_tasks WHERE billing_item_id = ?1", params![id])
         .map_err(|e| e.to_string())?;
-    delete_by_id(conn, "billing_items", &id)
+    delete_by_id(&tx, "billing_items", id)?;
+    tx.commit().map_err(|e| e.to_string())
 }
 
 // ── Billing Item Tasks (join) ──────────────────────────────────────────────
 
 #[tauri::command]
 pub fn list_billing_item_tasks(state: State<DbState>) -> Result<Vec<Value>, String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     let mut stmt = conn
         .prepare("SELECT billing_item_id, task_id, created_at FROM billing_item_tasks")
@@ -249,7 +261,7 @@ pub fn add_billing_item_task(
     task_id: String,
     created_at: String,
 ) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     conn.execute(
         "INSERT OR IGNORE INTO billing_item_tasks (billing_item_id, task_id, created_at)
@@ -266,7 +278,7 @@ pub fn remove_billing_item_task(
     billing_item_id: String,
     task_id: String,
 ) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     conn.execute(
         "DELETE FROM billing_item_tasks WHERE billing_item_id = ?1 AND task_id = ?2",
@@ -280,14 +292,14 @@ pub fn remove_billing_item_task(
 
 #[tauri::command]
 pub fn list_time_entries(state: State<DbState>) -> Result<Vec<Value>, String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     list_table(conn, "time_entries")
 }
 
 #[tauri::command]
 pub fn upsert_time_entry(state: State<DbState>, entry: Value) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     let id = entry["id"].as_str().ok_or("time_entry: missing id")?;
     let data = serde_json::to_string(&entry).map_err(|e| e.to_string())?;
@@ -307,7 +319,7 @@ pub fn upsert_time_entry(state: State<DbState>, entry: Value) -> Result<(), Stri
 
 #[tauri::command]
 pub fn delete_time_entry(state: State<DbState>, id: String) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     delete_by_id(conn, "time_entries", &id)
 }
@@ -316,40 +328,52 @@ pub fn delete_time_entry(state: State<DbState>, id: String) -> Result<(), String
 
 #[tauri::command]
 pub fn list_day_plans(state: State<DbState>) -> Result<Vec<Value>, String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     list_table(conn, "day_plans")
 }
 
 #[tauri::command]
 pub fn upsert_day_plan(state: State<DbState>, plan: Value) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
-    let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
+    let mut guard = state.lock();
+    let conn = guard.as_mut().ok_or("Keine Datenbank geöffnet")?;
+    upsert_day_plan_in(conn, &plan)
+}
+
+/// Ein Tagesplan ist über `id` und über `date` eindeutig: derselbe Tag ersetzt den bisherigen
+/// Plan dieses Tages, dieselbe `id` mit neuem Datum verschiebt den Plan.
+fn upsert_day_plan_in(conn: &mut rusqlite::Connection, plan: &Value) -> Result<(), String> {
     let id = plan["id"].as_str().ok_or("day_plan: missing id")?;
     let date = plan["date"].as_str().ok_or("day_plan: missing date")?;
-    let data = serde_json::to_string(&plan).map_err(|e| e.to_string())?;
-    conn.execute(
+    let data = serde_json::to_string(plan).map_err(|e| e.to_string())?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    tx.execute(
+        "DELETE FROM day_plans WHERE date = ?1 AND id != ?2",
+        params![date, id],
+    )
+    .map_err(|e| e.to_string())?;
+    tx.execute(
         "INSERT INTO day_plans (id, data, date)
          VALUES (?1, ?2, ?3)
-         ON CONFLICT(date) DO UPDATE SET id = excluded.id, data = excluded.data",
+         ON CONFLICT(id) DO UPDATE SET data = excluded.data, date = excluded.date",
         params![id, data, date],
     )
     .map_err(|e| e.to_string())?;
-    Ok(())
+    tx.commit().map_err(|e| e.to_string())
 }
 
 // ── Calendar Blocks ────────────────────────────────────────────────────────
 
 #[tauri::command]
 pub fn list_blocks(state: State<DbState>) -> Result<Vec<Value>, String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     list_table(conn, "calendar_blocks")
 }
 
 #[tauri::command]
 pub fn upsert_block(state: State<DbState>, block: Value) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     let id = block["id"].as_str().ok_or("block: missing id")?;
     let data = serde_json::to_string(&block).map_err(|e| e.to_string())?;
@@ -368,14 +392,14 @@ pub fn upsert_block(state: State<DbState>, block: Value) -> Result<(), String> {
 
 #[tauri::command]
 pub fn delete_block(state: State<DbState>, id: String) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     delete_by_id(conn, "calendar_blocks", &id)
 }
 
 #[tauri::command]
 pub fn delete_blocks_by_task_id(state: State<DbState>, task_id: String) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     conn.execute(
         "DELETE FROM calendar_blocks WHERE task_id = ?1",
@@ -389,14 +413,14 @@ pub fn delete_blocks_by_task_id(state: State<DbState>, task_id: String) -> Resul
 
 #[tauri::command]
 pub fn list_goals(state: State<DbState>) -> Result<Vec<Value>, String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     list_table(conn, "weekly_goals")
 }
 
 #[tauri::command]
 pub fn upsert_goal(state: State<DbState>, goal: Value) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     let id = goal["id"].as_str().ok_or("goal: missing id")?;
     let data = serde_json::to_string(&goal).map_err(|e| e.to_string())?;
@@ -412,7 +436,7 @@ pub fn upsert_goal(state: State<DbState>, goal: Value) -> Result<(), String> {
 
 #[tauri::command]
 pub fn delete_goal(state: State<DbState>, id: String) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     delete_by_id(conn, "weekly_goals", &id)
 }
@@ -421,14 +445,14 @@ pub fn delete_goal(state: State<DbState>, id: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn list_notes(state: State<DbState>) -> Result<Vec<Value>, String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     list_table(conn, "daily_notes")
 }
 
 #[tauri::command]
 pub fn upsert_note(state: State<DbState>, note: Value) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     let date = note["date"].as_str().ok_or("note: missing date")?;
     let data = serde_json::to_string(&note).map_err(|e| e.to_string())?;
@@ -445,14 +469,14 @@ pub fn upsert_note(state: State<DbState>, note: Value) -> Result<(), String> {
 
 #[tauri::command]
 pub fn list_invoices(state: State<DbState>) -> Result<Vec<Value>, String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     list_table(conn, "invoices")
 }
 
 #[tauri::command]
 pub fn upsert_invoice(state: State<DbState>, invoice: Value) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     let id = invoice["id"].as_str().ok_or("invoice: missing id")?;
     let data = serde_json::to_string(&invoice).map_err(|e| e.to_string())?;
@@ -478,7 +502,7 @@ pub fn upsert_invoice(state: State<DbState>, invoice: Value) -> Result<(), Strin
 
 #[tauri::command]
 pub fn delete_invoice(state: State<DbState>, id: String) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     delete_by_id(conn, "invoices", &id)
 }
@@ -487,14 +511,14 @@ pub fn delete_invoice(state: State<DbState>, id: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn list_templates(state: State<DbState>) -> Result<Vec<Value>, String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     list_table(conn, "project_templates")
 }
 
 #[tauri::command]
 pub fn upsert_template(state: State<DbState>, template: Value) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     let id = template["id"].as_str().ok_or("template: missing id")?;
     let data = serde_json::to_string(&template).map_err(|e| e.to_string())?;
@@ -509,7 +533,51 @@ pub fn upsert_template(state: State<DbState>, template: Value) -> Result<(), Str
 
 #[tauri::command]
 pub fn delete_template(state: State<DbState>, id: String) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     delete_by_id(conn, "project_templates", &id)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn db() -> rusqlite::Connection {
+        let mut conn = rusqlite::Connection::open_in_memory().unwrap();
+        crate::commands::database::init_schema(&mut conn).unwrap();
+        conn
+    }
+
+    #[test]
+    fn list_table_skips_rows_with_invalid_json() {
+        let conn = db();
+        conn.execute("INSERT INTO clients (id, data) VALUES ('a', '{\"id\":\"a\"}')", []).unwrap();
+        conn.execute("INSERT INTO clients (id, data) VALUES ('b', 'not json')", []).unwrap();
+        let rows = list_table(&conn, "clients").unwrap();
+        assert_eq!(rows, vec![json!({"id": "a"})]);
+    }
+
+    #[test]
+    fn deleting_a_billing_item_removes_its_links_together() {
+        let mut conn = db();
+        conn.execute("INSERT INTO billing_items (id, data, project_id) VALUES ('b', '{}', 'p')", []).unwrap();
+        conn.execute("INSERT INTO billing_item_tasks VALUES ('b', 't', 'x')", []).unwrap();
+        delete_billing_item_in(&mut conn, "b").unwrap();
+        let items: i64 = conn.query_row("SELECT COUNT(*) FROM billing_items", [], |r| r.get(0)).unwrap();
+        let links: i64 = conn.query_row("SELECT COUNT(*) FROM billing_item_tasks", [], |r| r.get(0)).unwrap();
+        assert_eq!((items, links), (0, 0));
+    }
+
+    #[test]
+    fn day_plan_upsert_handles_conflicts_by_date_and_by_id() {
+        let mut conn = db();
+        upsert_day_plan_in(&mut conn, &json!({"id": "p1", "date": "2026-11-12", "v": 1})).unwrap();
+        // same id, new date: moves the plan
+        upsert_day_plan_in(&mut conn, &json!({"id": "p1", "date": "2026-11-13", "v": 2})).unwrap();
+        // same date, other id: replaces the plan of that day
+        upsert_day_plan_in(&mut conn, &json!({"id": "p2", "date": "2026-11-13", "v": 3})).unwrap();
+        let rows = list_table(&conn, "day_plans").unwrap();
+        assert_eq!(rows, vec![json!({"id": "p2", "date": "2026-11-13", "v": 3})]);
+    }
 }
