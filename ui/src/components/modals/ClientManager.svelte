@@ -12,6 +12,7 @@
     import { $tasks as tasksStore } from "../../stores/taskStore";
     import { $bridgeTimeEntries as timeEntriesStore, $bridgeInvoices as invoicesStore } from "../../stores/coreBridge";
     import { PROJECT_COLORS } from "../../domain/types";
+    import { csvEscape } from "../../lib/csv";
     import { entrySeconds } from "../../domain/dateUtils";
     import type { Client } from "../../domain/types";
     import { isTauriAvailable } from "../../lib/platform";
@@ -130,13 +131,6 @@
             const raw = (e.currentTarget as HTMLInputElement).value;
             scheduleClientSave(selectedClientId, field, parseFloat(raw) || undefined);
         };
-    }
-
-    function csvEscape(value: string | number | null | undefined): string {
-        const normalized = String(value ?? "");
-        return /[",;\n]/.test(normalized)
-            ? `"${normalized.replace(/"/g, '""')}"`
-            : normalized;
     }
 
     async function exportClientCsv() {
