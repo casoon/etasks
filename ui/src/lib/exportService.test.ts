@@ -26,6 +26,8 @@ vi.mock("./storage", () => ({
     dayPlans: "etasks:dayPlans",
     services: "etasks:services",
     invoices: "etasks:invoices",
+    weekPlans: "etasks:weekPlans",
+    termine: "etasks:termine",
   },
   storageGet: (key: string) => {
     const raw = storage.get(key);
@@ -50,6 +52,8 @@ vi.mock("./db", () => ({
     { billingItemId: "billing-1", taskId: "task-1" },
   ],
   loadDayPlans: () => [{ id: "plan-1", date: "2026-03-28" }],
+  loadTermine: () => [{ id: "termin-1" }],
+  loadWeekPlans: () => [{ weekStart: "2026-03-23", focusProjectIds: [] }],
 }));
 
 vi.mock("../stores/coreBridge", () => ({
@@ -93,6 +97,8 @@ describe("exportService", () => {
       billingItemTasks: [{ billingItemId: "billing-1", taskId: "task-1" }],
       dayPlans: [{ id: "plan-1", date: "2026-03-28" }],
       invoices: [{ id: "invoice-1" }],
+      termine: [{ id: "termin-1" }],
+      weekPlans: [{ weekStart: "2026-03-23", focusProjectIds: [] }],
     });
     expect(snapshot.profile).toEqual({ company: "Test Co" });
     expect(snapshot.tenantMeta).toEqual([
@@ -123,6 +129,8 @@ describe("exportService", () => {
           billingItemTasks: [{ billingItemId: "billing-2", taskId: "task-2" }],
           dayPlans: [{ id: "plan-2", date: "2026-03-29" }],
           invoices: [{ id: "invoice-2" }],
+          termine: [{ id: "termin-2" }],
+          weekPlans: [{ weekStart: "2026-03-30", focusProjectIds: ["project-2"] }],
         },
       }),
     );
@@ -146,5 +154,20 @@ describe("exportService", () => {
     expect(JSON.parse(storage.get("etasks:invoices") ?? "null")).toEqual([
       { id: "invoice-2" },
     ]);
+    expect(JSON.parse(storage.get("etasks:termine") ?? "null")).toEqual([
+      { id: "termin-2" },
+    ]);
+    expect(JSON.parse(storage.get("etasks:weekPlans") ?? "null")).toEqual([
+      { weekStart: "2026-03-30", focusProjectIds: ["project-2"] },
+    ]);
+  });
+
+  it("still imports backups without termine and weekPlans", async () => {
+    const { importFromJSON } = await import("./exportService");
+    const ok = await importFromJSON(
+      JSON.stringify({ data: { tasks: [{ id: "task-3" }] } }),
+    );
+    expect(ok).toBe(true);
+    expect(storage.has("etasks:termine")).toBe(false);
   });
 });

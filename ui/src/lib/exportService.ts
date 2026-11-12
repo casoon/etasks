@@ -11,6 +11,8 @@ import {
   loadBillingItems,
   loadBillingItemTasks,
   loadDayPlans,
+  loadTermine,
+  loadWeekPlans,
 } from "./db";
 import { storageGet, storageSet, KEYS } from "./storage";
 import { $bridgeServices as $services, $bridgeInvoices as $invoices } from "../stores/coreBridge";
@@ -41,6 +43,8 @@ export async function buildSnapshot() {
       billingItemTasks: loadBillingItemTasks(),
       dayPlans: loadDayPlans(),
       invoices: $invoices.get(),
+      termine: loadTermine(),
+      weekPlans: loadWeekPlans(),
     },
   };
 }
@@ -113,6 +117,8 @@ export async function importFromJSON(json: string): Promise<boolean> {
       billingItemTasks,
       dayPlans,
       invoices,
+      termine,
+      weekPlans,
     } = snapshot.data;
     const profile = snapshot.profile;
     const tenantMeta = Array.isArray(snapshot.tenantMeta)
@@ -131,6 +137,8 @@ export async function importFromJSON(json: string): Promise<boolean> {
     if (billingItemTasks) storageSet(KEYS.billingItemTasks, billingItemTasks);
     if (dayPlans) storageSet(KEYS.dayPlans, dayPlans);
     if (invoices) storageSet(KEYS.invoices, invoices);
+    if (termine) storageSet(KEYS.termine, termine);
+    if (weekPlans) storageSet(KEYS.weekPlans, weekPlans);
     if (isTauriAvailable()) {
       await command("import_snapshot", {
         payload: {
@@ -147,6 +155,8 @@ export async function importFromJSON(json: string): Promise<boolean> {
           billingItemTasks: billingItemTasks ?? [],
           dayPlans: dayPlans ?? [],
           invoices: invoices ?? [],
+          termine,
+          weekPlans,
           tenantMeta,
         },
       });

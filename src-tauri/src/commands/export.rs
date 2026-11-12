@@ -30,6 +30,11 @@ pub struct SnapshotImportPayload {
     pub billing_item_tasks: Vec<Value>,
     pub day_plans: Vec<Value>,
     pub invoices: Vec<Value>,
+    // Stored in the kv table; absent in backups from older versions.
+    #[serde(default)]
+    pub termine: Option<Vec<Value>>,
+    #[serde(default)]
+    pub week_plans: Option<Vec<Value>>,
     pub tenant_meta: Vec<MetaImportEntry>,
 }
 
@@ -292,6 +297,24 @@ pub fn import_snapshot(
             params![meta.key, meta.value, meta.value_type],
         )
         .map_err(|e| e.to_string())?;
+    }
+
+    for (key, list) in [
+        ("etasks:termine", payload.termine),
+        ("etasks:weekPlans", payload.week_plans),
+    ] {
+        if let Some(list) = list {
+            let value = serde_json::to_string(&list).map_err(|e| e.to_string())?;
+            tx.execute(
+                "INSERT INTO kv (key, value, updated_at)
+                 VALUES (?1, ?2, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+                 ON CONFLICT(key) DO UPDATE
+                   SET value = excluded.value,
+                       updated_at = excluded.updated_at",
+                params![key, value],
+            )
+            .map_err(|e| e.to_string())?;
+        }
     }
 
     tx.commit().map_err(|e| e.to_string())?;
