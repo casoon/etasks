@@ -63,12 +63,13 @@
         workspaceError = "";
         workspaceSaved = false;
         workspaceName = activeTenant?.name ?? "";
+        // Zahlungsziel und Rechnungspräfix gehören dem Profil (eine Quelle).
+        workspacePaymentDays = String(config.profile.payment_days ?? 14);
+        workspaceInvoicePrefix = config.profile.invoice_number_prefix ?? "";
 
         if (!isTauriAvailable() || !config.active_tenant) {
             workspaceType = "browser";
             workspaceCurrency = "EUR";
-            workspacePaymentDays = String(config.profile.payment_days ?? 14);
-            workspaceInvoicePrefix = config.profile.invoice_number_prefix ?? "RE";
             workspaceCreatedAt = "";
             defaultWorkspaceDir = config.default_workspace_dir ?? "";
             defaultExportDir = config.default_export_dir ?? "";
@@ -80,13 +81,6 @@
             (await metaGet("tenant.display_name")) ?? activeTenant?.name ?? "";
         workspaceType = (await metaGet("tenant.type")) ?? "";
         workspaceCurrency = (await metaGet("defaults.currency")) ?? "EUR";
-        workspacePaymentDays =
-            (await metaGet("defaults.payment_term_days")) ??
-            String(config.profile.payment_days ?? 14);
-        workspaceInvoicePrefix =
-            (await metaGet("defaults.invoice_prefix")) ??
-            config.profile.invoice_number_prefix ??
-            "RE";
         workspaceCreatedAt = (await metaGet("app.created_at")) ?? "";
         defaultWorkspaceDir =
             config.default_workspace_dir ??
@@ -154,14 +148,6 @@
                 await metaSet(
                     "defaults.currency",
                     workspaceCurrency.trim() || "EUR",
-                );
-                await metaSet(
-                    "defaults.payment_term_days",
-                    String(Number.parseInt(workspacePaymentDays, 10) || 14),
-                );
-                await metaSet(
-                    "defaults.invoice_prefix",
-                    workspaceInvoicePrefix.trim() || "RE",
                 );
             }
 

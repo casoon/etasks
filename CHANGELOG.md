@@ -43,3 +43,4 @@ All notable changes to eTasks are listed here. eTasks follows
 - **Backup:** export and snapshot file names contain the workspace, so workspaces no longer overwrite each other; the daily snapshot is also checked after switching the workspace and hourly or on refocus while the app stays open; the iCloud snapshot is only written on macOS and reports failure elsewhere.
 - **Persistence:** failed database writes are logged and shown as a "Speichern fehlgeschlagen" toast (once per burst) instead of being swallowed.
 - **Workspaces:** the display name is stored in `config.json` and kept on startup and when switching; renaming it sticks. Without a name the folder name is used instead of "etasks.sqlite3".
+- **Settings:** saving the "Arbeitsbereich" tab no longer resets the invoice prefix and payment term of the profile; both fields now read and write the profile only.

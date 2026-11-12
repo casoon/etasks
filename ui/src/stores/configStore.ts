@@ -213,8 +213,6 @@ export async function writeTenantMeta(
   await metaSet("tenant.display_name", displayName);
   if (tenantType) await metaSet("tenant.type", tenantType);
   await metaSet("defaults.currency", "EUR");
-  await metaSet("defaults.payment_term_days", "14");
-  await metaSet("defaults.invoice_prefix", "RE");
   await metaSet("app.schema_version", "1");
   await metaSet("app.created_at", now);
 }
