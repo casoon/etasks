@@ -1,5 +1,6 @@
 <!-- @module:planning -->
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { $currentWeekPlan as currentWeekPlanStore, setFocusProjects, setOutcomeNote } from '../../stores/weekPlanStore';
   import { $projects as projectsStore } from '../../stores/projectStore';
   import { getWeekStart } from '../../domain/dateUtils';
@@ -34,11 +35,24 @@
   }
 
   let noteDebounce: ReturnType<typeof setTimeout> | null = null;
-  function handleNoteInput(e: Event) {
-    const val = (e.target as HTMLTextAreaElement).value;
+  let pendingNote: { week: string; value: string } | null = null;
+
+  function flushNote() {
     if (noteDebounce) clearTimeout(noteDebounce);
-    noteDebounce = setTimeout(() => setOutcomeNote(weekStart, val), 500);
+    noteDebounce = null;
+    if (!pendingNote) return;
+    const { week, value } = pendingNote;
+    pendingNote = null;
+    setOutcomeNote(week, value);
   }
+
+  function handleNoteInput(e: Event) {
+    pendingNote = { week: weekStart, value: (e.target as HTMLTextAreaElement).value };
+    if (noteDebounce) clearTimeout(noteDebounce);
+    noteDebounce = setTimeout(flushNote, 500);
+  }
+
+  onDestroy(flushNote);
 </script>
 
 <div class="flex flex-col gap-6 p-5 overflow-y-auto">
@@ -82,6 +96,7 @@
       rows={4}
       value={plan.outcomeNote ?? ''}
       on:input={handleNoteInput}
+      on:blur={flushNote}
       placeholder="z.B. Angebot für Kunde X fertig, Login-Flow implementiert, …"
     />
   </div>

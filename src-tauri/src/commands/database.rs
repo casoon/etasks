@@ -3,9 +3,40 @@ use tauri::State;
 
 use crate::state::DbState;
 
-fn init_schema(conn: &rusqlite::Connection) -> rusqlite::Result<()> {
-    conn.execute_batch("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;")?;
-    conn.execute_batch(
+/// Schema-Migrationen in Reihenfolge. Eintrag `i` hebt `user_version` von `i` auf `i + 1`.
+/// Neue Schemaänderungen kommen als weiterer Eintrag ans Ende; bestehende Einträge bleiben stehen.
+/// Jede Migration muss idempotent sein (Datenbanken ohne `user_version` laufen ab Eintrag 0).
+const MIGRATIONS: &[&str] = &[SCHEMA_V1];
+
+fn run_migrations(conn: &mut rusqlite::Connection, migrations: &[&str]) -> Result<(), String> {
+    let current: usize = conn
+        .query_row("PRAGMA user_version", [], |row| row.get::<_, i64>(0))
+        .map_err(|e| e.to_string())? as usize;
+    if current > migrations.len() {
+        return Err(format!(
+            "Die Datenbank stammt aus einer neueren eTasks-Version (Schema {current}, bekannt {}).",
+            migrations.len()
+        ));
+    }
+    for (index, sql) in migrations.iter().enumerate().skip(current) {
+        let tx = conn.transaction().map_err(|e| e.to_string())?;
+        tx.execute_batch(sql).map_err(|e| e.to_string())?;
+        tx.execute_batch(&format!("PRAGMA user_version = {}", index + 1))
+            .map_err(|e| e.to_string())?;
+        tx.commit().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+pub(crate) fn init_schema(conn: &mut rusqlite::Connection) -> Result<(), String> {
+    conn.busy_timeout(std::time::Duration::from_millis(5000))
+        .map_err(|e| e.to_string())?;
+    conn.execute_batch("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;")
+        .map_err(|e| e.to_string())?;
+    run_migrations(conn, MIGRATIONS)
+}
+
+const SCHEMA_V1: &str =
         "-- KV store (config / legacy)
         CREATE TABLE IF NOT EXISTS kv (
             key        TEXT PRIMARY KEY,
@@ -132,24 +163,23 @@ fn init_schema(conn: &rusqlite::Connection) -> rusqlite::Result<()> {
         );
         CREATE INDEX IF NOT EXISTS idx_invoices_client_id ON invoices(client_id);
         CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
-        ",
-    )
-}
+        ";
 
 #[tauri::command]
-pub fn db_open(state: State<DbState>, path: String) -> Result<(), String> {
+pub fn db_open(app: tauri::AppHandle, state: State<DbState>, path: String) -> Result<(), String> {
+    crate::commands::config::ensure_db_open_allowed(&app, &path)?;
     if let Some(parent) = std::path::Path::new(&path).parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-    let conn = rusqlite::Connection::open(&path).map_err(|e| e.to_string())?;
-    init_schema(&conn).map_err(|e| e.to_string())?;
-    *state.conn.lock().unwrap() = Some(conn);
+    let mut conn = rusqlite::Connection::open(&path).map_err(|e| e.to_string())?;
+    init_schema(&mut conn)?;
+    *state.lock() = Some(conn);
     Ok(())
 }
 
 #[tauri::command]
 pub fn db_get(state: State<DbState>, key: String) -> Result<Option<String>, String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     match conn.query_row(
         "SELECT value FROM kv WHERE key = ?1",
@@ -164,7 +194,7 @@ pub fn db_get(state: State<DbState>, key: String) -> Result<Option<String>, Stri
 
 #[tauri::command]
 pub fn db_set(state: State<DbState>, key: String, value: String) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     conn.execute(
         "INSERT INTO kv (key, value, updated_at)
@@ -180,7 +210,7 @@ pub fn db_set(state: State<DbState>, key: String, value: String) -> Result<(), S
 
 #[tauri::command]
 pub fn db_remove(state: State<DbState>, key: String) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     conn.execute("DELETE FROM kv WHERE key = ?1", params![key])
         .map_err(|e| e.to_string())?;
@@ -189,7 +219,7 @@ pub fn db_remove(state: State<DbState>, key: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn db_all_keys(state: State<DbState>) -> Result<Vec<String>, String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     let mut stmt = conn
         .prepare("SELECT key FROM kv")
@@ -203,7 +233,7 @@ pub fn db_all_keys(state: State<DbState>) -> Result<Vec<String>, String> {
 
 #[tauri::command]
 pub fn meta_get(state: State<DbState>, key: String) -> Result<Option<String>, String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     match conn.query_row(
         "SELECT value FROM meta_entries WHERE key = ?1",
@@ -218,7 +248,7 @@ pub fn meta_get(state: State<DbState>, key: String) -> Result<Option<String>, St
 
 #[tauri::command]
 pub fn meta_set(state: State<DbState>, key: String, value: Option<String>, value_type: Option<String>) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     let vtype = value_type.unwrap_or_else(|| "string".to_string());
     conn.execute(
@@ -236,7 +266,7 @@ pub fn meta_set(state: State<DbState>, key: String, value: Option<String>, value
 
 #[tauri::command]
 pub fn meta_delete(state: State<DbState>, key: String) -> Result<(), String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     conn.execute("DELETE FROM meta_entries WHERE key = ?1", params![key])
         .map_err(|e| e.to_string())?;
@@ -245,7 +275,7 @@ pub fn meta_delete(state: State<DbState>, key: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn meta_all(state: State<DbState>) -> Result<Vec<(String, Option<String>, String)>, String> {
-    let guard = state.conn.lock().unwrap();
+    let guard = state.lock();
     let conn = guard.as_ref().ok_or("Keine Datenbank geöffnet")?;
     let mut stmt = conn
         .prepare("SELECT key, value, value_type FROM meta_entries ORDER BY key")
@@ -255,4 +285,72 @@ pub fn meta_all(state: State<DbState>) -> Result<Vec<(String, Option<String>, St
         .map_err(|e| e.to_string())?
         .collect();
     rows.map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn user_version(conn: &rusqlite::Connection) -> i64 {
+        conn.query_row("PRAGMA user_version", [], |r| r.get(0)).unwrap()
+    }
+
+    #[test]
+    fn fresh_database_gets_the_current_schema_version() {
+        let mut conn = rusqlite::Connection::open_in_memory().unwrap();
+        init_schema(&mut conn).unwrap();
+        assert_eq!(user_version(&conn), MIGRATIONS.len() as i64);
+        conn.execute("INSERT INTO tasks (id, data) VALUES ('t', '{}')", []).unwrap();
+    }
+
+    #[test]
+    fn existing_database_without_user_version_is_migrated_and_keeps_its_data() {
+        let mut conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch(SCHEMA_V1).unwrap();
+        conn.execute("INSERT INTO tasks (id, data) VALUES ('t', '{}')", []).unwrap();
+        assert_eq!(user_version(&conn), 0);
+
+        init_schema(&mut conn).unwrap();
+        init_schema(&mut conn).unwrap();
+        assert_eq!(user_version(&conn), 1);
+        let count: i64 = conn.query_row("SELECT COUNT(*) FROM tasks", [], |r| r.get(0)).unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn migrations_run_in_order_once_and_a_newer_database_is_rejected() {
+        let mut conn = rusqlite::Connection::open_in_memory().unwrap();
+        let migrations = [
+            "CREATE TABLE a (x INTEGER);",
+            "ALTER TABLE a ADD COLUMN y INTEGER;",
+        ];
+        run_migrations(&mut conn, &migrations[..1]).unwrap();
+        assert_eq!(user_version(&conn), 1);
+        run_migrations(&mut conn, &migrations).unwrap();
+        run_migrations(&mut conn, &migrations).unwrap();
+        assert_eq!(user_version(&conn), 2);
+        conn.execute("INSERT INTO a (x, y) VALUES (1, 2)", []).unwrap();
+
+        assert!(run_migrations(&mut conn, &migrations[..1]).unwrap_err().contains("neueren"));
+    }
+
+    #[test]
+    fn a_failing_migration_leaves_the_version_untouched() {
+        let mut conn = rusqlite::Connection::open_in_memory().unwrap();
+        assert!(run_migrations(&mut conn, &["CREATE TABLE a (x); NOT SQL;"]).is_err());
+        assert_eq!(user_version(&conn), 0);
+    }
+
+    #[test]
+    fn poisoned_lock_is_recovered() {
+        let state = std::sync::Arc::new(DbState { conn: std::sync::Mutex::new(None) });
+        let clone = state.clone();
+        let _ = std::thread::spawn(move || {
+            let _guard = clone.conn.lock().unwrap();
+            panic!("poison");
+        })
+        .join();
+        assert!(state.conn.is_poisoned());
+        assert!(state.lock().is_none());
+    }
 }

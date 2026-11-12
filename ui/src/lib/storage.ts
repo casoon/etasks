@@ -1,6 +1,7 @@
 // @core
 import { isTauriAvailable } from "./platform";
 import { command } from "@casoon/origin-client";
+import { dbWrite } from "./dbWrites";
 import { logger } from "./logger";
 import { toast } from "../stores/toastStore";
 
@@ -139,7 +140,7 @@ export function storageSet<T>(key: string, value: T): void {
   }
   // Only legacy key/value state belongs in the KV table.
   if (isTauriAvailable() && !isEntityBackedKey(key)) {
-    command("db_set", { key, value: raw }).catch((e) =>
+    dbWrite("db_set", { key, value: raw }).catch((e) =>
       reportDbWriteError("db_set", e),
     );
   }
@@ -152,7 +153,7 @@ export function storageRemove(key: string): void {
     memoryFallback.delete(key);
   }
   if (isTauriAvailable() && !isEntityBackedKey(key)) {
-    command("db_remove", { key }).catch((e) =>
+    dbWrite("db_remove", { key }).catch((e) =>
       reportDbWriteError("db_remove", e),
     );
   }

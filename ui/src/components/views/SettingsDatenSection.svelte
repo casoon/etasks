@@ -21,19 +21,6 @@
     async function importBackup(event: Event) {
         const file = (event.currentTarget as HTMLInputElement).files?.[0];
         if (!file) return;
-        const activeTenant = config.tenants.find(
-            (tenant) => tenant.path === config.active_tenant,
-        );
-        const targetLabel = isTauriAvailable()
-            ? (activeTenant?.name ?? "den aktiven Arbeitsbereich")
-            : "den aktuellen Browser-Speicher";
-        const confirmed = confirm(
-            `Backup "${file.name}" wirklich in ${targetLabel} importieren? Bestehende Daten werden überschrieben.`,
-        );
-        if (!confirmed) {
-            if (importInput) importInput.value = "";
-            return;
-        }
         await restoreFromBackupFile(file);
         if (importInput) importInput.value = "";
     }
@@ -87,10 +74,10 @@
         </button>
 
         <button class="action-card" on:click={runSnapshotWithFeedback}>
-            <span class="action-card__title">Snapshot speichern</span>
+            <span class="action-card__title">Sicherung jetzt anlegen</span>
             <span class="action-card__text"
                 >{isTauriAvailable()
-                    ? "Täglichen Snapshot in der Desktop-App anstoßen."
+                    ? "Täglich automatisch im Ordner „Sicherungen“ des Exportordners (die letzten 14), ohne IBAN, Steuernummer und Bankdaten. Der JSON-Export enthält das volle Profil. Das ist eine lokale Datei, keine Cloud-Sicherung."
                     : "Nur in der Desktop-App verfügbar."}</span
             >
         </button>

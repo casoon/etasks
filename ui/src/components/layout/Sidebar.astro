@@ -98,8 +98,8 @@ const navItems = [
 
 <script>
     import { $navItem, $showShutdown } from "../../stores/uiStore";
-    import { $appConfig } from "../../stores/configStore";
-    import { exportToFile } from "../../lib/exportService";
+    import { $appConfig, tenantNameFromPath } from "../../stores/configStore";
+    import { runExportWithFeedback } from "../../lib/backupActions";
     import { activateTenant, tenantDbExists } from "../../lib/appBootstrap";
     import { toast } from "../../stores/toastStore";
 
@@ -126,7 +126,7 @@ const navItems = [
             const btn = document.createElement("button");
             btn.className = `flex items-center gap-2 w-full px-3 py-2 text-[12px] transition-colors text-left ${t.path === config.active_tenant ? "text-accent font-semibold bg-accent/5" : "text-secondary hover:bg-bg hover:text-primary"}`;
             btn.textContent =
-                t.displayName ?? t.name ?? t.path.split("/").pop();
+                t.displayName ?? t.name ?? tenantNameFromPath(t.path);
             if (t.path !== config.active_tenant) {
                 btn.addEventListener("click", async () => {
                     closeDropdown();
@@ -207,7 +207,7 @@ const navItems = [
     document
         .querySelector('[data-action="export"]')
         ?.addEventListener("click", () => {
-            exportToFile();
+            runExportWithFeedback();
         });
 
     // Follow every navigation, also programmatic ones (e.g. "Fokus starten")

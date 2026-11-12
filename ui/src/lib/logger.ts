@@ -5,16 +5,6 @@ import { $appConfig } from "../stores/configStore";
 
 type LogLevel = "INFO" | "WARN" | "ERROR" | "DEBUG";
 
-function getLogPath(): string | null {
-  const config = $appConfig.get();
-  if (!config.logging_enabled) return null;
-  const tenant = config.active_tenant;
-  if (!tenant) return null;
-  const lastSlash = tenant.lastIndexOf("/");
-  const dir = lastSlash >= 0 ? tenant.substring(0, lastSlash) : ".";
-  return dir + "/app.log";
-}
-
 function log(level: LogLevel, message: string): void {
   const formatted = `[${level}] ${message}`;
   if (level === "ERROR") console.error(formatted);
@@ -22,9 +12,8 @@ function log(level: LogLevel, message: string): void {
   else console.log(formatted);
 
   if (isTauriAvailable()) {
-    const path = getLogPath();
-    if (path) {
-      command("write_log", { path, level, message }).catch(() => {});
+    if ($appConfig.get().logging_enabled) {
+      command("write_log", { level, message }).catch(() => {});
     }
   }
 }

@@ -17,13 +17,10 @@ import type {
   Termin,
 } from "../domain/types";
 import { storageGet, storageSet, reportDbWriteError, KEYS } from "./storage";
-import { isTauriAvailable } from "./platform";
-import { command } from "@casoon/origin-client";
+import { dbWrite } from "./dbWrites";
 
 function dbInvoke(cmd: string, args?: Record<string, unknown>): void {
-  if (isTauriAvailable()) {
-    command(cmd, args).catch((e) => reportDbWriteError(cmd, e));
-  }
+  dbWrite(cmd, args).catch((e) => reportDbWriteError(cmd, e));
 }
 
 function withUpdate<T extends { id: string }>(arr: T[], item: T): T[] {

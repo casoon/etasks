@@ -20,6 +20,7 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Changed
 
+- **Backup:** the daily snapshot is a local backup, no longer called iCloud: it goes to `Sicherungen` inside the export folder on every platform, keeps the last 14 per workspace and leaves IBAN, tax number and bank data out (the JSON export keeps the full profile). Old files in the former iCloud folder are not touched.
 - **Contributors:** all calls into the Rust core go through `@casoon/origin-client`;
   `ui/src/lib/platform.ts` is the only file that still touches a Tauri webview API.
 - **Contributors:** the export snapshot test mocks `coreBridge` again, so CI on `main` is green.
@@ -32,6 +33,9 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Fixed
 
+- **Backup:** a failing export is reported as an error with the reason instead of "Backup exportiert." (the silent download fallback inside the desktop app is gone), a successful one shows the file path, and the sidebar "Exportieren" now gives that feedback too.
+- **Weekly planning:** the outcome note is saved on blur and when leaving the view, for the week it was typed in.
+- **Backup:** the import in the right panel asks like the one in Settings, with the number of entries that get replaced; both use the same path. The file is checked first (version, lists, required fields) and an invalid file is rejected before anything is touched. Before importing, the current state is saved to the export folder as `etasks-vor-import-…json`; if that fails, nothing is imported.
 - **Navigation:** the sidebar highlight follows every view change, including "Fokus starten", "Tag planen" and "Zur Tagesplanung".
 - **Analytics:** the weekly figures (completion rate, planned time, tracked time) only count the calendar week Monday–Sunday instead of everything planned from Monday on, "Zeit pro Kategorie" shows tracked time instead of estimates, and "Diese Woche" in Zeiterfassung uses the same calendar week.
 - **Appointments:** the day grid widens for Termine before 06:00 or after 20:00 instead of drawing them outside the grid.
@@ -92,3 +96,9 @@ All notable changes to eTasks are listed here. eTasks follows
 
 - **Dependencies:** `rusqlite` 0.41 bundles SQLite 3.54, which closes RUSTSEC-2026-0459 (a crafted
   database with a mismatched `-wal` file could read uninitialised memory). Building needs Rust 1.89.
+- **Configuration:** `config.json` is written atomically and the last good file is kept as `config.json.bak`. A damaged file is no longer replaced by defaults: the backup is restored automatically, otherwise an error screen offers a fresh setup. If the database of the last workspace is missing at start, "Arbeitsbereich nicht gefunden" offers the other workspaces instead of resetting the setup.
+- **Database:** SQLite waits up to 5 s for a locked database instead of failing at once, a schema version (`user_version`) with ordered migrations is in place, deleting a billing item and saving a day plan are transactional (a day plan with a known id and a new date no longer fails), unreadable rows are skipped instead of reaching the UI as `null`, and a panic in one command no longer blocks all others. Writes still in flight are finished before a workspace switch and none are sent during it, so data of one workspace cannot land in another.
+- **Logging (Windows):** the log file is written next to the open database by the Rust side, so Windows paths no longer end up in `./app.log` relative to the working directory; the workspace name in the sidebar fallback also handles `\`.
+- **Export and PDFs:** file names of exports, invoices, offers and project reports are cleaned for Windows (no `: * ? " < > |`, no reserved device names, no trailing dots, limited length), so an invoice prefix like `RE:` no longer creates a broken file. Project reports and exports no longer overwrite an existing file but get a `-2`, `-3` suffix; a re-created invoice still replaces its own previous PDF. The backend rejects export file names with path separators or `..`, and `db_open` only opens `etasks.sqlite3`, known workspaces or database files under the workspace folders.
+- **Project report:** project names with Typst special characters (`]`, `[`, `#`, `$`, `*`, `_`, `@`, a trailing `\`, even Typst code) are escaped, so the PDF is created and shows the name literally instead of failing or running the markup.
+- **CSV export:** cells that start with `=`, `+`, `-`, `@`, a tab or a carriage return are prefixed with `'` so Excel does not run them as formulas (numbers stay numeric); cells containing a carriage return are quoted.
