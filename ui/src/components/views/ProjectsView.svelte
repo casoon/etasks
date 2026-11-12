@@ -48,6 +48,7 @@
         lineTotalCents,
     } from "../../lib/invoiceMoney";
     import type { TerminType } from "../../domain/types";
+    import { saveAsTemplate } from "../../stores/templateStore";
     import TemplatePickerModal from "../modals/TemplatePickerModal.svelte";
     import ClientManager from "../modals/ClientManager.svelte";
     import ServiceCatalog from "../modals/ServiceCatalog.svelte";
@@ -360,6 +361,31 @@
 
     // Template picker
     let showTemplatePicker = false;
+
+    // Save the project's tasks as a custom template
+    let savingTemplate = false;
+    $: if (selectedId) savingTemplate = false;
+    let templateName = "";
+    function handleSaveAsTemplate() {
+        const name = templateName.trim();
+        const projectTasks = allTasks.filter((t) => t.projectId === selectedId && !t.recurrence);
+        if (!name) return;
+        if (projectTasks.length === 0) {
+            toast("Das Projekt hat noch keine Aufgaben.", "error");
+            return;
+        }
+        saveAsTemplate(
+            name,
+            projectTasks.map((t) => ({
+                title: t.title,
+                estimatedMinutes: t.estimatedMinutes ?? 30,
+                kanbanStatus: "backlog" as const,
+                tags: t.tags,
+            })),
+        );
+        savingTemplate = false;
+        toast(`Template „${name}“ gespeichert`, "success");
+    }
 
     // Notes debounce: the project id is bound when the edit happens; flushed on blur,
     // when another project is selected and when the view is left.
@@ -791,6 +817,25 @@
                         on:click={() => (showTemplatePicker = true)}
                         >Template anwenden</button
                     >
+                    {#if savingTemplate}
+                        <form class="flex items-center gap-1" on:submit|preventDefault={handleSaveAsTemplate}>
+                            <!-- svelte-ignore a11y-autofocus -->
+                            <input
+                                class="border border-border rounded-md px-2 py-1 text-[12px] bg-bg outline-none focus:border-accent w-[140px]"
+                                placeholder="Template-Name"
+                                bind:value={templateName}
+                                autofocus
+                            />
+                            <button type="submit" class="px-2 py-1 bg-accent text-white rounded-lg text-[12px] font-medium hover:opacity-90">Speichern</button>
+                            <button type="button" class="px-2 py-1 text-secondary rounded-lg text-[12px] hover:bg-gray-100" on:click={() => (savingTemplate = false)}>Abbrechen</button>
+                        </form>
+                    {:else}
+                        <button
+                            class="px-3 py-1 text-secondary rounded-lg text-[13px] hover:bg-gray-100 transition-colors whitespace-nowrap"
+                            on:click={() => { templateName = selectedProject?.name ?? ""; savingTemplate = true; }}
+                            >Als Template speichern</button
+                        >
+                    {/if}
                     {#if isTauriAvailable()}
                         <button
                             class="px-3 py-1 text-secondary rounded-lg text-[13px] hover:bg-gray-100 transition-colors whitespace-nowrap"

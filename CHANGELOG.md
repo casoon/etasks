@@ -7,6 +7,7 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Added
 
+- **Project templates:** "Als Template speichern" on a project saves its tasks as a custom template; custom templates can be deleted in the template picker.
 - **Releases:** every installer ships with a `.sha256` file and a signed build provenance
   attestation. Details: [Verify a download](https://github.com/casoon/etasks#verify-a-download).
 

@@ -1,6 +1,6 @@
 <!-- @module:projects -->
 <script lang="ts">
-  import { $templates as templatesStore, applyProjectTemplate } from '../../stores/templateStore';
+  import { $templates as templatesStore, applyProjectTemplate, removeTemplate } from '../../stores/templateStore';
   import type { ProjectTemplate } from '../../domain/types';
   import { formatDuration } from '../../domain/dateUtils';
 
@@ -10,6 +10,12 @@
   $: templates = $templatesStore;
   let preview: ProjectTemplate | null = null;
   let applied = false;
+
+  function handleDelete(tpl: ProjectTemplate) {
+    if (!confirm(`Template „${tpl.name}“ löschen?`)) return;
+    removeTemplate(tpl.id);
+    preview = null;
+  }
 
   function handleApply(tpl: ProjectTemplate) {
     applyProjectTemplate(tpl.id, projectId);
@@ -74,6 +80,14 @@
                 class="px-3 py-1.5 bg-accent text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
                 on:click={() => preview && handleApply(preview)}
               >Anwenden</button>
+            </div>
+            <div class="flex justify-end">
+              {#if !preview.isBuiltIn}
+                <button
+                  class="px-3 py-1 text-red-500 border border-red-200 rounded-lg text-[12px] hover:bg-red-50 transition-colors"
+                  on:click={() => preview && handleDelete(preview)}
+                >Template löschen</button>
+              {/if}
             </div>
           </div>
         {/if}
