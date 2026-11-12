@@ -13,7 +13,6 @@ A local-first productivity desktop app for focused daily planning, time tracking
 **Calendar & Time Tracking**
 - Day view with drag-and-drop scheduling
 - Per-task timer with time entry history
-- ICS import for external calendar events
 - Analytics: tracked vs. planned time per week/category
 
 **Projects & Clients**
@@ -25,12 +24,13 @@ A local-first productivity desktop app for focused daily planning, time tracking
 
 **Focus & Planning**
 - Pomodoro timer bound to tasks
-- Weekly objectives with task linking
+- Weekly planning with focus projects and a weekly outcome note
+- Quick add with Cmd/Ctrl+K
 - Guided morning planning and daily shutdown workflow
 - Recurring tasks (daily / weekly / monthly)
 
 **Data & Privacy**
-- All data stored locally in IndexedDB — no account, no sync, no telemetry
+- All data stored locally in a SQLite database per workspace — no account, no sync, no telemetry
 - Daily JSON snapshots to iCloud (macOS)
 - Full JSON export/import at any time
 
@@ -39,10 +39,10 @@ A local-first productivity desktop app for focused daily planning, time tracking
 | Layer | Technology |
 |---|---|
 | Desktop shell | [Tauri v2](https://tauri.app) |
-| Frontend framework | [Astro 5](https://astro.build) + [Svelte 4](https://svelte.dev) |
+| Frontend framework | [Astro 6](https://astro.build) + [Svelte 4](https://svelte.dev) |
 | State management | [nanostores](https://github.com/nanostores/nanostores) |
 | PDF report engine | [renderreport](https://github.com/casoon/renderreport) (Rust + Typst) |
-| Storage | IndexedDB (localStorage abstraction) |
+| Storage | SQLite per workspace (rusqlite), localStorage as UI cache |
 | Tests | [vitest](https://vitest.dev) |
 
 ## Getting Started
@@ -102,7 +102,7 @@ etasks/
 ├── src-tauri/               # Tauri Rust backend
 │   ├── src/
 │   │   ├── commands/
-│   │   │   ├── export.rs    # File export, iCloud sync, ICS file dialog
+│   │   │   ├── export.rs    # File export, iCloud sync
 │   │   │   ├── notification.rs
 │   │   │   └── report.rs    # PDF generation via renderreport
 │   │   ├── lib.rs
@@ -113,7 +113,7 @@ etasks/
 │   └── src/
 │       ├── components/      # Svelte UI components
 │       ├── domain/          # Pure domain logic + tests
-│       ├── lib/             # Services (export, ICS, reports, storage)
+│       ├── lib/             # Services (export, reports, storage)
 │       ├── stores/          # nanostores state
 │       └── styles/          # Global CSS
 └── assets/
