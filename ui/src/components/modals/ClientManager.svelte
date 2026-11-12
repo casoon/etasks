@@ -14,6 +14,7 @@
     import { PROJECT_COLORS } from "../../domain/types";
     import type { Client } from "../../domain/types";
     import { isTauriAvailable } from "../../lib/platform";
+    import { $appConfig as appConfigStore } from "../../stores/configStore";
 
     export let onProjectOpen: ((projectId: string) => void) | undefined =
         undefined;
@@ -192,20 +193,29 @@
                         entry.startAt,
                         entry.endAt ?? "",
                         minutes,
-                        Math.round((minutes / 60) * 100) / 100,
+                        (Math.round((minutes / 60) * 100) / 100)
+                            .toString()
+                            .replace(".", ","),
                         invoice?.invoiceNumber ?? "",
                         invoice?.status ?? "",
                     ];
                 }),
         ];
-        const csv = rows.map((row) => row.map(csvEscape).join(";")).join("\n");
+        // UTF-8 BOM so Excel reads umlauts correctly
+        const csv =
+            "\uFEFF" +
+            rows.map((row) => row.map(csvEscape).join(";")).join("\n");
         const filename = `etasks-${selectedClient.name.toLowerCase().replace(/[^a-z0-9]+/gi, "-")}-abrechnung.csv`;
 
         csvExporting = true;
         csvMessage = "";
         try {
             if (isTauriAvailable()) {
-                await command("export_to_file", { json: csv, filename });
+                await command("export_to_file", {
+                    json: csv,
+                    filename,
+                    directory: $appConfigStore?.default_export_dir ?? null,
+                });
             } else {
                 const blob = new Blob([csv], {
                     type: "text/csv;charset=utf-8",
