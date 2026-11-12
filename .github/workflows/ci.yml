@@ -37,7 +37,12 @@ jobs:
         working-directory: ui
 
       - name: Build UI
-        run: npm run build
+        run: |
+          npm run build 2>&1 | tee build.log
+          if grep -q "Circular chunk" build.log; then
+            echo "::error::Circular chunk warning in the UI build (the production UI would not start)"
+            exit 1
+          fi
         working-directory: ui
 
   rust:
