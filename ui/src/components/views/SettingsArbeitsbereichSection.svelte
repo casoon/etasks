@@ -188,10 +188,10 @@
             }
 
             invoiceCounterReset = false;
-            workspaceSaved = true;
-            setTimeout(() => (workspaceSaved = false), 2500);
             config = appConfigStore.get()!;
             await loadWorkspaceSettings();
+            workspaceSaved = true;
+            setTimeout(() => (workspaceSaved = false), 2500);
         } catch (e) {
             workspaceError = String(e);
         } finally {
