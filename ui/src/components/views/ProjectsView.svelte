@@ -44,10 +44,11 @@
     import {
         calcInvoiceTotals,
         formatCents,
+        isValidQuantity,
         isValidUnitPrice,
         lineTotalCents,
     } from "../../lib/invoiceMoney";
-    import type { TerminType } from "../../domain/types";
+    import type { BillingItem, TerminType } from "../../domain/types";
     import { saveAsTemplate } from "../../stores/templateStore";
     import TemplatePickerModal from "../modals/TemplatePickerModal.svelte";
     import ClientManager from "../modals/ClientManager.svelte";
@@ -494,18 +495,54 @@
     let addingBillingItem = false;
     let expandedBillingItemId: string | null = null;
 
+    const BILLING_TYPE_LABELS = {
+        hourly: "Stundenbasiert",
+        fixed: "Festpreis",
+        unit: "Einheit",
+    } as const;
+
+    function formatEuro(cents: number): string {
+        return (
+            (cents / 100).toLocaleString("de-DE", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }) + " €"
+        );
+    }
+
     interface BillingItemDraft {
         title: string;
         billingType: "fixed" | "hourly" | "unit";
         unitPriceEuro: string;
+        quantity: string;
     }
 
     const emptyBillingDraft = (): BillingItemDraft => ({
         title: "",
         billingType: "hourly",
         unitPriceEuro: "",
+        quantity: "",
     });
     let billingDraft: BillingItemDraft = emptyBillingDraft();
+    let editingBillingItemId: string | null = null;
+
+    function editBillingItem(item: BillingItem) {
+        editingBillingItemId = item.id;
+        billingDraft = {
+            title: item.title,
+            billingType: item.billingType,
+            unitPriceEuro:
+                item.unitPriceCents != null ? String(item.unitPriceCents / 100) : "",
+            quantity: item.quantity != null ? String(item.quantity) : "",
+        };
+        addingBillingItem = true;
+    }
+
+    function closeBillingForm() {
+        addingBillingItem = false;
+        editingBillingItemId = null;
+        billingDraft = emptyBillingDraft();
+    }
 
     function saveBillingItem() {
         if (!billingDraft.title.trim() || !selectedId) return;
@@ -516,16 +553,26 @@
             toast("Der Einzelpreis darf nicht negativ sein.", "error", 3500);
             return;
         }
+        const quantity =
+            billingDraft.billingType === "unit" && billingDraft.quantity
+                ? parseFloat(billingDraft.quantity)
+                : null;
+        if (quantity != null && !isValidQuantity(quantity)) {
+            toast("Die Menge muss größer als 0 sein.", "error", 3500);
+            return;
+        }
         const unitPriceCents = unitPrice != null ? Math.round(unitPrice * 100) : null;
-        addBillingItem(selectedId, {
+        const data = {
             title: billingDraft.title.trim(),
             billingType: billingDraft.billingType,
             unitPriceCents: isNaN(unitPriceCents ?? NaN)
                 ? null
                 : unitPriceCents,
-        });
-        billingDraft = emptyBillingDraft();
-        addingBillingItem = false;
+            quantity,
+        };
+        if (editingBillingItemId) updateBillingItem(editingBillingItemId, data);
+        else addBillingItem(selectedId, data);
+        closeBillingForm();
     }
 
     function toggleBillingItemExpand(id: string) {
@@ -916,6 +963,7 @@
                             class="px-2 py-0.5 text-[11px] font-medium rounded-lg border border-border text-secondary hover:bg-bg hover:text-primary transition-colors"
                             on:click={() => {
                                 addingBillingItem = true;
+                                editingBillingItemId = null;
                                 billingDraft = emptyBillingDraft();
                             }}>+ Hinzufügen</button
                         >
@@ -934,9 +982,7 @@
                                 placeholder="Bezeichnung..."
                                 autofocus
                                 on:keydown={(e) => {
-                                    if (e.key === "Escape") {
-                                        addingBillingItem = false;
-                                    }
+                                    if (e.key === "Escape") closeBillingForm();
                                     if (e.key === "Enter") saveBillingItem();
                                 }}
                             />
@@ -944,30 +990,38 @@
                                 class="border border-border rounded-md px-2 py-1 text-[12px] bg-bg outline-none text-secondary"
                                 bind:value={billingDraft.billingType}
                             >
-                                <option value="hourly">Stunden</option>
-                                <option value="fixed">Pauschal</option>
-                                <option value="unit">Einheit</option>
+                                <option value="hourly">{BILLING_TYPE_LABELS.hourly}</option>
+                                <option value="fixed">{BILLING_TYPE_LABELS.fixed}</option>
+                                <option value="unit">{BILLING_TYPE_LABELS.unit}</option>
                             </select>
                             <input
                                 class="w-24 px-2 py-1 border border-border rounded-md text-[13px] outline-none bg-surface focus:border-accent"
                                 bind:value={billingDraft.unitPriceEuro}
-                                placeholder="€ 0.00"
+                                placeholder="Preis in €"
                                 type="number"
                                 step="0.01"
                                 min="0"
                             />
+                            {#if billingDraft.billingType === "unit"}
+                                <input
+                                    class="w-20 px-2 py-1 border border-border rounded-md text-[13px] outline-none bg-surface focus:border-accent"
+                                    bind:value={billingDraft.quantity}
+                                    placeholder="Menge"
+                                    type="number"
+                                    step="any"
+                                    min="0"
+                                />
+                            {/if}
                         </div>
                         <div class="flex gap-2">
                             <button
                                 class="px-3 py-1 rounded-lg bg-accent text-white text-[12px] font-medium hover:opacity-90 transition-opacity"
-                                on:click={saveBillingItem}>Hinzufügen</button
+                                on:click={saveBillingItem}
+                                >{editingBillingItemId ? "Speichern" : "Hinzufügen"}</button
                             >
                             <button
                                 class="px-3 py-1 rounded-lg border border-border text-secondary text-[12px] hover:bg-bg transition-colors"
-                                on:click={() => {
-                                    addingBillingItem = false;
-                                    billingDraft = emptyBillingDraft();
-                                }}>Abbrechen</button
+                                on:click={closeBillingForm}>Abbrechen</button
                             >
                         </div>
                     </div>
@@ -1008,16 +1062,12 @@
                                       ? 'border-purple-200 text-purple-600 bg-purple-50'
                                       : 'border-orange-200 text-orange-600 bg-orange-50'}"
                             >
-                                {item.billingType === "hourly"
-                                    ? "Stundenbasiert"
-                                    : item.billingType === "fixed"
-                                      ? "Festpreis"
-                                      : "Pauschal"}
+                                {BILLING_TYPE_LABELS[item.billingType]}
                             </span>
                             {#if item.unitPriceCents != null}
                                 <span
                                     class="text-[12px] text-secondary font-mono"
-                                    >{(item.unitPriceCents / 100).toFixed(2)} €</span
+                                    >{#if item.billingType === "unit" && item.quantity != null}{item.quantity.toLocaleString("de-DE")} × {/if}{formatEuro(item.unitPriceCents)}</span
                                 >
                             {/if}
                             {#if isUnlocked}
@@ -1093,7 +1143,12 @@
                                         {/each}
                                     </div>
                                 {/if}
-                                <div class="flex justify-end pt-1">
+                                <div class="flex justify-end gap-2 pt-1">
+                                    <button
+                                        class="px-2 py-0.5 text-[11px] text-secondary border border-border rounded-md hover:bg-surface transition-colors"
+                                        on:click={() => editBillingItem(item)}
+                                        >Position bearbeiten</button
+                                    >
                                     <button
                                         class="px-2 py-0.5 text-[11px] text-red-500 border border-red-200 rounded-md hover:bg-red-50 transition-colors"
                                         on:click={() => {
