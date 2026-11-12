@@ -22,6 +22,12 @@ export function formatDate(dateStr: string): string {
   return date.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
+/** `2026-11-12` → `12.11.2026`; Werte ohne ISO-Datum bleiben unverändert. */
+export function formatDateDe(dateStr: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr ?? '');
+  return match ? `${match[3]}.${match[2]}.${match[1]}` : (dateStr ?? '');
+}
+
 export function formatTime(isoStr: string): string {
   return new Date(isoStr).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 }

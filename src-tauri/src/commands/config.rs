@@ -5,6 +5,7 @@ use tauri::Manager;
 const WORKSPACE_DB_FILENAME: &str = "etasks.sqlite3";
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(default)]
 pub struct UserProfile {
     pub first_name: String,
     pub last_name: String,
@@ -87,6 +88,7 @@ pub struct TenantInfo {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(default)]
 pub struct AppConfig {
     pub version: u32,
     pub setup_done: bool,
@@ -450,6 +452,14 @@ fn scan_workspace_root(root: &std::path::Path, only_default_name: bool, found: &
     }
 }
 
+/// Ein Arbeitsbereich, der direkt im Ordner liegt (Standardordner = Arbeitsbereichsordner).
+fn push_direct_workspace(dir: &std::path::Path, found: &mut Vec<String>) {
+    let db = dir.join(WORKSPACE_DB_FILENAME);
+    if db.is_file() {
+        found.push(db.to_string_lossy().to_string());
+    }
+}
+
 #[tauri::command]
 pub fn list_workspace_files(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     let mut found = vec![];
@@ -463,6 +473,7 @@ pub fn list_workspace_files(app: tauri::AppHandle) -> Result<Vec<String>, String
     }
     if let Some(dir) = load_config(app.clone()).default_workspace_dir {
         scan_workspace_root(std::path::Path::new(&dir), true, &mut found);
+        push_direct_workspace(std::path::Path::new(&dir), &mut found);
     }
     found.sort();
     found.dedup();
@@ -510,6 +521,28 @@ mod tests {
     }
 
     #[test]
+    fn old_config_without_newer_profile_fields_still_loads() {
+        let cfg: AppConfig = serde_json::from_str(
+            r#"{"version":1,"setup_done":true,"active_tenant":null,"tenants":[],
+                "profile":{"first_name":"Ada","hourly_rate":80.5}}"#,
+        )
+        .unwrap();
+        assert!(cfg.setup_done);
+        assert_eq!(cfg.profile.first_name, "Ada");
+        assert_eq!(cfg.profile.hourly_rate, 80.5);
+        assert_eq!(cfg.profile.payment_days, Some(14));
+        assert_eq!(cfg.profile.country, "Deutschland");
+    }
+
+    #[test]
+    fn config_with_empty_options_and_missing_sections_loads() {
+        let cfg: AppConfig = serde_json::from_str(r#"{"profile":{"payment_days":null}}"#).unwrap();
+        assert_eq!(cfg.profile.payment_days, None);
+        assert!(!cfg.setup_done);
+        assert!(cfg.tenants.is_empty());
+    }
+
+    #[test]
     fn tenant_display_name_round_trips_as_camel_case() {
         let tenant: TenantInfo = serde_json::from_str(
             r#"{"path":"/a/etasks.sqlite3","name":"Studio","displayName":"Studio Nord","last_opened":"x"}"#,
@@ -554,6 +587,20 @@ mod tests {
         let mut missing = vec![];
         scan_workspace_root(&root.join("nope"), true, &mut missing);
         assert!(missing.is_empty());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn direct_workspace_in_default_dir_is_found() {
+        let root = std::env::temp_dir().join(format!("etasks-direct-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        let mut found = vec![];
+        push_direct_workspace(&root, &mut found);
+        assert!(found.is_empty());
+        std::fs::write(root.join(WORKSPACE_DB_FILENAME), "").unwrap();
+        push_direct_workspace(&root, &mut found);
+        assert_eq!(found.len(), 1);
         let _ = std::fs::remove_dir_all(&root);
     }
 }

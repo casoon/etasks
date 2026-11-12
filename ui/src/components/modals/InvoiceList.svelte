@@ -1,6 +1,7 @@
 <!-- @module:billing -->
 <script lang="ts">
   import type { Client, Invoice } from '../../domain/types';
+  import { formatDateDe } from '../../domain/dateUtils';
 
   export let invoices: Invoice[] = [];
   export let clients: Client[] = [];
@@ -48,7 +49,7 @@
         <button class="flex items-center gap-2 py-[6px] px-2 rounded-lg w-full text-left transition-colors min-w-0 {selectedInvoiceId === inv.id ? 'bg-accent-subtle' : 'hover:bg-bg'}" on:click={() => onSelect(inv.id)}>
           <div class="flex-1 min-w-0">
             <p class="text-[12px] font-mono overflow-hidden text-ellipsis whitespace-nowrap {selectedInvoiceId === inv.id ? 'text-accent font-semibold' : 'text-primary'}">{inv.invoiceNumber}</p>
-            <p class="text-[11px] text-muted">{inv.date}</p>
+            <p class="text-[11px] text-muted">{formatDateDe(inv.date)}</p>
           </div>
           <span class="text-[10px] px-[6px] py-[2px] rounded-full flex-shrink-0 {statusBadgeClass(inv.status)}">{statusLabel(inv.status)}</span>
         </button>

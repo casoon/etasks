@@ -9,6 +9,9 @@ vi.mock("./metaStore", () => ({
 }));
 
 import {
+  validateInvoiceCounterStart,
+  peekInvoiceCounter,
+  setInvoiceCounter,
   allocateInvoiceNumber,
   commitOfferCounter,
   isInvoiceNumberTaken,
@@ -62,5 +65,21 @@ describe("invoiceNumber", () => {
     expect((await peekOfferNumber("ANG-", 4)).number).toBe("ANG-004");
     await commitOfferCounter(first.next);
     expect((await peekOfferNumber("ANG-", 4)).number).toBe("ANG-005");
+  });
+
+  it("validates a requested start value against existing numbers", () => {
+    expect(validateInvoiceCounterStart("RE-", 100, [])).toBe("");
+    expect(validateInvoiceCounterStart("RE-", 0, [])).not.toBe("");
+    expect(validateInvoiceCounterStart("RE-", 2.5, [])).not.toBe("");
+    expect(validateInvoiceCounterStart("RE-", 5, ["RE-007"])).toMatch(/RE-008/);
+    expect(validateInvoiceCounterStart("RE-", 8, ["RE-007", "XX-099"])).toBe("");
+  });
+
+  it("peeks without consuming and honours a manually set start", async () => {
+    expect(await peekInvoiceCounter("RE-", 100, [])).toBe(1);
+    expect(await peekInvoiceCounter("RE-", 100, ["RE-003"])).toBe(100);
+    await setInvoiceCounter(250);
+    expect(await peekInvoiceCounter("RE-", 1, [])).toBe(250);
+    expect(await allocateInvoiceNumber("RE-", 1, () => [])).toBe("RE-250");
   });
 });

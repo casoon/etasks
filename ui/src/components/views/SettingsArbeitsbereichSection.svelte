@@ -11,7 +11,13 @@
     import { activateTenant, tenantDbExists } from "../../lib/appBootstrap";
     import { toast } from "../../stores/toastStore";
     import { metaGet, metaSet } from "../../lib/metaStore";
-    import { INVOICE_COUNTER_KEY } from "../../lib/invoiceNumber";
+    import { $invoices as invoicesStore } from "../../stores/invoiceStore";
+    import {
+        formatInvoiceNumber,
+        peekInvoiceCounter,
+        setInvoiceCounter,
+        validateInvoiceCounterStart,
+    } from "../../lib/invoiceNumber";
     import { isTauriAvailable } from "../../lib/platform";
 
     interface AppPaths {
@@ -38,6 +44,9 @@
     let workspaceSaved = false;
     let workspaceError = "";
     let invoiceCounterReset = false;
+    let nextInvoiceCounter = "1";
+    let loadedInvoiceCounter = "1";
+    let invoiceCounterError = "";
     let addingTenant = false;
     let tenantName = "";
     let tenantDir = "";
@@ -61,7 +70,19 @@
         await loadWorkspaceSettings();
     });
 
+    $: invoicePrefix = workspaceInvoicePrefix.trim() || "RE-";
+    const existingInvoiceNumbers = () =>
+        invoicesStore.get().map((i) => i.invoiceNumber);
+
     async function loadWorkspaceSettings() {
+        invoiceCounterError = "";
+        loadedInvoiceCounter = nextInvoiceCounter = String(
+            await peekInvoiceCounter(
+                config.profile.invoice_number_prefix?.trim() || "RE-",
+                config.profile.invoice_number_counter,
+                existingInvoiceNumbers(),
+            ),
+        );
         workspaceError = "";
         workspaceSaved = false;
         workspaceName = activeTenant?.name ?? "";
@@ -100,9 +121,22 @@
     }
 
     async function saveWorkspaceSettings() {
-        workspaceSaving = true;
         workspaceSaved = false;
         workspaceError = "";
+        invoiceCounterError = "";
+        const counterValue = Number(nextInvoiceCounter);
+        const counterChanged =
+            !invoiceCounterReset &&
+            String(nextInvoiceCounter) !== loadedInvoiceCounter;
+        if (counterChanged) {
+            invoiceCounterError = validateInvoiceCounterStart(
+                invoicePrefix,
+                counterValue,
+                existingInvoiceNumbers(),
+            );
+            if (invoiceCounterError) return;
+        }
+        workspaceSaving = true;
         try {
             const nextProfile = {
                 ...config.profile,
@@ -132,10 +166,10 @@
                 default_export_dir: defaultExportDir || null,
             });
 
+            if (invoiceCounterReset) await setInvoiceCounter(1);
+            else if (counterChanged) await setInvoiceCounter(counterValue);
+
             if (isTauriAvailable() && config.active_tenant) {
-                if (invoiceCounterReset) {
-                    await metaSet(INVOICE_COUNTER_KEY, "1");
-                }
                 await metaSet(
                     "tenant.name",
                     workspaceName.trim() || activeTenant?.name || "Workspace",
@@ -154,10 +188,10 @@
             }
 
             invoiceCounterReset = false;
-            workspaceSaved = true;
-            setTimeout(() => (workspaceSaved = false), 2500);
             config = appConfigStore.get()!;
             await loadWorkspaceSettings();
+            workspaceSaved = true;
+            setTimeout(() => (workspaceSaved = false), 2500);
         } catch (e) {
             workspaceError = String(e);
         } finally {
@@ -405,12 +439,31 @@
         </label>
     </div>
 
+    <label class="flex flex-col gap-1 max-w-xs">
+        <span class="text-xs text-muted font-medium">Nächste Rechnungsnummer</span>
+        <input
+            class="input font-mono"
+            type="number"
+            min="1"
+            step="1"
+            bind:value={nextInvoiceCounter}
+            disabled={invoiceCounterReset}
+        />
+        <span class="text-[11px] text-muted">
+            Nächste Nummer: {formatInvoiceNumber(invoicePrefix, Number(nextInvoiceCounter) || 1)}
+            · gilt nur für diesen Arbeitsbereich, nie unter bereits vergebenen Nummern
+        </span>
+        {#if invoiceCounterError}
+            <span class="text-[11px] text-red-500">{invoiceCounterError}</span>
+        {/if}
+    </label>
+
     <label
         class="inline-flex items-center gap-2 text-sm text-secondary"
     >
         <input type="checkbox" bind:checked={invoiceCounterReset} />
         <span
-            >Rechnungszähler dieses Arbeitsbereichs beim Speichern auf `1`
+            >Rechnungszähler dieses Arbeitsbereichs beim Speichern auf 1
             zurücksetzen (bereits vergebene Nummern werden nicht erneut
             vergeben)</span
         >

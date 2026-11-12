@@ -5,6 +5,11 @@
         $projects as projectsStore,
     } from "../../stores/projectStore";
     import { $tasks as tasksStore } from "../../stores/taskStore";
+    import { $timeEntries as timeEntriesStore } from "../../stores/timerStore";
+    import {
+        $billingItems as billingItemsStore,
+        $unlockedBillingItemIds as unlockedBillingItemIdsStore,
+    } from "../../stores/billingStore";
     import { $services as servicesStore } from "../../stores/serviceStore";
     import {
         $invoices as invoicesStore,
@@ -25,6 +30,10 @@
         allocateInvoiceNumber,
         isInvoiceNumberTaken,
     } from "../../lib/invoiceNumber";
+    import {
+        needsRevertConfirmation,
+        statusBlockedReason,
+    } from "../../lib/invoiceStatus";
     import { calcInvoiceTotals, fromCents, lineTotalCents } from "../../lib/invoiceMoney";
     import type { Invoice } from "../../domain/types";
     import ClientManager from "../modals/ClientManager.svelte";
@@ -118,24 +127,32 @@
         }
     }
 
-    function markSelectedInvoiceStatus(status: Invoice["status"]) {
-        if (!selectedInvoice) return;
-        if (
-            status === "sent" &&
-            (!selectedInvoice.clientId || !selectedInvoice.lineItems.length)
-        ) {
+    function setSelectedInvoiceStatus(status: Invoice["status"]) {
+        if (!selectedInvoice || selectedInvoice.status === status) return;
+        const blocked = statusBlockedReason(selectedInvoice, status);
+        if (blocked) {
             toast(
-                "Zum Senden braucht die Rechnung einen Kunden und mindestens eine Position.",
+                `Status „${status === "sent" ? "Gesendet" : "Bezahlt"}“ nicht möglich. ${blocked}`,
                 "error",
                 4000,
             );
+            return;
+        }
+        if (
+            needsRevertConfirmation(selectedInvoice.status, status) &&
+            !confirm(
+                `Rechnung "${selectedInvoice.invoiceNumber}" wieder auf „Entwurf“ setzen? Sie war bereits ${selectedInvoice.status === "paid" ? "bezahlt" : "gesendet"}.`,
+            )
+        ) {
             return;
         }
         updateInvoice(selectedInvoice.id, { status });
         toast(
             status === "sent"
                 ? "Rechnung als gesendet markiert."
-                : "Rechnung als bezahlt markiert.",
+                : status === "paid"
+                  ? "Rechnung als bezahlt markiert."
+                  : "Rechnung wieder auf Entwurf gesetzt.",
             "success",
             3500,
         );
@@ -284,12 +301,7 @@
                 appConfig,
                 selectedInvoice.pdfPath,
             );
-            updateInvoice(selectedInvoice.id, {
-                pdfPath: path,
-                ...(selectedInvoice.status === "draft"
-                    ? { status: "sent" as const }
-                    : {}),
-            });
+            updateInvoice(selectedInvoice.id, { pdfPath: path });
             toast(`PDF gespeichert: ${path}`, "success", 5500);
         } catch (error) {
             toast(
@@ -417,6 +429,9 @@
                 {tasks}
                 {projects}
                 {appConfig}
+                billingItems={$billingItemsStore}
+                unlockedBillingItemIds={$unlockedBillingItemIdsStore}
+                timeEntries={$timeEntriesStore}
                 {blockedTaskIds}
                 {otherInvoiceNumbers}
                 pdfBusy={generatingPdf}
@@ -424,8 +439,7 @@
                 onUpdate={updateSelectedInvoice}
                 onDelete={deleteSelectedInvoice}
                 onGeneratePdf={generateSelectedInvoicePdf}
-                onMarkSent={() => markSelectedInvoiceStatus("sent")}
-                onMarkPaid={() => markSelectedInvoiceStatus("paid")}
+                onSetStatus={setSelectedInvoiceStatus}
             />
         {/if}
     </div>

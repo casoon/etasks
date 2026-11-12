@@ -2,13 +2,16 @@
 <script lang="ts">
     import { onDestroy } from "svelte";
     import type {
+        BillingItem,
         Client,
         Invoice,
         InvoiceLineItem,
         InvoiceStatus,
         ServiceItem,
         Task,
+        TimeEntry,
     } from "../../domain/types";
+    import { formatDateDe, formatTrackedTime, today } from "../../domain/dateUtils";
 
     import {
         calcInvoiceTotals,
@@ -18,7 +21,14 @@
         isValidVatRate,
         lineTotalCents,
     } from "../../lib/invoiceMoney";
+    import {
+        billingItemToLineItem,
+        minutesToQuarterHours,
+        trackedTimeByProject,
+        trackedTimeToLineItem,
+    } from "../../lib/invoiceImport";
     import { isInvoiceNumberTaken } from "../../lib/invoiceNumber";
+    import { statusBlockedReason } from "../../lib/invoiceStatus";
     import { toast } from "../../stores/toastStore";
 
     export let invoice: Invoice;
@@ -28,8 +38,15 @@
     export let projects: Array<{ id: string; name: string; clientId: string }> =
         [];
     export let appConfig: {
-        profile?: { default_vat_rate?: number; invoice_number_prefix?: string };
+        profile?: {
+            default_vat_rate?: number;
+            invoice_number_prefix?: string;
+            hourly_rate?: number;
+        };
     } | null = null;
+    export let billingItems: readonly BillingItem[] = [];
+    export let unlockedBillingItemIds: readonly string[] = [];
+    export let timeEntries: readonly TimeEntry[] = [];
     export let blockedTaskIds: Set<string> = new Set();
     export let otherInvoiceNumbers: string[] = [];
     export let pdfAvailable = false;
@@ -39,12 +56,14 @@
     ) => void;
     export let onDelete: () => void;
     export let onGeneratePdf: () => void | Promise<void>;
-    export let onMarkSent: () => void;
-    export let onMarkPaid: () => void;
+    export let onSetStatus: (status: InvoiceStatus) => void;
 
     let newItemInput = "";
     let showNewItemSuggestions = false;
     let taskPickerForLineItem: string | null = null;
+    let importPanel: "project" | "time" | null = null;
+    let timeFrom = today().slice(0, 8) + "01";
+    let timeTo = today();
     // Pending text edits; flushed on blur (before another invoice is selected) and on destroy.
     const lineItemPending = new Map<string, { timer: ReturnType<typeof setTimeout>; run: () => void }>();
 
@@ -66,6 +85,31 @@
     $: availableClientTasks = clientTasksForInvoice.filter(
         (t) => !blockedTaskIds.has(t.id),
     );
+    $: client = clients.find((c) => c.id === invoice.clientId);
+    $: vatDefault = appConfig?.profile?.default_vat_rate ?? 19;
+    $: clientBillingItems = invoice.clientId
+        ? billingItems
+              .filter(
+                  (i) =>
+                      projects.find((p) => p.id === i.projectId)?.clientId ===
+                      invoice.clientId,
+              )
+              .map((i) => ({ item: i, ready: unlockedBillingItemIds.includes(i.id) }))
+              .sort((a, b) => Number(b.ready) - Number(a.ready))
+        : [];
+    $: hourlyRate = client?.hourlyRate ?? appConfig?.profile?.hourly_rate;
+    $: hourlyRateSource =
+        client?.hourlyRate != null ? "Kunde" : "Profil";
+    $: trackedRows = invoice.clientId
+        ? trackedTimeByProject(
+              timeEntries,
+              (taskId) => tasks.find((t) => t.id === taskId)?.projectId,
+              projects,
+              invoice.clientId,
+              timeFrom,
+              timeTo,
+          )
+        : [];
     $: newItemSuggestions =
         newItemInput.trim().length >= 1
             ? services.filter((s) =>
@@ -78,13 +122,8 @@
         : isInvoiceNumberTaken(invoice.invoiceNumber, otherInvoiceNumbers)
           ? "Diese Rechnungsnummer ist bereits vergeben."
           : "";
-    $: sendBlockedReason = numberProblem
-        ? numberProblem
-        : !invoice.clientId
-        ? "Wähle zuerst einen Kunden."
-        : invoice.lineItems.length === 0
-          ? "Füge mindestens eine Position hinzu."
-          : "";
+    $: sendBlockedReason = numberProblem || statusBlockedReason(invoice, "sent");
+    $: paidBlockedReason = statusBlockedReason(invoice, "paid");
 
     function patchLineItem(
         lineItemId: string,
@@ -187,6 +226,34 @@
         showNewItemSuggestions = false;
     }
 
+    function addBillingItemLine(item: BillingItem) {
+        onUpdate({
+            lineItems: [
+                ...invoice.lineItems,
+                billingItemToLineItem(item, vatDefault),
+            ],
+        });
+    }
+
+    function addTrackedTimeLine(row: (typeof trackedRows)[number]) {
+        onUpdate({
+            lineItems: [
+                ...invoice.lineItems,
+                trackedTimeToLineItem(
+                    row,
+                    hourlyRate ?? 0,
+                    vatDefault,
+                    timeFrom,
+                    timeTo,
+                ),
+            ],
+        });
+    }
+
+    function formatHours(hours: number) {
+        return hours.toLocaleString("de-DE", { maximumFractionDigits: 2 });
+    }
+
     function removeLineItem(lineItemId: string) {
         onUpdate({
             lineItems: invoice.lineItems.filter((li) => li.id !== lineItemId),
@@ -270,10 +337,10 @@
     }
 
     function handleStatusChange(e: Event) {
-        onUpdate({
-            status: (e.currentTarget as HTMLSelectElement)
-                .value as InvoiceStatus,
-        });
+        const select = e.currentTarget as HTMLSelectElement;
+        onSetStatus(select.value as InvoiceStatus);
+        // Bei abgelehntem Wechsel zeigt das Dropdown weiter den echten Status.
+        select.value = invoice.status;
     }
 
     function handleNotesChange(e: Event) {
@@ -322,24 +389,26 @@
                     on:input={handleInvoiceMetaChange("customerNumber")}
                 />
             </label>
-            <label class="flex flex-col gap-1 w-[130px]">
+            <label class="flex flex-col gap-1 w-[150px]">
                 <span class="text-[10px] uppercase tracking-wide text-muted"
-                    >Rechnungsdatum</span
+                    >Rechnungsdatum{invoice.date ? ` · ${formatDateDe(invoice.date)}` : ""}</span
                 >
                 <input
                     class="input"
                     type="date"
+                    lang="de"
                     value={invoice.date}
                     on:input={handleDateChange("date")}
                 />
             </label>
-            <label class="flex flex-col gap-1 w-[130px]">
+            <label class="flex flex-col gap-1 w-[150px]">
                 <span class="text-[10px] uppercase tracking-wide text-muted"
-                    >Fällig am</span
+                    >Fällig am{invoice.dueDate ? ` · ${formatDateDe(invoice.dueDate)}` : ""}</span
                 >
                 <input
                     class="input"
                     type="date"
+                    lang="de"
                     value={invoice.dueDate}
                     on:input={handleDateChange("dueDate")}
                 />
@@ -355,7 +424,11 @@
                     disabled={Boolean(sendBlockedReason) &&
                         invoice.status !== "sent"}>Gesendet</option
                 >
-                <option value="paid">Bezahlt</option>
+                <option
+                    value="paid"
+                    disabled={Boolean(paidBlockedReason) &&
+                        invoice.status !== "paid"}>Bezahlt</option
+                >
             </select>
             <button
                 class="ml-auto rounded-lg border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-bg disabled:opacity-50"
@@ -370,7 +443,7 @@
             {#if invoice.status === "draft"}
                 <button
                     class="rounded-lg border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-bg disabled:opacity-50"
-                    on:click={onMarkSent}
+                    on:click={() => onSetStatus("sent")}
                     disabled={Boolean(sendBlockedReason)}
                     title={sendBlockedReason}
                 >
@@ -379,8 +452,10 @@
             {/if}
             {#if invoice.status !== "paid"}
                 <button
-                    class="rounded-xl border border-green-200 bg-green-50 px-3 py-1.5 text-[12px] font-medium text-green-700 transition-colors hover:bg-green-100"
-                    on:click={onMarkPaid}
+                    class="rounded-xl border border-green-200 bg-green-50 px-3 py-1.5 text-[12px] font-medium text-green-700 transition-colors hover:bg-green-100 disabled:opacity-50"
+                    on:click={() => onSetStatus("paid")}
+                    disabled={Boolean(paidBlockedReason)}
+                    title={paidBlockedReason}
                 >
                     Als bezahlt markieren
                 </button>
@@ -394,6 +469,12 @@
                 „Als gesendet markieren“ ist noch nicht möglich. {sendBlockedReason}
             </p>
         {/if}
+        {#if invoice.status !== "draft"}
+            <p class="mt-2 text-[11px] text-muted">
+                Diese Rechnung ist bereits {invoice.status === "paid" ? "bezahlt" : "gesendet"}.
+                Änderungen an Nummer oder Datum stimmen dann nicht mehr mit dem ausgestellten Dokument überein.
+            </p>
+        {/if}
         <p class="mt-2 text-[11px] text-muted">
             {#if pdfAvailable}
                 PDF-Rechnungen werden im Standard-Exportordner der Desktop-App
@@ -405,7 +486,7 @@
         <div class="mt-2 flex flex-wrap gap-2 text-[11px] text-muted">
             <span class="rounded-full border border-border bg-surface px-2 py-1">1. Daten prüfen</span>
             <span class="rounded-full border border-border bg-surface px-2 py-1">2. PDF erzeugen</span>
-            <span class="rounded-full border border-border bg-surface px-2 py-1">3. Status setzen</span>
+            <span class="rounded-full border border-border bg-surface px-2 py-1">3. Als gesendet markieren</span>
         </div>
         <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
             <label class="flex flex-col gap-1">
@@ -426,7 +507,7 @@
                 <input
                     class="input text-[12px]"
                     value={invoice.projectReference ?? ""}
-                    placeholder="z. B. P240001 Andersch Liebthal"
+                    placeholder="z. B. P240001 Website-Relaunch"
                     on:input={handleInvoiceMetaChange("projectReference")}
                 />
             </label>
@@ -434,11 +515,95 @@
     </div>
 
     <div class="px-6 py-4 flex flex-col gap-3" on:focusout={flushLineItemEdits}>
-        <h3
-            class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted"
-        >
-            Positionen
-        </h3>
+        <div class="flex items-center gap-2 flex-wrap">
+            <h3
+                class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted mr-auto"
+            >
+                Positionen
+            </h3>
+            <button
+                class="px-2 py-[2px] rounded-full border border-dashed border-border text-[11px] text-muted hover:text-primary hover:border-accent transition-colors disabled:opacity-50"
+                disabled={!invoice.clientId}
+                title={invoice.clientId ? "" : "Wähle zuerst einen Kunden."}
+                on:click={() =>
+                    (importPanel = importPanel === "project" ? null : "project")}
+                >Aus Projekt übernehmen</button
+            >
+            <button
+                class="px-2 py-[2px] rounded-full border border-dashed border-border text-[11px] text-muted hover:text-primary hover:border-accent transition-colors disabled:opacity-50"
+                disabled={!invoice.clientId}
+                title={invoice.clientId ? "" : "Wähle zuerst einen Kunden."}
+                on:click={() =>
+                    (importPanel = importPanel === "time" ? null : "time")}
+                >Erfasste Zeit übernehmen</button
+            >
+        </div>
+        {#if importPanel === "project"}
+            <div class="border border-border rounded-lg bg-bg overflow-hidden">
+                {#if clientBillingItems.length === 0}
+                    <p class="text-[12px] text-muted px-3 py-2">
+                        Keine Projekt-Positionen für diesen Kunden.
+                    </p>
+                {/if}
+                {#each clientBillingItems as { item, ready } (item.id)}
+                    <button
+                        class="w-full flex items-center gap-2 px-3 py-2 hover:bg-surface text-left border-b border-border last:border-b-0 transition-colors"
+                        on:click={() => addBillingItemLine(item)}
+                    >
+                        <span class="flex-1 text-[12px] text-primary">{item.title}</span>
+                        {#if ready}
+                            <span class="text-[10px] px-[6px] py-[1px] rounded-full bg-green-100 text-green-700">✓ Abrechenbar</span>
+                        {/if}
+                        <span class="text-[11px] text-muted">{projects.find((p) => p.id === item.projectId)?.name ?? ""}</span>
+                        <span class="text-[11px] text-muted tabular-nums">{((item.unitPriceCents ?? 0) / 100).toFixed(2)} €</span>
+                    </button>
+                {/each}
+                <button
+                    class="w-full text-[11px] text-muted text-center py-2 hover:bg-surface border-t border-border"
+                    on:click={() => (importPanel = null)}>Schließen</button
+                >
+            </div>
+        {:else if importPanel === "time"}
+            <div class="border border-border rounded-lg bg-bg overflow-hidden">
+                <div class="flex items-end gap-2 flex-wrap px-3 py-2 border-b border-border">
+                    <label class="flex flex-col gap-1 w-[130px]">
+                        <span class="text-[10px] uppercase tracking-wide text-muted">Von</span>
+                        <input class="input" type="date" lang="de" bind:value={timeFrom} />
+                    </label>
+                    <label class="flex flex-col gap-1 w-[130px]">
+                        <span class="text-[10px] uppercase tracking-wide text-muted">Bis</span>
+                        <input class="input" type="date" lang="de" bind:value={timeTo} />
+                    </label>
+                    <p class="text-[11px] text-muted flex-1 min-w-[160px]">
+                        {#if hourlyRate != null}
+                            Stundensatz {hourlyRate.toFixed(2)} € ({hourlyRateSource}). Zeit wird auf Viertelstunden gerundet.
+                        {:else}
+                            Kein Stundensatz hinterlegt (weder beim Kunden noch im Profil); der Preis wird mit 0 € eingetragen.
+                        {/if}
+                    </p>
+                </div>
+                {#if trackedRows.length === 0}
+                    <p class="text-[12px] text-muted px-3 py-2">
+                        Keine erfasste Zeit für diesen Kunden im Zeitraum.
+                    </p>
+                {/if}
+                {#each trackedRows as row (row.projectId)}
+                    <button
+                        class="w-full flex items-center gap-2 px-3 py-2 hover:bg-surface text-left border-b border-border last:border-b-0 transition-colors"
+                        title={row.tasks.map((t) => `${getTaskById(t.taskId)?.title ?? "Aufgabe"}: ${formatTrackedTime(t.minutes * 60)}`).join("\n")}
+                        on:click={() => addTrackedTimeLine(row)}
+                    >
+                        <span class="flex-1 text-[12px] text-primary">{row.projectName}</span>
+                        <span class="text-[11px] text-muted tabular-nums">{formatTrackedTime(row.minutes * 60)} erfasst</span>
+                        <span class="text-[11px] text-primary tabular-nums">{formatHours(minutesToQuarterHours(row.minutes))} h</span>
+                    </button>
+                {/each}
+                <button
+                    class="w-full text-[11px] text-muted text-center py-2 hover:bg-surface border-t border-border"
+                    on:click={() => (importPanel = null)}>Schließen</button
+                >
+            </div>
+        {/if}
         {#each invoice.lineItems as li (li.id)}
             <div
                 class="flex flex-col gap-2 p-3 rounded-xl border border-border bg-surface"
@@ -587,7 +752,9 @@
                                     >
                                     <span
                                         class="text-[11px] text-muted tabular-nums"
-                                        >{t.estimatedMinutes ?? 0}m</span
+                                        >{t.trackedSeconds
+                                            ? formatTrackedTime(t.trackedSeconds)
+                                            : "–"}</span
                                     >
                                 </button>
                             {/each}
