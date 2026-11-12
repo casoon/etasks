@@ -3,6 +3,7 @@
 import { metaGet, metaSet } from "./metaStore";
 
 export const INVOICE_COUNTER_KEY = "invoice.counter";
+export const OFFER_COUNTER_KEY = "offer.counter";
 
 export function formatInvoiceNumber(prefix: string, counter: number): string {
   return prefix + String(counter).padStart(3, "0");
@@ -59,4 +60,23 @@ export function allocateInvoiceNumber(
   });
   allocationQueue = run.catch(() => undefined);
   return run;
+}
+
+/**
+ * Nächste Angebotsnummer des Arbeitsbereichs, ohne den Zähler zu verbrauchen: erst
+ * nach erfolgreicher PDF-Erzeugung mit {@link commitOfferCounter} speichern.
+ * Ohne gespeicherten Zähler gilt der Profil-Zähler (bestehende Nutzer) als Startwert.
+ */
+export async function peekOfferNumber(
+  prefix: string,
+  profileCounter: number | undefined,
+): Promise<{ number: string; next: number }> {
+  const stored = Number.parseInt((await metaGet(OFFER_COUNTER_KEY)) ?? "", 10);
+  const start = Number.isFinite(stored) ? stored : (profileCounter ?? 1);
+  const counter = Math.max(1, Math.floor(start) || 1);
+  return { number: formatInvoiceNumber(prefix, counter), next: counter + 1 };
+}
+
+export function commitOfferCounter(next: number): Promise<void> {
+  return metaSet(OFFER_COUNTER_KEY, String(next));
 }

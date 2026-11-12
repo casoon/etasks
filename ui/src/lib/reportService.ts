@@ -12,7 +12,6 @@ export interface ProjectReportInput {
   done_tasks: number;
   tracked_hours: number;
   planned_hours: number;
-  notes?: string;
   tasks: { title: string; status: string; duration_minutes: number }[];
 }
 
@@ -109,7 +108,6 @@ export function buildProjectReportInput(
     done_tasks: doneTasks.length,
     tracked_hours: trackedSeconds / 3600,
     planned_hours: plannedMinutes / 60,
-    notes: project.notes,
     tasks: projectTasks.map((t) => ({
       title: t.title,
       status: t.status,

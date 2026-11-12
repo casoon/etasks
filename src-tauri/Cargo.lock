@@ -1223,6 +1223,7 @@ dependencies = [
 name = "etasks"
 version = "0.1.0-alpha.1"
 dependencies = [
+ "base64 0.22.1",
  "chrono",
  "renderreport",
  "rusqlite",
@@ -5741,9 +5742,9 @@ checksum = "b5bf0cc3c2265502b51fcb73147cc7c951ceb694507195b93c2ab0b901abb902"
 
 [[package]]
 name = "typst-business-templates"
-version = "0.1.3"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f31816eeca0abea0512e96a8954529fd3952884338d47e03a623fbcc92e7daf"
+checksum = "00e270f0585e922c961ccfc0ef205a66f45a3aa3e19f9e83dd60cb51b5ea586c"
 dependencies = [
  "anyhow",
  "chrono",

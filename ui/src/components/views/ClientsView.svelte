@@ -12,7 +12,11 @@
         updateInvoice,
         removeInvoice,
     } from "../../stores/invoiceStore";
-    import { $appConfig as appConfigStore } from "../../stores/configStore";
+    import {
+        $appConfig as appConfigStore,
+        missingPdfProfileFields,
+        missingProfileMessage,
+    } from "../../stores/configStore";
     import { toast } from "../../stores/toastStore";
     import { today, toDateKey } from "../../domain/dateUtils";
     import { isTauriAvailable } from "../../lib/platform";
@@ -177,9 +181,6 @@
         const client = clients.find(
             (entry) => entry.id === selectedInvoice.clientId,
         );
-        const clientProjects = projects.filter(
-            (project) => project.clientId === selectedInvoice.clientId,
-        );
         if (!client) {
             toast("Für die Rechnung ist kein Kunde ausgewählt.", "error", 4500);
             return;
@@ -194,19 +195,9 @@
         }
 
         const profile = appConfig.profile;
-        if (
-            !profile.company.trim() ||
-            !profile.first_name.trim() ||
-            !profile.last_name.trim() ||
-            !profile.street.trim() ||
-            !profile.zip.trim() ||
-            !profile.city.trim()
-        ) {
-            toast(
-                "Im Profil fehlen noch Firmen- oder Adressdaten für die PDF-Rechnung.",
-                "error",
-                5000,
-            );
+        const missing = missingPdfProfileFields(profile);
+        if (missing.length) {
+            toast(missingProfileMessage(missing), "error", 7000);
             return;
         }
         if (!selectedInvoice.lineItems.length) {
@@ -240,10 +231,8 @@
                 performance_period:
                     selectedInvoice.performancePeriod?.trim() || undefined,
                 project_reference:
-                    selectedInvoice.projectReference?.trim() ||
-                    clientProjects[0]?.name ||
-                    undefined,
-                show_footer: Boolean(profile.invoice_footer_text?.trim()),
+                    selectedInvoice.projectReference?.trim() || undefined,
+                show_footer: true,
             },
             recipient: {
                 name: client.contactPerson?.trim() || client.name,
@@ -254,6 +243,8 @@
                 greeting: client.contactPerson?.trim()
                     ? `Hallo ${client.contactPerson.trim()},`
                     : `Hallo ${client.name},`,
+                // Das Template druckt den Dankestext unter der Anrede; am Ende hat es keinen Platz dafür.
+                introduction: profile.invoice_footer_text?.trim() || undefined,
             },
             items: selectedInvoice.lineItems.map((item, index) => {
                 const total = fromCents(
@@ -283,10 +274,6 @@
             payment: {
                 due_date: { date: selectedInvoice.dueDate },
                 bank_transfer_note: selectedInvoice.invoiceNumber,
-            },
-            closing: {
-                text: profile.invoice_footer_text?.trim() || undefined,
-                signature: `${profile.first_name} ${profile.last_name}`.trim(),
             },
         };
 

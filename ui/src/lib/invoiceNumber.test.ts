@@ -10,8 +10,10 @@ vi.mock("./metaStore", () => ({
 
 import {
   allocateInvoiceNumber,
+  commitOfferCounter,
   isInvoiceNumberTaken,
   nextFreeCounter,
+  peekOfferNumber,
 } from "./invoiceNumber";
 
 describe("invoiceNumber", () => {
@@ -51,5 +53,14 @@ describe("invoiceNumber", () => {
   it("skips numbers that exist even if the stored counter is lower", async () => {
     store.value = "2";
     expect(await allocateInvoiceNumber("RE-", 1, () => ["RE-001", "RE-005"])).toBe("RE-006");
+  });
+
+  it("numbers offers per workspace: profile counter as fallback, stored counter after a commit", async () => {
+    const first = await peekOfferNumber("ANG-", 4);
+    expect(first).toEqual({ number: "ANG-004", next: 5 });
+    // ohne Commit (PDF fehlgeschlagen) wird keine Nummer verbraucht
+    expect((await peekOfferNumber("ANG-", 4)).number).toBe("ANG-004");
+    await commitOfferCounter(first.next);
+    expect((await peekOfferNumber("ANG-", 4)).number).toBe("ANG-005");
   });
 });

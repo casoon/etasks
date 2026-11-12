@@ -23,6 +23,7 @@ pub fn run() {
             commands::config::default_export_dir,
             commands::config::pick_tenant_path,
             commands::config::import_logo_file,
+            commands::config::logo_data_url,
             commands::config::file_exists,
             commands::config::list_workspace_files,
             commands::config::write_log,

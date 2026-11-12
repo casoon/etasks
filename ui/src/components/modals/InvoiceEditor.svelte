@@ -694,12 +694,12 @@
         class="px-6 py-4 border-t border-border-subtle flex-shrink-0 flex flex-col gap-2"
     >
         <p class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted">
-            Anmerkungen
+            Anmerkungen (intern)
         </p>
         <textarea
             class="w-full px-3 py-2 border border-border rounded-lg text-[13px] resize-y outline-none bg-bg text-primary focus:border-accent"
             value={invoice.notes ?? ""}
-            placeholder="Interne Notizen oder zusätzlicher Rechnungstext..."
+            placeholder="Interne Notizen (werden nicht auf die Rechnung gedruckt)..."
             rows={2}
             on:input={handleNotesChange}
         />

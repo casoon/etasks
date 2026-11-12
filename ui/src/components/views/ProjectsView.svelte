@@ -18,7 +18,8 @@
     import { $projectsView as projectsViewStore } from "../../stores/uiStore";
     import {
         $appConfig as appConfigStore,
-        saveAppConfig,
+        missingPdfProfileFields,
+        missingProfileMessage,
     } from "../../stores/configStore";
     import { toast } from "../../stores/toastStore";
     import { today as todayKey, toDateKey } from "../../domain/dateUtils";
@@ -39,6 +40,7 @@
         generateProjectReport,
     } from "../../lib/reportService";
     import { generateOffer, type OfferData } from "../../lib/offerService";
+    import { commitOfferCounter, peekOfferNumber } from "../../lib/invoiceNumber";
     import KanbanBoard from "./KanbanBoard.svelte";
     import { $termine as termineStore, addTermin, removeTermin } from "../../stores/terminStore";
     import {
@@ -158,7 +160,15 @@
     }
 
     async function handleGenerateOffer() {
-        if (!selectedProject || !selectedClient || !appConfig) return;
+        if (!selectedProject || !appConfig || offerGenerating) return;
+        if (!selectedClient) {
+            toast(
+                "Für ein Angebot braucht das Projekt einen Kunden. Interne Projekte haben keinen.",
+                "error",
+                4500,
+            );
+            return;
+        }
         if (!isTauriAvailable()) {
             toast(
                 "Angebote können nur in der Desktop-App als PDF erzeugt werden.",
@@ -185,11 +195,29 @@
         }
 
         const profile = appConfig.profile;
+        const missing = missingPdfProfileFields(profile);
+        if (missing.length) {
+            toast(missingProfileMessage(missing), "error", 7000);
+            return;
+        }
         const today = new Date();
         const year = today.getFullYear();
-        const counter = profile.offer_number_counter ?? 1;
         const prefix = profile.offer_number_prefix?.trim() || `ANG-${year}-`;
-        const offerNumber = prefix + String(counter).padStart(3, "0");
+        offerGenerating = true;
+        let offerNumber: string;
+        let nextOfferCounter: number;
+        try {
+            ({ number: offerNumber, next: nextOfferCounter } =
+                await peekOfferNumber(prefix, profile.offer_number_counter));
+        } catch (error) {
+            offerGenerating = false;
+            toast(
+                `Angebotsnummer konnte nicht vergeben werden: ${String(error)}`,
+                "error",
+                5000,
+            );
+            return;
+        }
         const validUntil = new Date(today);
         validUntil.setDate(
             validUntil.getDate() + (profile.offer_validity_days ?? 30),
@@ -270,7 +298,7 @@
                 greeting: selectedClient.contactPerson?.trim()
                     ? `Hallo ${selectedClient.contactPerson.trim()},`
                     : `Hallo ${selectedClient.name},`,
-                introduction: selectedProject.notes?.trim() || undefined,
+                introduction: selectedProject.offerText?.trim() || undefined,
             },
             items: offerItems,
             totals: {
@@ -283,27 +311,19 @@
                 total: money(offerTotals.totalCents),
             },
             terms: {
-                validity: `Dieses Angebot ist gueltig bis ${validUntil.toLocaleDateString("de-DE")}`,
+                validity: `Dieses Angebot ist gültig bis ${validUntil.toLocaleDateString("de-DE")}`,
                 payment_terms: profile.offer_payment_terms?.trim() || undefined,
                 delivery_terms:
                     profile.offer_delivery_terms?.trim() || undefined,
                 additional_terms:
                     additionalTerms.length > 0 ? additionalTerms : undefined,
             },
-            notes: selectedProject.notes?.trim() || undefined,
         };
 
-        offerGenerating = true;
         reportMessage = "";
         try {
             const path = await generateOffer(offerData, appConfig);
-            await saveAppConfig({
-                ...appConfig,
-                profile: {
-                    ...appConfig.profile,
-                    offer_number_counter: counter + 1,
-                },
-            });
+            await commitOfferCounter(nextOfferCounter);
             reportMessage = `Angebot gespeichert: ${path}`;
             toast(`Angebot gespeichert: ${path}`, "success", 5000);
         } catch (error) {
@@ -935,7 +955,7 @@
             >
                 <span
                     class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted"
-                    >Notizen & Fähigkeiten</span
+                    >Notizen & Fähigkeiten (intern, nicht in Angebot oder Bericht)</span
                 >
                 {#key selectedProject.id}
                     <textarea
@@ -945,6 +965,28 @@
                         on:blur={flushNotes}
                         placeholder="Tech-Stack, Client-Zugänge, besondere Anforderungen, Code-Snippets..."
                         rows={4}
+                    />
+                {/key}
+            </div>
+
+            <div
+                class="px-6 py-4 border-b border-border-subtle flex-shrink-0 flex flex-col gap-2"
+            >
+                <span
+                    class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted"
+                    >Angebotstext (optional, steht unter der Anrede im Angebot)</span
+                >
+                {#key selectedProject.id}
+                    <textarea
+                        class="w-full px-3 py-3 border border-border rounded-lg text-[13px] leading-relaxed resize-y outline-none bg-bg text-primary min-h-[60px] focus:border-accent focus:bg-surface"
+                        value={selectedProject.offerText ?? ""}
+                        on:blur={(e) =>
+                            selectedProject &&
+                            updateProject(selectedProject.id, {
+                                offerText: e.currentTarget.value,
+                            })}
+                        placeholder="z. B. Vielen Dank für Ihre Anfrage. Gerne bieten wir Ihnen an:"
+                        rows={3}
                     />
                 {/key}
             </div>

@@ -17,7 +17,6 @@ pub struct ProjectReportInput {
     pub done_tasks: usize,
     pub tracked_hours: f64,
     pub planned_hours: f64,
-    pub notes: Option<String>,
     pub tasks: Vec<TaskReportRow>,
 }
 
@@ -46,7 +45,7 @@ pub async fn generate_project_report(
 struct PdfResult(String, Vec<u8>);
 
 fn build_pdf(project: ProjectReportInput) -> Result<PdfResult, String> {
-    use renderreport::components::advanced::{KeyValueList, ProgressBar};
+    use renderreport::components::advanced::ProgressBar;
     use renderreport::components::{AuditTable, SummaryBox, TableColumn};
     use renderreport::prelude::*;
 
@@ -75,7 +74,7 @@ fn build_pdf(project: ProjectReportInput) -> Result<PdfResult, String> {
         ]);
     }
 
-    let mut builder = engine
+    let builder = engine
         .report("default")
         .title(&project.name)
         .subtitle("Projektstatusbericht")
@@ -97,16 +96,6 @@ fn build_pdf(project: ProjectReportInput) -> Result<PdfResult, String> {
                 .with_max(100.0)
                 .with_color(bar_color),
         );
-
-    if let Some(notes) = &project.notes {
-        if !notes.trim().is_empty() {
-            builder = builder.add_component(
-                KeyValueList::new()
-                    .with_title("Notizen")
-                    .add("Details", notes.trim()),
-            );
-        }
-    }
 
     let request = builder.add_component(task_table).build();
     let pdf = engine.render_pdf(&request).map_err(|e| e.to_string())?;

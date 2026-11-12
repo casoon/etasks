@@ -51,10 +51,6 @@ export interface InvoiceData {
     due_date: { date: string };
     bank_transfer_note?: string;
   };
-  closing?: {
-    text?: string;
-    signature?: string;
-  };
 }
 
 export async function generateInvoice(

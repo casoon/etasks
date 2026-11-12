@@ -12,6 +12,7 @@ vi.mock("../lib/metaStore", () => ({ metaGet, metaSet: vi.fn() }));
 import {
   $appConfig,
   createDefaultAppConfig,
+  missingPdfProfileFields,
   openTenant,
   tenantNameFromPath,
 } from "./configStore";
@@ -73,5 +74,37 @@ describe("openTenant", () => {
   it("falls back to the folder name without any stored name", async () => {
     await openTenant(path);
     expect($appConfig.get().tenants[0].name).toBe("studio-nord");
+  });
+});
+
+describe("missingPdfProfileFields", () => {
+  const complete = {
+    ...createDefaultAppConfig().profile,
+    first_name: "Anna",
+    last_name: "Testfrau",
+    email: "anna@testfrau.example",
+    company: "Testfrau Studio",
+    street: "Teststraße 7",
+    zip: "10115",
+    city: "Berlin",
+    tax_id: "DE999888777",
+    iban: "DE02 1203 0000 0000 2020 51",
+  };
+
+  it("starts with an empty profile instead of sample data", () => {
+    const profile = createDefaultAppConfig().profile;
+    expect(profile.first_name).toBe("");
+    expect(profile.iban).toBe("");
+    expect(missingPdfProfileFields(profile)).toHaveLength(9);
+  });
+
+  it("accepts a complete profile", () => {
+    expect(missingPdfProfileFields(complete)).toEqual([]);
+  });
+
+  it("lists missing fields and treats old sample values as missing", () => {
+    expect(
+      missingPdfProfileFields({ ...complete, iban: " ", company: "Musterfirma GmbH" }),
+    ).toEqual(["Unternehmen", "IBAN"]);
   });
 });

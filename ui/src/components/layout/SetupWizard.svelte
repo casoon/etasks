@@ -201,11 +201,7 @@
                     first_name: firstName.trim() || config.profile.first_name,
                     last_name: lastName.trim() || config.profile.last_name,
                     email: email.trim() || config.profile.email,
-                    company:
-                        company.trim() ||
-                        (config.profile.company === "Musterfirma GmbH"
-                            ? displayName
-                            : config.profile.company),
+                    company: company.trim() || config.profile.company,
                 },
             };
             await saveAppConfig(updated);
@@ -395,7 +391,7 @@
                     <div class="text-xs font-medium text-muted uppercase tracking-wide">Schritt 2 von 2</div>
                     <h2 class="text-xl font-semibold text-primary">Dein Profil</h2>
                     <p class="text-sm text-secondary">
-                        Diese Angaben erscheinen auf Rechnungen. Du kannst sie jederzeit in den Einstellungen ändern.
+                        Diese Angaben erscheinen auf Rechnungen. Straße, Ort, Steuernummer und IBAN ergänzt du in den Einstellungen → Profil, bevor du das erste PDF erzeugst.
                     </p>
                 </div>
 

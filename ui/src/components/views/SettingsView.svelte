@@ -5,7 +5,7 @@
         $appConfig as appConfigStore,
         saveAppConfig,
     } from "../../stores/configStore";
-    import { assetUrl, isTauriAvailable } from "../../lib/platform";
+    import { isTauriAvailable } from "../../lib/platform";
     import type { UserProfile } from "../../stores/configStore";
     import SettingsDatenSection from "./SettingsDatenSection.svelte";
     import SettingsArbeitsbereichSection from "./SettingsArbeitsbereichSection.svelte";
@@ -20,10 +20,8 @@
     type SettingsSection = "profil" | "arbeitsbereich" | "daten";
     let activeSection: SettingsSection = "profil";
 
-    $: logoPreviewUrl =
-        isTauriAvailable() && profile.logo?.trim()
-            ? assetUrl(profile.logo)
-            : profile.logo?.trim() || "";
+    let logoPreviewUrl = "";
+    $: updateLogoPreview(profile.logo);
     // Der Rechnungszähler gehört zum Arbeitsbereich; hier nur das Format.
     $: invoicePrefixPreview = buildNumberPreview(
         profile.invoice_number_prefix,
@@ -32,7 +30,7 @@
     );
     $: offerPrefixPreview = buildNumberPreview(
         profile.offer_number_prefix,
-        profile.offer_number_counter,
+        1,
         "ANG-",
     );
     $: invoicePrefixError = validatePrefix(profile.invoice_number_prefix);
@@ -65,6 +63,19 @@
             errorMsg = String(e);
         } finally {
             saving = false;
+        }
+    }
+
+    async function updateLogoPreview(path: string | undefined) {
+        const value = path?.trim() ?? "";
+        logoPreviewError = false;
+        logoPreviewUrl = "";
+        if (!value || !isTauriAvailable()) return;
+        try {
+            const url = await command<string>("logo_data_url", { path: value });
+            if (profile.logo?.trim() === value) logoPreviewUrl = url;
+        } catch {
+            if (profile.logo?.trim() === value) logoPreviewError = true;
         }
     }
 
@@ -163,11 +174,11 @@
             <div class="grid grid-cols-2 gap-3">
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium">Vorname</span>
-                    <input class="input" bind:value={profile.first_name} />
+                    <input class="input" bind:value={profile.first_name} placeholder="Max" />
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium">Nachname</span>
-                    <input class="input" bind:value={profile.last_name} />
+                    <input class="input" bind:value={profile.last_name} placeholder="Mustermann" />
                 </label>
                 <label class="flex flex-col gap-1 col-span-2">
                     <span class="text-xs text-muted font-medium">E-Mail</span>
@@ -175,6 +186,7 @@
                         class="input"
                         type="email"
                         bind:value={profile.email}
+                        placeholder="max@beispiel.de"
                     />
                 </label>
                 <label class="flex flex-col gap-1">
@@ -193,7 +205,7 @@
                     <span class="text-xs text-muted font-medium"
                         >Unternehmen</span
                     >
-                    <input class="input" bind:value={profile.company} />
+                    <input class="input" bind:value={profile.company} placeholder="Musterfirma GmbH" />
                 </label>
                 <div
                     class="col-span-2 rounded-2xl border border-border bg-white/55 p-4"
@@ -215,33 +227,16 @@
                             {logoImporting ? "Import…" : "Logo wählen"}
                         </button>
                     </div>
-                    <div
-                        class="mt-3 grid grid-cols-1 md:grid-cols-[1fr_120px] gap-3"
-                    >
-                        <label class="flex flex-col gap-1">
-                            <span class="text-xs text-muted font-medium">
-                                Dateipfad
-                            </span>
-                            <input
-                                class="input font-mono"
-                                bind:value={profile.logo}
-                                placeholder="/Users/.../company-logo.png"
-                                on:input={() => {
-                                    logoPreviewError = false;
-                                }}
-                            />
-                        </label>
-                        <label class="flex flex-col gap-1">
-                            <span class="text-xs text-muted font-medium">
-                                Logo-Breite
-                            </span>
-                            <input
-                                class="input font-mono"
-                                bind:value={profile.logo_width}
-                                placeholder="3cm"
-                            />
-                        </label>
-                    </div>
+                    <label class="mt-3 flex flex-col gap-1">
+                        <span class="text-xs text-muted font-medium">
+                            Dateipfad
+                        </span>
+                        <input
+                            class="input font-mono"
+                            bind:value={profile.logo}
+                            placeholder="/Users/.../company-logo.png"
+                        />
+                    </label>
                     <div class="mt-3">
                         {#if logoPreviewUrl && !logoPreviewError}
                             <div
@@ -271,15 +266,15 @@
                 </div>
                 <label class="flex flex-col gap-1 col-span-2">
                     <span class="text-xs text-muted font-medium">Straße</span>
-                    <input class="input" bind:value={profile.street} />
+                    <input class="input" bind:value={profile.street} placeholder="Musterstraße 1" />
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium">PLZ</span>
-                    <input class="input" bind:value={profile.zip} />
+                    <input class="input" bind:value={profile.zip} placeholder="12345" />
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium">Stadt</span>
-                    <input class="input" bind:value={profile.city} />
+                    <input class="input" bind:value={profile.city} placeholder="Musterstadt" />
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium">Land</span>
@@ -297,13 +292,13 @@
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium"
-                        >Steuernummer / USt-IdNr.</span
+                        >Steuernummer / USt-IdNr. (Fußzeile: „USt-IdNr.“)</span
                     >
-                    <input class="input" bind:value={profile.tax_id} />
+                    <input class="input" bind:value={profile.tax_id} placeholder="DE123456789" />
                 </label>
                 <label class="flex flex-col gap-1 col-span-2">
                     <span class="text-xs text-muted font-medium">IBAN</span>
-                    <input class="input font-mono" bind:value={profile.iban} />
+                    <input class="input font-mono" bind:value={profile.iban} placeholder="DE89 3704 0044 0532 0130 00" />
                 </label>
             </div>
 
@@ -389,7 +384,7 @@
                 </label>
                 <label class="flex flex-col gap-1 col-span-2">
                     <span class="text-xs text-muted font-medium"
-                        >Fußzeile / Dankestext</span
+                        >Dankestext (unter der Anrede)</span
                     >
                     <input
                         class="input"
@@ -431,7 +426,8 @@
                         placeholder="ANG-2026-"
                     />
                     <span class="text-[11px] text-muted">
-                        Nächste Nummer: {offerPrefixPreview}
+                        Beispiel: {offerPrefixPreview} · der Zähler läuft pro
+                        Arbeitsbereich
                     </span>
                     {#if offerPrefixError}
                         <span class="text-[11px] text-red-500">
@@ -441,18 +437,7 @@
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium">
-                        Angebots-Zähler
-                    </span>
-                    <input
-                        class="input font-mono"
-                        type="number"
-                        bind:value={profile.offer_number_counter}
-                        placeholder="1"
-                    />
-                </label>
-                <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">
-                        Gueltigkeit (Tage)
+                        Gültigkeit (Tage)
                     </span>
                     <input
                         class="input"

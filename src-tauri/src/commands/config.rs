@@ -41,20 +41,20 @@ pub struct UserProfile {
 impl Default for UserProfile {
     fn default() -> Self {
         UserProfile {
-            first_name: "Max".into(),
-            last_name: "Mustermann".into(),
-            email: "max@musterfirma.de".into(),
+            first_name: String::new(),
+            last_name: String::new(),
+            email: String::new(),
             phone: None,
             website: None,
             logo: None,
             logo_width: Some("3cm".into()),
-            company: "Musterfirma GmbH".into(),
-            street: "Musterstraße 1".into(),
-            zip: "12345".into(),
-            city: "Musterstadt".into(),
+            company: String::new(),
+            street: String::new(),
+            zip: String::new(),
+            city: String::new(),
             country: "Deutschland".into(),
-            tax_id: "DE123456789".into(),
-            iban: "DE89 3704 0044 0532 0130 00".into(),
+            tax_id: String::new(),
+            iban: String::new(),
             hourly_rate: 90.0,
             invoice_number_prefix: Some("RE-".into()),
             invoice_number_counter: Some(1),
@@ -356,7 +356,7 @@ pub fn import_logo_file(app: tauri::AppHandle) -> Result<Option<String>, String>
     let result = app
         .dialog()
         .file()
-        .add_filter("Images", &["png", "jpg", "jpeg", "svg", "webp"])
+        .add_filter("Images", &["png", "jpg", "jpeg", "gif", "svg"])
         .blocking_pick_file();
 
     let source = match result {
@@ -386,6 +386,33 @@ pub fn import_logo_file(app: tauri::AppHandle) -> Result<Option<String>, String>
     std::fs::copy(&source, &target).map_err(|e| e.to_string())?;
 
     Ok(Some(target.to_string_lossy().to_string()))
+}
+
+/// Logo als Data-URL für die Vorschau in den Einstellungen (kein Asset-Protokoll nötig).
+#[tauri::command]
+pub fn logo_data_url(path: String) -> Result<String, String> {
+    use base64::Engine;
+    let path = std::path::Path::new(&path);
+    let mime = match path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(str::to_ascii_lowercase)
+        .as_deref()
+    {
+        Some("png") => "image/png",
+        Some("jpg" | "jpeg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        Some("svg") => "image/svg+xml",
+        _ => return Err("Dateityp wird nicht unterstützt".into()),
+    };
+    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+    if bytes.len() > 5 * 1024 * 1024 {
+        return Err("Datei ist größer als 5 MB".into());
+    }
+    Ok(format!(
+        "data:{mime};base64,{}",
+        base64::engine::general_purpose::STANDARD.encode(bytes)
+    ))
 }
 
 #[tauri::command]
@@ -474,6 +501,13 @@ pub fn write_log(path: String, level: String, message: String) -> Result<(), Str
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn default_profile_has_no_sample_data() {
+        let p = UserProfile::default();
+        assert!(p.first_name.is_empty() && p.company.is_empty() && p.iban.is_empty());
+        assert!(p.street.is_empty() && p.tax_id.is_empty() && p.email.is_empty());
+    }
 
     #[test]
     fn tenant_display_name_round_trips_as_camel_case() {
