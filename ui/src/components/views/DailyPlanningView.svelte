@@ -734,7 +734,7 @@
           {@const col = projectColor(task)}
           <!-- svelte-ignore a11y-no-static-element-interactions -->
           <div
-            class="flex items-center gap-2 px-3 py-[9px] border-b border-border/60 cursor-grab select-none
+            class="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-[9px] border-b border-border/60 cursor-grab select-none
               {isMit ? 'bg-accent-subtle border-l-[3px] border-l-accent' : 'hover:bg-bg/60'}
               {draggingId === task.id && dragSource === 'today' ? 'opacity-30' : ''}
               {dragOverId === task.id && dragSource === 'today' ? 'border-t-2 border-t-accent' : ''}"
@@ -760,7 +760,7 @@
               <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:{col}" />
             {/if}
 
-            <span class="text-[13px] flex-1 min-w-0 truncate {isMit ? 'font-semibold text-primary' : 'text-primary'}">
+            <span class="text-[13px] flex-1 min-w-[8rem] truncate {isMit ? 'font-semibold text-primary' : 'text-primary'}">
               {task.title}
             </span>
 
