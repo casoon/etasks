@@ -12,15 +12,5 @@ export default defineConfig({
     resolve: {
       conditions: ['browser', 'module', 'default'],
     },
-    build: {
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (id.includes('/components/views/')) return 'views';
-            if (id.includes('/components/modals/')) return 'modals';
-          },
-        },
-      },
-    },
   },
 });
