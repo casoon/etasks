@@ -40,3 +40,9 @@ export function updateTermin(id: string, patch: Partial<Termin>): void {
 export function removeTermin(id: string): void {
   $termine.set(dbDeleteTermin(id));
 }
+
+export function removeTermineWhere(match: (termin: Termin) => boolean): void {
+  for (const termin of $termine.get().filter(match)) {
+    $termine.set(dbDeleteTermin(termin.id));
+  }
+}

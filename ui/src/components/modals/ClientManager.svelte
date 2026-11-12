@@ -6,8 +6,8 @@
         $projects as projectsStore,
         addClient,
         updateClient,
-        removeClient,
     } from "../../stores/projectStore";
+    import { deleteClientCascade } from "../../lib/taskActions";
     import { $tasks as tasksStore } from "../../stores/taskStore";
     import { $bridgeTimeEntries as timeEntriesStore, $bridgeInvoices as invoicesStore } from "../../stores/coreBridge";
     import { PROJECT_COLORS } from "../../domain/types";
@@ -71,12 +71,20 @@
 
     function handleDeleteClient() {
         if (!selectedClient) return;
+        const clientProjectIds = new Set(
+            projects.filter((p) => p.clientId === selectedClient!.id).map((p) => p.id),
+        );
+        const taskCount = tasks.filter((t) => t.projectId && clientProjectIds.has(t.projectId)).length;
+        const invoiceCount = invoices.filter((i) => i.clientId === selectedClient!.id).length;
         if (
             confirm(
-                `Kunden "${selectedClient.name}" und alle Projekte löschen?`,
+                `Kunden "${selectedClient.name}" löschen?\n\nGelöscht werden ${clientProjectIds.size} Projekt(e) mit ${taskCount} Aufgabe(n), Rechnungspositionen, Zeiteinträgen und Terminen.` +
+                    (invoiceCount
+                        ? `\n${invoiceCount} Rechnung(en) bleiben erhalten und erscheinen unter „Ohne Kunde“.`
+                        : ""),
             )
         ) {
-            removeClient(selectedClient.id);
+            deleteClientCascade(selectedClient.id);
             selectedClientId = null;
         }
     }

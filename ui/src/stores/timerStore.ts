@@ -1,7 +1,7 @@
 // @module:time-tracking
 import { atom, computed } from 'nanostores';
 import type { TimeEntry } from '../domain/types';
-import { loadTimeEntries, loadTasks } from '../lib/db';
+import { loadTimeEntries, loadTasks, deleteTimeEntry } from '../lib/db';
 import { startTimer as svcStart, stopTimer as svcStop } from '../lib/timerService';
 import { $tasks } from './taskStore';
 import { $bridgeTimeEntries } from './coreBridge';
@@ -32,6 +32,12 @@ export function stopActiveTimer(): void {
   // Reload both entries and tasks (trackedSeconds got updated in svcStop)
   $timeEntries.set(loadTimeEntries());
   $tasks.set(loadTasks());
+}
+
+export function removeTimeEntriesWhere(match: (entry: TimeEntry) => boolean): void {
+  for (const entry of $timeEntries.get().filter(match)) {
+    $timeEntries.set(deleteTimeEntry(entry.id));
+  }
 }
 
 export function getTaskTrackedSeconds(taskId: string): number {

@@ -10,9 +10,9 @@
         updateClient,
         updateProject,
         assignClientToProject,
-        removeProject,
     } from "../../stores/projectStore";
     import { $tasks as tasksStore } from "../../stores/taskStore";
+    import { deleteProjectCascade } from "../../lib/taskActions";
     import { $timeEntries as timeEntriesStore } from "../../stores/timerStore";
     import { $projectsView as projectsViewStore } from "../../stores/uiStore";
     import {
@@ -1138,10 +1138,10 @@
                     on:click={() => {
                         if (
                             confirm(
-                                `Projekt „${selectedProject?.name}" wirklich löschen?`,
+                                `Projekt „${selectedProject?.name}" wirklich löschen?\n\nGelöscht werden auch ${allTasks.filter((t) => t.projectId === selectedProject?.id).length} Aufgabe(n), Rechnungspositionen, Zeiteinträge und Termine des Projekts. Rechnungen bleiben erhalten.`,
                             )
                         )
-                            removeProject(selectedProject.id);
+                            deleteProjectCascade(selectedProject.id);
                     }}>Projekt löschen</button
                 >
             </div>

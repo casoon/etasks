@@ -5,7 +5,7 @@ import { $tasks } from './taskStore';
 import {
   loadBillingItems, upsertBillingItem, deleteBillingItem as dbDeleteBillingItem,
   loadBillingItemTasks, addBillingItemTask, removeBillingItemTask,
-  removeBillingItemTasksByBillingItem,
+  removeBillingItemTasksByBillingItem, removeBillingItemTasksByTask,
 } from '../lib/db';
 
 export const $billingItems = atom<BillingItem[]>([]);
@@ -50,6 +50,10 @@ export function removeBillingItem(id: string): void {
   $billingItemTasks.set(removeBillingItemTasksByBillingItem(id));
 }
 
+export function removeTaskLinks(taskId: string): void {
+  $billingItemTasks.set(removeBillingItemTasksByTask(taskId));
+}
+
 export function linkTaskToBillingItem(billingItemId: string, taskId: string): void {
   const link: BillingItemTask = {
     billingItemId,
@@ -69,8 +73,12 @@ export const $unlockedBillingItemIds = computed(
   (items, links, tasks) =>
     items
       .filter(item => {
-        const linked = links.filter(l => l.billingItemId === item.id).map(l => l.taskId);
-        return linked.length > 0 && linked.every(id => tasks.find(t => t.id === id)?.status === 'done');
+        // links to deleted tasks (older data) are ignored
+        const linked = links
+          .filter(l => l.billingItemId === item.id)
+          .map(l => tasks.find(t => t.id === l.taskId))
+          .filter(t => !!t);
+        return linked.length > 0 && linked.every(t => t!.status === 'done');
       })
       .map(item => item.id),
 );
