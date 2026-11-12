@@ -1,5 +1,6 @@
 <!-- @module:projects -->
 <script lang="ts">
+    import { onDestroy } from "svelte";
     import { command } from "@casoon/origin-client";
     import {
         $clients as clientsStore,
@@ -27,7 +28,8 @@
     let selectedClientId: string | null = null;
     let addingClient = false;
     let newClientName = "";
-    let clientFieldDebounce: ReturnType<typeof setTimeout> | null = null;
+    // One pending save per client and field; the client id is bound when the edit happens.
+    const pendingClientSaves = new Map<string, { timer: ReturnType<typeof setTimeout>; run: () => void }>();
     let editingClientName = false;
     let editClientNameVal = "";
     let csvExporting = false;
@@ -89,21 +91,34 @@
         }
     }
 
+    function scheduleClientSave(clientId: string, field: keyof Client, value: unknown) {
+        const key = `${clientId}:${field}`;
+        const prev = pendingClientSaves.get(key);
+        if (prev) clearTimeout(prev.timer);
+        const run = () => {
+            pendingClientSaves.delete(key);
+            updateClient(clientId, { [field]: value } as Partial<Client>);
+        };
+        pendingClientSaves.set(key, { timer: setTimeout(run, 400), run });
+    }
+
+    function flushClientSaves() {
+        for (const { timer, run } of [...pendingClientSaves.values()]) {
+            clearTimeout(timer);
+            run();
+        }
+    }
+
+    onDestroy(flushClientSaves);
+
     function onClientStr(field: keyof Client) {
         return (e: Event) => {
             if (!selectedClientId) return;
             const value = (
                 e.currentTarget as HTMLInputElement | HTMLTextAreaElement
             ).value;
-            if (clientFieldDebounce) clearTimeout(clientFieldDebounce);
             if (field === "name" && !value.trim()) return;
-            clientFieldDebounce = setTimeout(
-                () =>
-                    updateClient(selectedClientId!, {
-                        [field]: value,
-                    } as Partial<Client>),
-                400,
-            );
+            scheduleClientSave(selectedClientId, field, value);
         };
     }
 
@@ -111,15 +126,7 @@
         return (e: Event) => {
             if (!selectedClientId) return;
             const raw = (e.currentTarget as HTMLInputElement).value;
-            const value = parseFloat(raw) || undefined;
-            if (clientFieldDebounce) clearTimeout(clientFieldDebounce);
-            clientFieldDebounce = setTimeout(
-                () =>
-                    updateClient(selectedClientId!, {
-                        [field]: value,
-                    } as Partial<Client>),
-                400,
-            );
+            scheduleClientSave(selectedClientId, field, parseFloat(raw) || undefined);
         };
     }
 
@@ -352,7 +359,7 @@
                 {/each}
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 gap-3" on:focusout={flushClientSaves}>
                 <label class="flex flex-col gap-1 col-span-2">
                     <span class="text-xs text-muted font-medium"
                         >Kundenname</span

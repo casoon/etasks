@@ -1,5 +1,6 @@
 <!-- @module:projects -->
 <script lang="ts">
+    import { onDestroy } from "svelte";
     import {
         $clients as clientsStore,
         $projects as projectsStore,
@@ -360,16 +361,24 @@
     // Template picker
     let showTemplatePicker = false;
 
-    // Notes debounce
-    let notesDebounce: ReturnType<typeof setTimeout> | null = null;
+    // Notes debounce: the project id is bound when the edit happens; flushed on blur,
+    // when another project is selected and when the view is left.
+    let pendingNotes: { projectId: string; value: string; timer: ReturnType<typeof setTimeout> } | null = null;
+    function flushNotes() {
+        if (!pendingNotes) return;
+        const { projectId, value, timer } = pendingNotes;
+        clearTimeout(timer);
+        pendingNotes = null;
+        updateProject(projectId, { notes: value });
+    }
     function handleNotesChange(value: string) {
         if (!selectedId) return;
-        if (notesDebounce) clearTimeout(notesDebounce);
-        notesDebounce = setTimeout(
-            () => updateProject(selectedId!, { notes: value }),
-            600,
-        );
+        if (pendingNotes && pendingNotes.projectId !== selectedId) flushNotes();
+        if (pendingNotes) clearTimeout(pendingNotes.timer);
+        pendingNotes = { projectId: selectedId, value, timer: setTimeout(flushNotes, 600) };
     }
+    $: if (pendingNotes && pendingNotes.projectId !== selectedId) flushNotes();
+    onDestroy(flushNotes);
 
     function handleAddClient(e: Event) {
         e.preventDefault();
@@ -841,6 +850,7 @@
                         class="w-full px-3 py-3 border border-border rounded-lg text-[13px] font-mono leading-relaxed resize-y outline-none bg-bg text-primary min-h-[80px] focus:border-accent focus:bg-surface"
                         value={selectedProject.notes ?? ""}
                         on:input={handleNotesInput}
+                        on:blur={flushNotes}
                         placeholder="Tech-Stack, Client-Zugänge, besondere Anforderungen, Code-Snippets..."
                         rows={4}
                     />

@@ -1,5 +1,6 @@
 <!-- @module:billing -->
 <script lang="ts">
+    import { onDestroy } from "svelte";
     import type {
         Client,
         Invoice,
@@ -44,7 +45,16 @@
     let newItemInput = "";
     let showNewItemSuggestions = false;
     let taskPickerForLineItem: string | null = null;
-    let lineItemDebounce: Record<string, ReturnType<typeof setTimeout>> = {};
+    // Pending text edits; flushed on blur (before another invoice is selected) and on destroy.
+    const lineItemPending = new Map<string, { timer: ReturnType<typeof setTimeout>; run: () => void }>();
+
+    function flushLineItemEdits() {
+        for (const { timer, run } of [...lineItemPending.values()]) {
+            clearTimeout(timer);
+            run();
+        }
+    }
+    onDestroy(flushLineItemEdits);
 
     $: clientTasksForInvoice = invoice.clientId
         ? tasks.filter(
@@ -93,14 +103,14 @@
                 e.currentTarget as HTMLInputElement | HTMLTextAreaElement
             ).value;
             const key = lineItemId + ":" + String(field);
-            clearTimeout(lineItemDebounce[key]);
-            lineItemDebounce[key] = setTimeout(
-                () =>
-                    patchLineItem(lineItemId, {
-                        [field]: val,
-                    } as Partial<InvoiceLineItem>),
-                400,
-            );
+            clearTimeout(lineItemPending.get(key)?.timer);
+            const run = () => {
+                lineItemPending.delete(key);
+                patchLineItem(lineItemId, {
+                    [field]: val,
+                } as Partial<InvoiceLineItem>);
+            };
+            lineItemPending.set(key, { timer: setTimeout(run, 400), run });
         };
     }
 
@@ -423,7 +433,7 @@
         </div>
     </div>
 
-    <div class="px-6 py-4 flex flex-col gap-3">
+    <div class="px-6 py-4 flex flex-col gap-3" on:focusout={flushLineItemEdits}>
         <h3
             class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted"
         >
