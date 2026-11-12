@@ -43,6 +43,7 @@
     import {
         calcInvoiceTotals,
         formatCents,
+        isValidUnitPrice,
         lineTotalCents,
     } from "../../lib/invoiceMoney";
     import type { TerminType } from "../../domain/types";
@@ -473,9 +474,14 @@
 
     function saveBillingItem() {
         if (!billingDraft.title.trim() || !selectedId) return;
-        const unitPriceCents = billingDraft.unitPriceEuro
-            ? Math.round(parseFloat(billingDraft.unitPriceEuro) * 100)
+        const unitPrice = billingDraft.unitPriceEuro
+            ? parseFloat(billingDraft.unitPriceEuro)
             : null;
+        if (unitPrice != null && !isNaN(unitPrice) && !isValidUnitPrice(unitPrice)) {
+            toast("Der Einzelpreis darf nicht negativ sein.", "error", 3500);
+            return;
+        }
+        const unitPriceCents = unitPrice != null ? Math.round(unitPrice * 100) : null;
         addBillingItem(selectedId, {
             title: billingDraft.title.trim(),
             billingType: billingDraft.billingType,
@@ -893,6 +899,7 @@
                                 placeholder="€ 0.00"
                                 type="number"
                                 step="0.01"
+                                min="0"
                             />
                         </div>
                         <div class="flex gap-2">

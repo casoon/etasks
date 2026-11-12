@@ -1,6 +1,7 @@
 <!-- @module:billing -->
 <script lang="ts">
   import { $services as servicesStore, addService, updateService, removeService } from '../../stores/serviceStore';
+  import { isValidUnitPrice, isValidVatRate } from '../../lib/invoiceMoney';
   import type { ServiceItem } from '../../domain/types';
 
   $: services = $servicesStore;
@@ -37,8 +38,17 @@
     };
   }
 
+  function draftError(draft: ServiceDraft): string {
+    if (draft.unitPrice != null && !isValidUnitPrice(draft.unitPrice)) return 'Der Einzelpreis darf nicht negativ sein.';
+    if (draft.vatRate != null && !isValidVatRate(draft.vatRate)) return 'Die MwSt. muss zwischen 0 und 100 % liegen.';
+    return '';
+  }
+
+  $: addError = draftError(serviceDraft);
+  $: editError = draftError(editDraft);
+
   function saveService() {
-    if (!serviceDraft.name.trim()) return;
+    if (!serviceDraft.name.trim() || addError) return;
     addService({
       name: serviceDraft.name.trim(),
       description: serviceDraft.description.trim(),
@@ -52,6 +62,7 @@
   }
 
   function commitEditService() {
+    if (editError) return;
     if (!editingServiceId || !editDraft.name.trim()) {
       editingServiceId = null;
       return;
@@ -86,12 +97,13 @@
         <label class="flex flex-col gap-1 col-span-2"><span class="text-xs text-muted font-medium">Kurzbezeichnung *</span><input class="input" bind:value={editDraft.name} placeholder="Webentwicklung" /></label>
         <label class="flex flex-col gap-1 col-span-2"><span class="text-xs text-muted font-medium">Rechnungstext (Langtext)</span><textarea class="input resize-none" bind:value={editDraft.description} rows={2} placeholder="Entwicklung und Implementierung…" /></label>
         <label class="flex flex-col gap-1"><span class="text-xs text-muted font-medium">Einheit</span><input class="input" bind:value={editDraft.unit} placeholder="Stunde" /></label>
-        <label class="flex flex-col gap-1"><span class="text-xs text-muted font-medium">Einzelpreis (€)</span><input class="input" type="number" step="0.01" bind:value={editDraft.unitPrice} placeholder="95.00" /></label>
-        <label class="flex flex-col gap-1"><span class="text-xs text-muted font-medium">MwSt. (%)</span><input class="input" type="number" bind:value={editDraft.vatRate} placeholder="19" /></label>
+        <label class="flex flex-col gap-1"><span class="text-xs text-muted font-medium">Einzelpreis (€)</span><input class="input" type="number" step="0.01" min="0" bind:value={editDraft.unitPrice} placeholder="95.00" /></label>
+        <label class="flex flex-col gap-1"><span class="text-xs text-muted font-medium">MwSt. (%)</span><input class="input" type="number" min="0" max="100" bind:value={editDraft.vatRate} placeholder="19" /></label>
         <label class="flex flex-col gap-1"><span class="text-xs text-muted font-medium">Kategorie</span><input class="input" bind:value={editDraft.category} placeholder="Entwicklung" /></label>
       </div>
+      {#if editError}<p class="text-[12px] text-red-500">{editError}</p>{/if}
       <div class="flex gap-2">
-        <button class="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:opacity-90 transition-opacity" on:click={commitEditService}>Speichern</button>
+        <button class="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50" disabled={Boolean(editError)} on:click={commitEditService}>Speichern</button>
         <button class="px-4 py-2 rounded-lg border border-border text-secondary text-sm hover:bg-bg transition-colors" on:click={() => editingServiceId = null}>Abbrechen</button>
         <button class="ml-auto px-3 py-2 rounded-lg text-red-500 border border-red-200 text-sm hover:bg-red-50 transition-colors" on:click={() => { if (editingServiceId) removeService(editingServiceId); editingServiceId = null; }}>Löschen</button>
       </div>
@@ -103,12 +115,13 @@
         <label class="flex flex-col gap-1 col-span-2"><span class="text-xs text-muted font-medium">Kurzbezeichnung *</span><!-- svelte-ignore a11y-autofocus --><input class="input" bind:value={serviceDraft.name} placeholder="Webentwicklung" autofocus /></label>
         <label class="flex flex-col gap-1 col-span-2"><span class="text-xs text-muted font-medium">Rechnungstext (Langtext)</span><textarea class="input resize-none" bind:value={serviceDraft.description} rows={2} placeholder="Entwicklung und Implementierung…" /></label>
         <label class="flex flex-col gap-1"><span class="text-xs text-muted font-medium">Einheit</span><input class="input" bind:value={serviceDraft.unit} placeholder="Stunde" /></label>
-        <label class="flex flex-col gap-1"><span class="text-xs text-muted font-medium">Einzelpreis (€)</span><input class="input" type="number" step="0.01" bind:value={serviceDraft.unitPrice} placeholder="95.00" /></label>
-        <label class="flex flex-col gap-1"><span class="text-xs text-muted font-medium">MwSt. (%)</span><input class="input" type="number" bind:value={serviceDraft.vatRate} placeholder="19" /></label>
+        <label class="flex flex-col gap-1"><span class="text-xs text-muted font-medium">Einzelpreis (€)</span><input class="input" type="number" step="0.01" min="0" bind:value={serviceDraft.unitPrice} placeholder="95.00" /></label>
+        <label class="flex flex-col gap-1"><span class="text-xs text-muted font-medium">MwSt. (%)</span><input class="input" type="number" min="0" max="100" bind:value={serviceDraft.vatRate} placeholder="19" /></label>
         <label class="flex flex-col gap-1"><span class="text-xs text-muted font-medium">Kategorie</span><input class="input" bind:value={serviceDraft.category} placeholder="Entwicklung" /></label>
       </div>
+      {#if addError}<p class="text-[12px] text-red-500">{addError}</p>{/if}
       <div class="flex gap-2">
-        <button class="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:opacity-90 transition-opacity" on:click={saveService}>Hinzufügen</button>
+        <button class="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50" disabled={Boolean(addError)} on:click={saveService}>Hinzufügen</button>
         <button class="px-4 py-2 rounded-lg border border-border text-secondary text-sm hover:bg-bg transition-colors" on:click={() => { addingService = false; serviceDraft = emptyDraft(); }}>Abbrechen</button>
       </div>
     </div>

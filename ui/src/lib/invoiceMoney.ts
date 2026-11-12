@@ -50,3 +50,15 @@ export function calcInvoiceTotals(
   const vatCents = vatEntries.reduce((sum, entry) => sum + entry.amountCents, 0);
   return { nettoCents, vatEntries, vatCents, totalCents: nettoCents + vatCents };
 }
+
+export function isValidUnitPrice(value: number): boolean {
+  return Number.isFinite(value) && value >= 0;
+}
+
+export function isValidVatRate(value: number): boolean {
+  return Number.isFinite(value) && value >= 0 && value <= 100;
+}
+
+export function isValidQuantity(value: number): boolean {
+  return Number.isFinite(value) && value > 0;
+}

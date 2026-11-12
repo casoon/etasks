@@ -88,6 +88,7 @@
                 e.currentTarget as HTMLInputElement | HTMLTextAreaElement
             ).value;
             if (clientFieldDebounce) clearTimeout(clientFieldDebounce);
+            if (field === "name" && !value.trim()) return;
             clientFieldDebounce = setTimeout(
                 () =>
                     updateClient(selectedClientId!, {
@@ -352,6 +353,10 @@
                         class="input"
                         value={selectedClient.name}
                         on:input={onClientStr("name")}
+                        on:blur={(e) => {
+                            if (!e.currentTarget.value.trim())
+                                e.currentTarget.value = selectedClient.name;
+                        }}
                     />
                 </label>
                 <label class="flex flex-col gap-1">

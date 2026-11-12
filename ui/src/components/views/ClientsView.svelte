@@ -104,6 +104,17 @@
 
     function markSelectedInvoiceStatus(status: Invoice["status"]) {
         if (!selectedInvoice) return;
+        if (
+            status === "sent" &&
+            (!selectedInvoice.clientId || !selectedInvoice.lineItems.length)
+        ) {
+            toast(
+                "Zum Senden braucht die Rechnung einen Kunden und mindestens eine Position.",
+                "error",
+                4000,
+            );
+            return;
+        }
         updateInvoice(selectedInvoice.id, { status });
         toast(
             status === "sent"

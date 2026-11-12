@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { calcInvoiceTotals, lineTotalCents } from "./invoiceMoney";
+import {
+  calcInvoiceTotals,
+  isValidQuantity,
+  isValidUnitPrice,
+  isValidVatRate,
+  lineTotalCents,
+} from "./invoiceMoney";
 
 const item = (unitPrice: number, quantity: number, vatRate = 19) => ({
   unitPrice,
@@ -40,5 +46,19 @@ describe("invoiceMoney", () => {
       vatCents: 0,
       totalCents: 0,
     });
+  });
+
+  it("validates price, VAT rate and quantity ranges", () => {
+    expect(isValidUnitPrice(0)).toBe(true);
+    expect(isValidUnitPrice(-50)).toBe(false);
+    expect(isValidUnitPrice(NaN)).toBe(false);
+    expect(isValidVatRate(0)).toBe(true);
+    expect(isValidVatRate(100)).toBe(true);
+    expect(isValidVatRate(-1)).toBe(false);
+    expect(isValidVatRate(101)).toBe(false);
+    expect(isValidQuantity(0.25)).toBe(true);
+    expect(isValidQuantity(0)).toBe(false);
+    expect(isValidQuantity(-1)).toBe(false);
+    expect(isValidQuantity(NaN)).toBe(false);
   });
 });
