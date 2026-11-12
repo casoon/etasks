@@ -45,29 +45,16 @@
     localStorage.setItem(boardCollapseKey, JSON.stringify(collapsedColumns));
   }
 
-  function tasksByColumn(col: KanbanStatus) {
-    return tasks
+  function tasksByColumn(list: Task[], col: KanbanStatus) {
+    return list
       .filter(t => (t.kanbanStatus ?? 'backlog') === col)
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   }
 
-  function isCollapsed(col: KanbanStatus): boolean {
-    return collapsedColumns.includes(col);
-  }
-
   function toggleColumn(col: KanbanStatus): void {
-    collapsedColumns = isCollapsed(col)
+    collapsedColumns = collapsedColumns.includes(col)
       ? collapsedColumns.filter(id => id !== col)
       : [...collapsedColumns, col];
-  }
-
-  function columnLimit(col: KanbanStatus): number | null {
-    return COLUMN_LIMITS[col] ?? null;
-  }
-
-  function isOverLimit(col: KanbanStatus): boolean {
-    const limit = columnLimit(col);
-    return limit != null && tasksByColumn(col).length > limit;
   }
 
   function cardAccent(task: Task): string {
@@ -165,7 +152,7 @@
     if (!task) { onDragEnd(); return; }
 
     // Build ordered list for target column, without the dragged card
-    const colTasks = tasksByColumn(targetColId).filter(t => t.id !== taskId);
+    const colTasks = tasksByColumn(tasks, targetColId).filter(t => t.id !== taskId);
 
     let insertIdx: number;
     if (dragOverCardId) {
@@ -194,11 +181,11 @@
 
 <div class="grid flex-1 overflow-hidden gap-px bg-border" style="grid-template-columns: repeat(4, 1fr)">
   {#each KANBAN_COLUMNS as col (col.id)}
-    {@const colTasks = tasksByColumn(col.id)}
+    {@const colTasks = tasksByColumn(tasks, col.id)}
     {@const isColActive = dragOverColId === col.id}
-    {@const limit = columnLimit(col.id)}
+    {@const limit = COLUMN_LIMITS[col.id] ?? null}
     {@const overLimit = limit != null && colTasks.length > limit}
-    {@const collapsed = isCollapsed(col.id)}
+    {@const collapsed = collapsedColumns.includes(col.id)}
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div
       class="flex flex-col overflow-hidden transition-colors min-w-0 {isColActive ? 'bg-accent-subtle/40' : 'bg-bg'} {collapsed ? 'max-w-[68px]' : ''}"
