@@ -13,6 +13,7 @@
   import { $currentWeekPlan as currentWeekPlanStore } from '../../stores/weekPlanStore';
   import { daysSince, formatDate, isRecurringDueOn } from '../../domain/dateUtils';
   import { autoScheduleTasks } from '../../domain/taskService';
+  import { toast } from '../../stores/toastStore';
   import CalendarView from './CalendarView.svelte';
   import RecurringTasksPanel from '../widgets/RecurringTasksPanel.svelte';
   import type { Task } from '../../domain/types';
@@ -288,9 +289,11 @@
 
   function autoPlanTask(task: Task): void {
     const busySlots = getBusySlots();
-    const [planned] = autoScheduleTasks([{ ...task, scheduledStart: null }], busySlots, 9, 18);
+    const [planned] = autoScheduleTasks([{ ...task, scheduledStart: null }], busySlots, 9, 18, { date: activeDate });
     if (planned?.scheduledStart) {
       scheduleTask(task, new Date(planned.scheduledStart));
+    } else {
+      toast('Kein freier Slot mehr bis 18:00 Uhr.', 'info');
     }
   }
 
@@ -315,11 +318,23 @@
       busySlots,
       9,
       18,
+      { date: activeDate },
     );
+    let notFitting = 0;
     for (const task of planned) {
       if (task.scheduledStart) {
         scheduleTask(task, new Date(task.scheduledStart));
+      } else {
+        notFitting++;
       }
+    }
+    if (notFitting > 0) {
+      toast(
+        notFitting === 1
+          ? '1 Aufgabe passt nicht mehr in den Tag und bleibt unverplant.'
+          : `${notFitting} Aufgaben passen nicht mehr in den Tag und bleiben unverplant.`,
+        'info',
+      );
     }
   }
 

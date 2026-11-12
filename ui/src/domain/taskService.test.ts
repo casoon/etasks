@@ -138,4 +138,37 @@ describe('autoScheduleTasks', () => {
     // 30-min window can't fit 60-min task → returned without scheduledStart
     expect(result[0].scheduledStart).toBeUndefined();
   });
+
+  it('starts at the next quarter hour when planning today after dayStart', () => {
+    const now = new Date(2026, 2, 27, 14, 7);
+    const result = autoScheduleTasks([makeTask()], [], 9, 18, { date: '2026-03-27', now });
+    const start = new Date(result[0].scheduledStart!);
+    expect(start.getHours()).toBe(14);
+    expect(start.getMinutes()).toBe(15);
+  });
+
+  it('ignores now when planning another day', () => {
+    const now = new Date(2026, 2, 27, 14, 7);
+    const result = autoScheduleTasks([makeTask()], [], 9, 18, { date: '2026-03-28', now });
+    const start = new Date(result[0].scheduledStart!);
+    expect(start.getDate()).toBe(28);
+    expect(start.getHours()).toBe(9);
+  });
+
+  it('requires the slot to end by dayEnd', () => {
+    const now = new Date(2026, 2, 27, 17, 40);
+    const tasks = [makeTask({ estimatedMinutes: 30 }), makeTask({ estimatedMinutes: 15 })];
+    const result = autoScheduleTasks(tasks, [], 9, 18, { date: '2026-03-27', now });
+    // 17:45 + 30 min would end 18:15 -> unscheduled; the 15 min task still fits
+    expect(result[0].scheduledStart).toBeUndefined();
+    const second = new Date(result[1].scheduledStart!);
+    expect(second.getHours()).toBe(17);
+    expect(second.getMinutes()).toBe(45);
+  });
+
+  it('leaves everything unscheduled when the day is over', () => {
+    const now = new Date(2026, 2, 27, 18, 30);
+    const result = autoScheduleTasks([makeTask()], [], 9, 18, { date: '2026-03-27', now });
+    expect(result[0].scheduledStart).toBeUndefined();
+  });
 });
