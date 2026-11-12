@@ -19,6 +19,7 @@
     import PomodoroWidget from "../widgets/PomodoroWidget.svelte";
     import TaskColumn from "../widgets/TaskColumn.svelte";
     import ShutdownModal from "../modals/ShutdownModal.svelte";
+    import StaleTimerDialog from "../modals/StaleTimerDialog.svelte";
     import AnalyticsView from "../views/AnalyticsView.svelte";
     import ProjectsView from "../views/ProjectsView.svelte";
     import TimeTrackingView from "../views/TimeTrackingView.svelte";
@@ -180,6 +181,7 @@
 
     <QuickAddModal />
     <ShutdownModal />
+    <StaleTimerDialog />
 </div>
 {/if}
 
