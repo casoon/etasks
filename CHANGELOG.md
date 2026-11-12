@@ -31,3 +31,4 @@ All notable changes to eTasks are listed here. eTasks follows
 - **Today:** the day plan shows scheduled and tracked times in local time instead of UTC, block heights match their duration, and dragging a block keeps a full timestamp; tasks with a calendar block are no longer drawn twice.
 - **Project board:** new cards appear immediately; column contents, counters and collapse state update reactively.
 - **Project board:** new cards and applied project templates no longer land in today's plan; dragging a card to or from "Erledigt" sets or clears the completion date, a drop only updates cards whose column or position changed, and the duration dropdown works in card edit mode.
+- **Planning:** dropping an already scheduled task on the calendar moves its block instead of creating a second one.

@@ -23,14 +23,8 @@ export function initBlocks(): void {
 }
 
 export function dropTaskOnCalendar(task: Task, start: Date): void {
-  // Remove existing block for this task if any
-  const existing = $blocks.get().find((b) => b.taskId === task.id);
-  let next = $blocks.get();
-
-  if (existing) {
-    next = next.filter((b) => b.id !== existing.id);
-  }
-
+  // A task has at most one block: drop the existing one before creating the new one
+  deleteBlockByTaskId(task.id);
   const block = createBlockFromTask(task, start);
   const saved = upsertBlock(block);
   $blocks.set(saved);
