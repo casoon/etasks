@@ -81,6 +81,7 @@ impl Default for UserProfile {
 pub struct TenantInfo {
     pub path: String,
     pub name: String,
+    #[serde(default, rename = "displayName", alias = "display_name")]
     pub display_name: Option<String>,
     pub last_opened: String,
 }
@@ -455,4 +456,32 @@ pub fn write_log(path: String, level: String, message: String) -> Result<(), Str
         .map_err(|e| e.to_string())?;
     let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
     writeln!(file, "[{now}] [{level}] {message}").map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tenant_display_name_round_trips_as_camel_case() {
+        let tenant: TenantInfo = serde_json::from_str(
+            r#"{"path":"/a/etasks.sqlite3","name":"Studio","displayName":"Studio Nord","last_opened":"x"}"#,
+        )
+        .unwrap();
+        assert_eq!(tenant.display_name.as_deref(), Some("Studio Nord"));
+        let json = serde_json::to_string(&tenant).unwrap();
+        assert!(json.contains(r#""displayName":"Studio Nord""#));
+    }
+
+    #[test]
+    fn old_tenant_entries_without_display_name_still_load() {
+        let tenant: TenantInfo =
+            serde_json::from_str(r#"{"path":"/a","name":"a","last_opened":"x"}"#).unwrap();
+        assert!(tenant.display_name.is_none());
+        let snake: TenantInfo = serde_json::from_str(
+            r#"{"path":"/a","name":"a","display_name":"A","last_opened":"x"}"#,
+        )
+        .unwrap();
+        assert_eq!(snake.display_name.as_deref(), Some("A"));
+    }
 }
