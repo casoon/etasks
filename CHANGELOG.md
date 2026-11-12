@@ -29,6 +29,7 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Fixed
 
+- **Navigation:** the sidebar highlight follows every view change, including "Fokus starten", "Tag planen" and "Zur Tagesplanung".
 - **Analytics:** the weekly figures (completion rate, planned time, tracked time) only count the calendar week Monday–Sunday instead of everything planned from Monday on, "Zeit pro Kategorie" shows tracked time instead of estimates, and "Diese Woche" in Zeiterfassung uses the same calendar week.
 - **Appointments:** the day grid widens for Termine before 06:00 or after 20:00 instead of drawing them outside the grid.
 - **Reports:** time on a deleted task keeps its project and client in the report table and the client report.

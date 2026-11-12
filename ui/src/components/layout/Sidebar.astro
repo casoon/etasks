@@ -210,10 +210,17 @@ const navItems = [
             exportToFile();
         });
 
-    const initial = $navItem.get();
-    document
-        .querySelector(`[data-nav="${initial}"]`)
-        ?.classList.add("is-active");
+    // Follow every navigation, also programmatic ones (e.g. "Fokus starten")
+    $navItem.subscribe((current) => {
+        document
+            .querySelectorAll("[data-nav]")
+            .forEach((b) =>
+                b.classList.toggle(
+                    "is-active",
+                    (b as HTMLElement).dataset.nav === current,
+                ),
+            );
+    });
 </script>
 
 <style>

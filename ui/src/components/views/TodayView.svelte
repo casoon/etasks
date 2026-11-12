@@ -9,7 +9,7 @@
   } from '../../stores/taskStore';
   import { $mitTaskIds as mitTaskIdsStore } from '../../stores/planningStore';
   import { $projects as projectsStore } from '../../stores/projectStore';
-  import { $focusTaskId as focusTaskIdStore } from '../../stores/uiStore';
+  import { $focusTaskId as focusTaskIdStore, $navItem as navItemStore } from '../../stores/uiStore';
   import { $todayBlocks as todayBlocksStore, moveBlock } from '../../stores/calendarStore';
   import { $termine as termineStore } from '../../stores/terminStore';
   import { dayHourRange } from '../../domain/calendarService';
@@ -55,10 +55,10 @@
   }
   function startFocus(task: Task) {
     focusTaskIdStore.set(task.id);
-    (document.querySelector('[data-nav="focus"]') as HTMLElement)?.click();
+    navItemStore.set('focus');
   }
   function goToPlanning() {
-    (document.querySelector('[data-nav="planning-daily"]') as HTMLElement)?.click();
+    navItemStore.set('planning-daily');
   }
 
   // ── Calendar panel ─────────────────────────────────────────────────────────
