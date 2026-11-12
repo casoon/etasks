@@ -39,3 +39,4 @@ All notable changes to eTasks are listed here. eTasks follows
 - **Focus:** the Pomodoro timer keeps running and notifies at the end while another view is open; "Start" after a finished session begins a fresh one, and the ±5 minute buttons are disabled while the timer runs.
 - **Workspaces:** switching the workspace clears the previous workspace's appointments, week plans and export state instead of showing and re-saving them; a failed load is reported instead of silently keeping old data.
 - **Backup:** exports, snapshots and imports include appointments and week plans (focus projects, weekly goal note); older backup files without them still import.
+- **Backup:** an import writes to the database first and refreshes the UI from it, so a broken file changes nothing; lists missing from the file leave the workspace's data untouched, and the import no longer replaces the workspace meta, the profile or the invoice/offer counters.

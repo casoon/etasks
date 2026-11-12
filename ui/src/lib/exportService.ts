@@ -14,9 +14,9 @@ import {
   loadTermine,
   loadWeekPlans,
 } from "./db";
-import { storageGet, storageSet, KEYS } from "./storage";
+import { storageGet, storageSet, syncFromDatabase, KEYS } from "./storage";
 import { $bridgeServices as $services, $bridgeInvoices as $invoices } from "../stores/coreBridge";
-import { $appConfig, saveAppConfig } from "../stores/configStore";
+import { $appConfig } from "../stores/configStore";
 import { metaAll } from "./metaStore";
 import { today } from "../domain/dateUtils";
 import { isTauriAvailable } from "./platform";
@@ -99,71 +99,48 @@ export async function scheduleDailySnapshot(): Promise<void> {
   await saveToICloud();
 }
 
+const IMPORT_LISTS = [
+  ["tasks", KEYS.tasks],
+  ["blocks", KEYS.blocks],
+  ["goals", KEYS.goals],
+  ["notes", KEYS.notes],
+  ["clients", KEYS.clients],
+  ["projects", KEYS.projects],
+  ["services", KEYS.services],
+  ["timeEntries", KEYS.timeEntries],
+  ["templates", KEYS.templates],
+  ["billingItems", KEYS.billingItems],
+  ["billingItemTasks", KEYS.billingItemTasks],
+  ["dayPlans", KEYS.dayPlans],
+  ["invoices", KEYS.invoices],
+  ["termine", KEYS.termine],
+  ["weekPlans", KEYS.weekPlans],
+] as const;
+
+/**
+ * Imports the data lists of a backup into the active workspace. Lists missing
+ * from the file stay untouched. Profile, invoice/offer counters and workspace
+ * meta are never imported, so counters cannot be rolled back.
+ * SQLite is written first; the UI storage is only refreshed after it succeeded.
+ */
 export async function importFromJSON(json: string): Promise<boolean> {
   try {
     const snapshot = JSON.parse(json);
-    if (!snapshot.data) return false;
-    const {
-      tasks,
-      blocks,
-      goals,
-      notes,
-      clients,
-      projects,
-      services,
-      timeEntries,
-      templates,
-      billingItems,
-      billingItemTasks,
-      dayPlans,
-      invoices,
-      termine,
-      weekPlans,
-    } = snapshot.data;
-    const profile = snapshot.profile;
-    const tenantMeta = Array.isArray(snapshot.tenantMeta)
-      ? snapshot.tenantMeta
-      : [];
-    if (tasks) storageSet(KEYS.tasks, tasks);
-    if (blocks) storageSet(KEYS.blocks, blocks);
-    if (goals) storageSet(KEYS.goals, goals);
-    if (notes) storageSet(KEYS.notes, notes);
-    if (clients) storageSet(KEYS.clients, clients);
-    if (projects) storageSet(KEYS.projects, projects);
-    if (services) storageSet(KEYS.services, services);
-    if (timeEntries) storageSet(KEYS.timeEntries, timeEntries);
-    if (templates) storageSet(KEYS.templates, templates);
-    if (billingItems) storageSet(KEYS.billingItems, billingItems);
-    if (billingItemTasks) storageSet(KEYS.billingItemTasks, billingItemTasks);
-    if (dayPlans) storageSet(KEYS.dayPlans, dayPlans);
-    if (invoices) storageSet(KEYS.invoices, invoices);
-    if (termine) storageSet(KEYS.termine, termine);
-    if (weekPlans) storageSet(KEYS.weekPlans, weekPlans);
-    if (isTauriAvailable()) {
-      await command("import_snapshot", {
-        payload: {
-          tasks: tasks ?? [],
-          blocks: blocks ?? [],
-          goals: goals ?? [],
-          notes: notes ?? [],
-          clients: clients ?? [],
-          projects: projects ?? [],
-          services: services ?? [],
-          timeEntries: timeEntries ?? [],
-          templates: templates ?? [],
-          billingItems: billingItems ?? [],
-          billingItemTasks: billingItemTasks ?? [],
-          dayPlans: dayPlans ?? [],
-          invoices: invoices ?? [],
-          termine,
-          weekPlans,
-          tenantMeta,
-        },
-      });
+    if (!snapshot.data || typeof snapshot.data !== "object") return false;
+    const lists: Record<string, unknown[]> = {};
+    for (const [name] of IMPORT_LISTS) {
+      const value = snapshot.data[name];
+      if (value === undefined || value === null) continue;
+      if (!Array.isArray(value)) return false;
+      lists[name] = value;
     }
-    const config = $appConfig.get();
-    if (profile && config) {
-      await saveAppConfig({ ...config, profile });
+    if (isTauriAvailable()) {
+      await command("import_snapshot", { payload: lists });
+      await syncFromDatabase();
+    } else {
+      for (const [name, key] of IMPORT_LISTS) {
+        if (lists[name]) storageSet(key, lists[name]);
+      }
     }
     return true;
   } catch {

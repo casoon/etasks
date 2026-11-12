@@ -8,34 +8,40 @@ use crate::state::DbState;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MetaImportEntry {
-    pub key: String,
-    pub value: Option<String>,
-    pub value_type: String,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
+/// Lists missing from the payload leave the matching tables untouched.
+/// Profile and workspace meta are never part of an import.
 pub struct SnapshotImportPayload {
-    pub tasks: Vec<Value>,
-    pub blocks: Vec<Value>,
-    pub goals: Vec<Value>,
-    pub notes: Vec<Value>,
-    pub clients: Vec<Value>,
-    pub projects: Vec<Value>,
-    pub services: Vec<Value>,
-    pub time_entries: Vec<Value>,
-    pub templates: Vec<Value>,
-    pub billing_items: Vec<Value>,
-    pub billing_item_tasks: Vec<Value>,
-    pub day_plans: Vec<Value>,
-    pub invoices: Vec<Value>,
+    #[serde(default)]
+    pub tasks: Option<Vec<Value>>,
+    #[serde(default)]
+    pub blocks: Option<Vec<Value>>,
+    #[serde(default)]
+    pub goals: Option<Vec<Value>>,
+    #[serde(default)]
+    pub notes: Option<Vec<Value>>,
+    #[serde(default)]
+    pub clients: Option<Vec<Value>>,
+    #[serde(default)]
+    pub projects: Option<Vec<Value>>,
+    #[serde(default)]
+    pub services: Option<Vec<Value>>,
+    #[serde(default)]
+    pub time_entries: Option<Vec<Value>>,
+    #[serde(default)]
+    pub templates: Option<Vec<Value>>,
+    #[serde(default)]
+    pub billing_items: Option<Vec<Value>>,
+    #[serde(default)]
+    pub billing_item_tasks: Option<Vec<Value>>,
+    #[serde(default)]
+    pub day_plans: Option<Vec<Value>>,
+    #[serde(default)]
+    pub invoices: Option<Vec<Value>>,
     // Stored in the kv table; absent in backups from older versions.
     #[serde(default)]
     pub termine: Option<Vec<Value>>,
     #[serde(default)]
     pub week_plans: Option<Vec<Value>>,
-    pub tenant_meta: Vec<MetaImportEntry>,
 }
 
 #[tauri::command]
@@ -98,27 +104,28 @@ pub fn import_snapshot(
     let conn = guard.as_mut().ok_or("Keine Datenbank geöffnet")?;
     let tx = conn.transaction().map_err(|e| e.to_string())?;
 
-    tx.execute_batch(
-        "
-        DELETE FROM billing_item_tasks;
-        DELETE FROM billing_items;
-        DELETE FROM invoices;
-        DELETE FROM time_entries;
-        DELETE FROM calendar_blocks;
-        DELETE FROM weekly_goals;
-        DELETE FROM daily_notes;
-        DELETE FROM day_plans;
-        DELETE FROM project_templates;
-        DELETE FROM services;
-        DELETE FROM projects;
-        DELETE FROM clients;
-        DELETE FROM tasks;
-        DELETE FROM meta_entries;
-        ",
-    )
-    .map_err(|e| e.to_string())?;
+    for (present, table) in [
+        (payload.billing_item_tasks.is_some(), "billing_item_tasks"),
+        (payload.billing_items.is_some(), "billing_items"),
+        (payload.invoices.is_some(), "invoices"),
+        (payload.time_entries.is_some(), "time_entries"),
+        (payload.blocks.is_some(), "calendar_blocks"),
+        (payload.goals.is_some(), "weekly_goals"),
+        (payload.notes.is_some(), "daily_notes"),
+        (payload.day_plans.is_some(), "day_plans"),
+        (payload.templates.is_some(), "project_templates"),
+        (payload.services.is_some(), "services"),
+        (payload.projects.is_some(), "projects"),
+        (payload.clients.is_some(), "clients"),
+        (payload.tasks.is_some(), "tasks"),
+    ] {
+        if present {
+            tx.execute(&format!("DELETE FROM {table}"), [])
+                .map_err(|e| e.to_string())?;
+        }
+    }
 
-    for task in payload.tasks {
+    for task in payload.tasks.unwrap_or_default() {
         let id = task["id"].as_str().ok_or("task: missing id")?;
         let data = serde_json::to_string(&task).map_err(|e| e.to_string())?;
         tx.execute(
@@ -135,7 +142,7 @@ pub fn import_snapshot(
         .map_err(|e| e.to_string())?;
     }
 
-    for client in payload.clients {
+    for client in payload.clients.unwrap_or_default() {
         let id = client["id"].as_str().ok_or("client: missing id")?;
         let data = serde_json::to_string(&client).map_err(|e| e.to_string())?;
         tx.execute(
@@ -145,7 +152,7 @@ pub fn import_snapshot(
         .map_err(|e| e.to_string())?;
     }
 
-    for project in payload.projects {
+    for project in payload.projects.unwrap_or_default() {
         let id = project["id"].as_str().ok_or("project: missing id")?;
         let data = serde_json::to_string(&project).map_err(|e| e.to_string())?;
         tx.execute(
@@ -161,7 +168,7 @@ pub fn import_snapshot(
         .map_err(|e| e.to_string())?;
     }
 
-    for service in payload.services {
+    for service in payload.services.unwrap_or_default() {
         let id = service["id"].as_str().ok_or("service: missing id")?;
         let data = serde_json::to_string(&service).map_err(|e| e.to_string())?;
         tx.execute(
@@ -171,7 +178,7 @@ pub fn import_snapshot(
         .map_err(|e| e.to_string())?;
     }
 
-    for item in payload.billing_items {
+    for item in payload.billing_items.unwrap_or_default() {
         let id = item["id"].as_str().ok_or("billing_item: missing id")?;
         let project_id = item["projectId"]
             .as_str()
@@ -185,7 +192,7 @@ pub fn import_snapshot(
         .map_err(|e| e.to_string())?;
     }
 
-    for link in payload.billing_item_tasks {
+    for link in payload.billing_item_tasks.unwrap_or_default() {
         let billing_item_id = link["billingItemId"]
             .as_str()
             .ok_or("billing_item_task: missing billingItemId")?;
@@ -203,7 +210,7 @@ pub fn import_snapshot(
         .map_err(|e| e.to_string())?;
     }
 
-    for entry in payload.time_entries {
+    for entry in payload.time_entries.unwrap_or_default() {
         let id = entry["id"].as_str().ok_or("time_entry: missing id")?;
         let data = serde_json::to_string(&entry).map_err(|e| e.to_string())?;
         let is_running: i32 = if entry["isRunning"].as_bool().unwrap_or(false) {
@@ -219,7 +226,7 @@ pub fn import_snapshot(
         .map_err(|e| e.to_string())?;
     }
 
-    for plan in payload.day_plans {
+    for plan in payload.day_plans.unwrap_or_default() {
         let id = plan["id"].as_str().ok_or("day_plan: missing id")?;
         let date = plan["date"].as_str().ok_or("day_plan: missing date")?;
         let data = serde_json::to_string(&plan).map_err(|e| e.to_string())?;
@@ -231,7 +238,7 @@ pub fn import_snapshot(
         .map_err(|e| e.to_string())?;
     }
 
-    for block in payload.blocks {
+    for block in payload.blocks.unwrap_or_default() {
         let id = block["id"].as_str().ok_or("block: missing id")?;
         let data = serde_json::to_string(&block).map_err(|e| e.to_string())?;
         tx.execute(
@@ -242,7 +249,7 @@ pub fn import_snapshot(
         .map_err(|e| e.to_string())?;
     }
 
-    for goal in payload.goals {
+    for goal in payload.goals.unwrap_or_default() {
         let id = goal["id"].as_str().ok_or("goal: missing id")?;
         let data = serde_json::to_string(&goal).map_err(|e| e.to_string())?;
         tx.execute(
@@ -253,7 +260,7 @@ pub fn import_snapshot(
         .map_err(|e| e.to_string())?;
     }
 
-    for note in payload.notes {
+    for note in payload.notes.unwrap_or_default() {
         let date = note["date"].as_str().ok_or("note: missing date")?;
         let data = serde_json::to_string(&note).map_err(|e| e.to_string())?;
         tx.execute(
@@ -263,7 +270,7 @@ pub fn import_snapshot(
         .map_err(|e| e.to_string())?;
     }
 
-    for template in payload.templates {
+    for template in payload.templates.unwrap_or_default() {
         let id = template["id"].as_str().ok_or("template: missing id")?;
         let data = serde_json::to_string(&template).map_err(|e| e.to_string())?;
         tx.execute(
@@ -273,7 +280,7 @@ pub fn import_snapshot(
         .map_err(|e| e.to_string())?;
     }
 
-    for invoice in payload.invoices {
+    for invoice in payload.invoices.unwrap_or_default() {
         let id = invoice["id"].as_str().ok_or("invoice: missing id")?;
         let data = serde_json::to_string(&invoice).map_err(|e| e.to_string())?;
         tx.execute(
@@ -286,15 +293,6 @@ pub fn import_snapshot(
                 invoice["status"].as_str(),
                 invoice["invoiceNumber"].as_str()
             ],
-        )
-        .map_err(|e| e.to_string())?;
-    }
-
-    for meta in payload.tenant_meta {
-        tx.execute(
-            "INSERT INTO meta_entries (key, value, value_type, updated_at)
-             VALUES (?1, ?2, ?3, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))",
-            params![meta.key, meta.value, meta.value_type],
         )
         .map_err(|e| e.to_string())?;
     }

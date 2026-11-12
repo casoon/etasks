@@ -2,12 +2,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const storage = new Map<string, string>();
 
+let tauri = true;
+const command = vi.fn();
+const syncFromDatabase = vi.fn();
+
 vi.mock("./platform", () => ({
-  isTauriAvailable: () => true,
+  isTauriAvailable: () => tauri,
 }));
 
 vi.mock("@casoon/origin-client", () => ({
-  command: vi.fn(),
+  command,
 }));
 
 vi.mock("./storage", () => ({
@@ -29,6 +33,7 @@ vi.mock("./storage", () => ({
     weekPlans: "etasks:weekPlans",
     termine: "etasks:termine",
   },
+  syncFromDatabase,
   storageGet: (key: string) => {
     const raw = storage.get(key);
     return raw ? JSON.parse(raw) : null;
@@ -65,7 +70,6 @@ vi.mock("../stores/configStore", () => ({
   $appConfig: {
     get: () => ({ profile: { company: "Test Co" } }),
   },
-  saveAppConfig: vi.fn(),
 }));
 
 vi.mock("./metaStore", () => ({
@@ -77,6 +81,9 @@ vi.mock("./metaStore", () => ({
 describe("exportService", () => {
   beforeEach(() => {
     storage.clear();
+    tauri = true;
+    command.mockReset();
+    syncFromDatabase.mockReset();
   });
 
   it("builds a full snapshot for all persisted entities", async () => {
@@ -107,6 +114,7 @@ describe("exportService", () => {
   });
 
   it("imports all persisted entities from JSON", async () => {
+    tauri = false;
     const { importFromJSON } = await import("./exportService");
 
     const ok = await importFromJSON(
@@ -163,11 +171,55 @@ describe("exportService", () => {
   });
 
   it("still imports backups without termine and weekPlans", async () => {
+    tauri = false;
     const { importFromJSON } = await import("./exportService");
     const ok = await importFromJSON(
       JSON.stringify({ data: { tasks: [{ id: "task-3" }] } }),
     );
     expect(ok).toBe(true);
     expect(storage.has("etasks:termine")).toBe(false);
+  });
+
+  it("writes SQLite first and leaves local storage to the DB refresh", async () => {
+    storage.set("etasks:invoices", JSON.stringify([{ id: "old" }]));
+    const { importFromJSON } = await import("./exportService");
+
+    const ok = await importFromJSON(
+      JSON.stringify({
+        profile: { company: "Other" },
+        tenantMeta: [{ key: "tenant.name", value: "Other", valueType: "string" }],
+        data: { tasks: [{ id: "task-4" }], termine: [{ id: "termin-4" }] },
+      }),
+    );
+
+    expect(ok).toBe(true);
+    expect(command).toHaveBeenCalledWith("import_snapshot", {
+      payload: { tasks: [{ id: "task-4" }], termine: [{ id: "termin-4" }] },
+    });
+    expect(syncFromDatabase).toHaveBeenCalledTimes(1);
+    expect(storage.get("etasks:invoices")).toBe(JSON.stringify([{ id: "old" }]));
+    expect(storage.has("etasks:tasks")).toBe(false);
+  });
+
+  it("does not touch local storage when the DB import fails", async () => {
+    command.mockRejectedValueOnce(new Error("task: missing id"));
+    const { importFromJSON } = await import("./exportService");
+
+    const ok = await importFromJSON(
+      JSON.stringify({ data: { tasks: [{ title: "broken" }] } }),
+    );
+
+    expect(ok).toBe(false);
+    expect(syncFromDatabase).not.toHaveBeenCalled();
+    expect(storage.size).toBe(0);
+  });
+
+  it("rejects non-array lists before writing anything", async () => {
+    const { importFromJSON } = await import("./exportService");
+
+    expect(await importFromJSON(JSON.stringify({ data: { tasks: {} } }))).toBe(
+      false,
+    );
+    expect(command).not.toHaveBeenCalled();
   });
 });
