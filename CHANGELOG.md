@@ -29,6 +29,7 @@ All notable changes to eTasks are listed here. eTasks follows
 - **Daily close:** Escape and a close button dismiss the dialog without saving, and the summary updates after moving a task to tomorrow.
 - **Planning:** task titles in the "Noch einplanen" list stay readable at narrow window widths; the row actions wrap to a second line.
 - **UI:** texts that spelled umlauts as ae/oe/ue now use real umlauts.
+- **Texts:** the invoice list and editor show dates as dd.mm.yyyy, the "Projektbezug" placeholder uses a neutral example, the counter reset option no longer shows literal backticks, and the Pomodoro task list only offers today's open tasks (plus the focused one).
 - **Invoices:** the invoice counter is kept in the browser mode as well (including "Rechnungszähler zurücksetzen"), and Settings → Arbeitsbereich has a "Nächste Rechnungsnummer" field to set the start value, never below an already issued number.
 - **Setup:** "Eigener Projektordner" creates the workspace in its own subfolder like "Neuer Arbeitsbereich" and never reuses or renames an existing one; a workspace already in the chosen folder can be opened as it is. Workspaces directly in the default folder show up under existing workspaces.
 - **Settings:** empty or decimal number fields in the profile no longer block saving; values are checked before saving with a message at the field, the save error and "Gespeichert ✓" appear next to the button, and saving the Arbeitsbereich tab keeps unsaved profile edits. Older `config.json` files missing newer fields load again.

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   diffDays,
+  formatDateDe,
   toDateKey,
   toDateKeyFromIso,
   getWeekStart,
@@ -147,5 +148,14 @@ describe('formatElapsed', () => {
   it('returns minutes for timestamps over a minute ago', () => {
     const twoMinutesAgo = new Date(Date.now() - 120_000).toISOString();
     expect(formatElapsed(twoMinutesAgo)).toBe('2m');
+  });
+});
+
+describe('formatDateDe', () => {
+  it('formats ISO dates as dd.mm.yyyy and leaves other values alone', () => {
+    expect(formatDateDe('2026-11-12')).toBe('12.11.2026');
+    expect(formatDateDe('2026-11-12T10:00:00Z')).toBe('12.11.2026');
+    expect(formatDateDe('')).toBe('');
+    expect(formatDateDe('kein Datum')).toBe('kein Datum');
   });
 });

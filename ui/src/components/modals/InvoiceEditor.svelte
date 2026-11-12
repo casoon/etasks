@@ -11,7 +11,7 @@
         Task,
         TimeEntry,
     } from "../../domain/types";
-    import { formatTrackedTime, today } from "../../domain/dateUtils";
+    import { formatDateDe, formatTrackedTime, today } from "../../domain/dateUtils";
 
     import {
         calcInvoiceTotals,
@@ -389,24 +389,26 @@
                     on:input={handleInvoiceMetaChange("customerNumber")}
                 />
             </label>
-            <label class="flex flex-col gap-1 w-[130px]">
+            <label class="flex flex-col gap-1 w-[150px]">
                 <span class="text-[10px] uppercase tracking-wide text-muted"
-                    >Rechnungsdatum</span
+                    >Rechnungsdatum{invoice.date ? ` · ${formatDateDe(invoice.date)}` : ""}</span
                 >
                 <input
                     class="input"
                     type="date"
+                    lang="de"
                     value={invoice.date}
                     on:input={handleDateChange("date")}
                 />
             </label>
-            <label class="flex flex-col gap-1 w-[130px]">
+            <label class="flex flex-col gap-1 w-[150px]">
                 <span class="text-[10px] uppercase tracking-wide text-muted"
-                    >Fällig am</span
+                    >Fällig am{invoice.dueDate ? ` · ${formatDateDe(invoice.dueDate)}` : ""}</span
                 >
                 <input
                     class="input"
                     type="date"
+                    lang="de"
                     value={invoice.dueDate}
                     on:input={handleDateChange("dueDate")}
                 />
@@ -505,7 +507,7 @@
                 <input
                     class="input text-[12px]"
                     value={invoice.projectReference ?? ""}
-                    placeholder="z. B. P240001 Andersch Liebthal"
+                    placeholder="z. B. P240001 Website-Relaunch"
                     on:input={handleInvoiceMetaChange("projectReference")}
                 />
             </label>

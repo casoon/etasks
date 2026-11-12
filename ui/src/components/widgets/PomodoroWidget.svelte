@@ -10,6 +10,7 @@
     $focusTaskId as focusIdStore,
   } from '../../stores/uiStore';
   import { $tasks as tasksStore } from '../../stores/taskStore';
+  import { today } from '../../domain/dateUtils';
   import { requestPermission } from '../../lib/notifications';
   import { togglePomodoro, startPomodoroBreak, cancelPomodoro, adjustPomodoroDuration } from '../../lib/pomodoroTimer';
   import { hoverLift, pageReveal } from '../../lib/motionActions';
@@ -23,8 +24,8 @@
   $: tasks = $tasksStore;
   $: focusTask = focusId ? tasks.find(t => t.id === focusId) : null;
 
-  // Today's open tasks for the selector
-  $: todayTasks = tasks.filter(t => t.status !== 'done');
+  // Today's planned open tasks (plus the currently focused one) for the selector
+  $: todayTasks = tasks.filter(t => t.id === focusId || (t.status !== 'done' && t.plannedDate === today()));
 
   $: displayMinutes = Math.floor(seconds / 60);
   $: displaySecs = seconds % 60;
