@@ -32,6 +32,7 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Fixed
 
+- **Backup:** the import in the right panel asks like the one in Settings, with the number of entries that get replaced; both use the same path. The file is checked first (version, lists, required fields) and an invalid file is rejected before anything is touched. Before importing, the current state is saved to the export folder as `etasks-vor-import-…json`; if that fails, nothing is imported.
 - **Navigation:** the sidebar highlight follows every view change, including "Fokus starten", "Tag planen" and "Zur Tagesplanung".
 - **Analytics:** the weekly figures (completion rate, planned time, tracked time) only count the calendar week Monday–Sunday instead of everything planned from Monday on, "Zeit pro Kategorie" shows tracked time instead of estimates, and "Diese Woche" in Zeiterfassung uses the same calendar week.
 - **Appointments:** the day grid widens for Termine before 06:00 or after 20:00 instead of drawing them outside the grid.

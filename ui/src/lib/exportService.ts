@@ -64,24 +64,18 @@ function workspaceSlug(): string {
   return slug || "arbeitsbereich";
 }
 
-export async function exportToFile(): Promise<void> {
-  const snapshot = await buildSnapshot();
-  const json = JSON.stringify(snapshot, null, 2);
-  const filename = `etasks-export-${workspaceSlug()}-${today()}.json`;
-
+/**
+ * Schreibt eine JSON-Datei in den Exportordner und gibt den Pfad zurück; Fehler werden geworfen.
+ * Nur im Browser-Modus (ohne Tauri) wird stattdessen ein Download ausgelöst (Rückgabe `null`).
+ */
+async function saveJson(filename: string, json: string): Promise<string | null> {
   if (isTauriAvailable()) {
-    try {
-      await command("export_to_file", {
-        json,
-        filename,
-        directory: $appConfig.get()?.default_export_dir ?? null,
-      });
-      return;
-    } catch {
-      // Fallback auf Browser-Download
-    }
+    return command<string>("export_to_file", {
+      json,
+      filename,
+      directory: $appConfig.get()?.default_export_dir ?? null,
+    });
   }
-
   const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -89,6 +83,12 @@ export async function exportToFile(): Promise<void> {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+  return null;
+}
+
+export async function exportToFile(): Promise<string | null> {
+  const json = JSON.stringify(await buildSnapshot(), null, 2);
+  return saveJson(`etasks-export-${workspaceSlug()}-${today()}.json`, json);
 }
 
 export async function saveToICloud(): Promise<boolean> {
@@ -133,33 +133,109 @@ const IMPORT_LISTS = [
   ["weekPlans", KEYS.weekPlans],
 ] as const;
 
+/** Pflichtfelder je Liste (Zeichenketten); spiegelt, was `import_snapshot` verlangt. */
+const REQUIRED_KEYS: Record<string, string[]> = {
+  tasks: ["id"],
+  blocks: ["id"],
+  goals: ["id"],
+  notes: ["date"],
+  clients: ["id"],
+  projects: ["id"],
+  services: ["id"],
+  timeEntries: ["id"],
+  templates: ["id"],
+  billingItems: ["id", "projectId"],
+  billingItemTasks: ["billingItemId", "taskId", "createdAt"],
+  dayPlans: ["id", "date"],
+  invoices: ["id"],
+  termine: ["id"],
+  weekPlans: ["weekStart"],
+};
+
+export type BackupLists = Record<string, unknown[]>;
+export type ParsedBackup = { lists: BackupLists } | { error: string };
+
 /**
- * Imports the data lists of a backup into the active workspace. Lists missing
- * from the file stay untouched. Profile, invoice/offer counters and workspace
- * meta are never imported, so counters cannot be rolled back.
- * SQLite is written first; the UI storage is only refreshed after it succeeded.
+ * Prüft den Aufbau einer Backup-Datei, bevor irgendetwas geschrieben wird:
+ * Version, `data`-Objekt, jede vorhandene Liste ein Array von Objekten mit den Pflichtfeldern.
  */
-export async function importFromJSON(json: string): Promise<boolean> {
+export function parseBackup(json: string): ParsedBackup {
+  let snapshot: any;
   try {
-    const snapshot = JSON.parse(json);
-    if (!snapshot.data || typeof snapshot.data !== "object") return false;
-    const lists: Record<string, unknown[]> = {};
-    for (const [name] of IMPORT_LISTS) {
-      const value = snapshot.data[name];
-      if (value === undefined || value === null) continue;
-      if (!Array.isArray(value)) return false;
-      lists[name] = value;
-    }
-    if (isTauriAvailable()) {
-      await command("import_snapshot", { payload: lists });
-      await syncFromDatabase();
-    } else {
-      for (const [name, key] of IMPORT_LISTS) {
-        if (lists[name]) storageSet(key, lists[name]);
+    snapshot = JSON.parse(json);
+  } catch {
+    return { error: "Die Datei ist kein gültiges JSON." };
+  }
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
+    return { error: "Die Datei ist kein eTasks-Backup." };
+  }
+  if (snapshot.version !== undefined && !/^1(\.|$)/.test(String(snapshot.version))) {
+    return { error: `Backup-Version "${snapshot.version}" wird nicht unterstützt.` };
+  }
+  if (!snapshot.data || typeof snapshot.data !== "object" || Array.isArray(snapshot.data)) {
+    return { error: "Die Datei enthält kein Feld \"data\" und ist kein eTasks-Backup." };
+  }
+  const lists: BackupLists = {};
+  for (const [name] of IMPORT_LISTS) {
+    const value = snapshot.data[name];
+    if (value === undefined || value === null) continue;
+    if (!Array.isArray(value)) return { error: `"${name}" ist keine Liste.` };
+    for (const [index, item] of value.entries()) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        return { error: `"${name}" Eintrag ${index + 1} ist kein Objekt.` };
+      }
+      for (const key of REQUIRED_KEYS[name]) {
+        if (typeof item[key] !== "string" || !item[key]) {
+          return { error: `"${name}" Eintrag ${index + 1}: Feld "${key}" fehlt.` };
+        }
       }
     }
+    lists[name] = value;
+  }
+  if (Object.keys(lists).length === 0) {
+    return { error: "Die Datei enthält keine Daten zum Importieren." };
+  }
+  return { lists };
+}
+
+/** Pro Liste der Datei: Anzahl im aktiven Arbeitsbereich und Anzahl in der Datei. */
+export function importSummary(lists: BackupLists): { name: string; current: number; incoming: number }[] {
+  return IMPORT_LISTS.filter(([name]) => lists[name]).map(([name, key]) => ({
+    name,
+    current: storageGet<unknown[]>(key)?.length ?? 0,
+    incoming: lists[name].length,
+  }));
+}
+
+/**
+ * Schreibt bereits geprüfte Listen in den aktiven Arbeitsbereich. Fehlende Listen bleiben
+ * unberührt; Profil, Rechnungs-/Angebotszähler und Meta werden nie importiert.
+ * SQLite wird zuerst geschrieben; der UI-Speicher erst danach aktualisiert.
+ */
+export async function applyBackup(lists: BackupLists): Promise<void> {
+  if (isTauriAvailable()) {
+    await command("import_snapshot", { payload: lists });
+    await syncFromDatabase();
+  } else {
+    for (const [name, key] of IMPORT_LISTS) {
+      if (lists[name]) storageSet(key, lists[name]);
+    }
+  }
+}
+
+export async function importFromJSON(json: string): Promise<boolean> {
+  const parsed = parseBackup(json);
+  if ("error" in parsed) return false;
+  try {
+    await applyBackup(parsed.lists);
     return true;
   } catch {
     return false;
   }
+}
+
+/** Sichert den aktuellen Stand des Arbeitsbereichs in den Exportordner, bevor ein Import ihn ersetzt. */
+export async function writePreImportBackup(): Promise<string | null> {
+  const json = JSON.stringify(await buildSnapshot(), null, 2);
+  return saveJson(`etasks-vor-import-${workspaceSlug()}-${today()}.json`, json);
 }

@@ -138,8 +138,10 @@ describe("exportService", () => {
           services: [{ id: "service-2" }],
           timeEntries: [{ id: "entry-2" }],
           templates: [{ id: "template-2" }],
-          billingItems: [{ id: "billing-2" }],
-          billingItemTasks: [{ billingItemId: "billing-2", taskId: "task-2" }],
+          billingItems: [{ id: "billing-2", projectId: "project-2" }],
+          billingItemTasks: [
+            { billingItemId: "billing-2", taskId: "task-2", createdAt: "2026-03-29T10:00:00Z" },
+          ],
           dayPlans: [{ id: "plan-2", date: "2026-03-29" }],
           invoices: [{ id: "invoice-2" }],
           termine: [{ id: "termin-2" }],
@@ -156,11 +158,13 @@ describe("exportService", () => {
       { id: "template-2" },
     ]);
     expect(JSON.parse(storage.get("etasks:billingItems") ?? "null")).toEqual([
-      { id: "billing-2" },
+      { id: "billing-2", projectId: "project-2" },
     ]);
     expect(
       JSON.parse(storage.get("etasks:billingItemTasks") ?? "null"),
-    ).toEqual([{ billingItemId: "billing-2", taskId: "task-2" }]);
+    ).toEqual([
+      { billingItemId: "billing-2", taskId: "task-2", createdAt: "2026-03-29T10:00:00Z" },
+    ]);
     expect(JSON.parse(storage.get("etasks:dayPlans") ?? "null")).toEqual([
       { id: "plan-2", date: "2026-03-29" },
     ]);
@@ -207,11 +211,11 @@ describe("exportService", () => {
   });
 
   it("does not touch local storage when the DB import fails", async () => {
-    command.mockRejectedValueOnce(new Error("task: missing id"));
+    command.mockRejectedValueOnce(new Error("database is locked"));
     const { importFromJSON } = await import("./exportService");
 
     const ok = await importFromJSON(
-      JSON.stringify({ data: { tasks: [{ title: "broken" }] } }),
+      JSON.stringify({ data: { tasks: [{ id: "task-5" }] } }),
     );
 
     expect(ok).toBe(false);
@@ -226,6 +230,83 @@ describe("exportService", () => {
       false,
     );
     expect(command).not.toHaveBeenCalled();
+  });
+
+  describe("parseBackup", () => {
+    const err = async (value: unknown) => {
+      const { parseBackup } = await import("./exportService");
+      const parsed = parseBackup(typeof value === "string" ? value : JSON.stringify(value));
+      return "error" in parsed ? parsed.error : null;
+    };
+
+    it("accepts a valid backup and keeps only present lists", async () => {
+      const { parseBackup } = await import("./exportService");
+      const parsed = parseBackup(
+        JSON.stringify({ version: "1.0", data: { tasks: [{ id: "t" }], notes: [{ date: "2026-01-01" }] } }),
+      );
+      expect(parsed).toEqual({ lists: { tasks: [{ id: "t" }], notes: [{ date: "2026-01-01" }] } });
+    });
+
+    it("rejects non-JSON, non-objects and missing data", async () => {
+      expect(await err("not json")).toMatch(/JSON/);
+      expect(await err([])).toMatch(/kein eTasks-Backup/);
+      expect(await err({ version: "1.0" })).toMatch(/data/);
+      expect(await err({ data: [] })).toMatch(/data/);
+    });
+
+    it("rejects unknown versions", async () => {
+      expect(await err({ version: "2.0", data: { tasks: [{ id: "t" }] } })).toMatch(/Version/);
+    });
+
+    it("rejects a backup without any known list", async () => {
+      expect(await err({ data: {} })).toMatch(/keine Daten/);
+      expect(await err({ data: { other: [] } })).toMatch(/keine Daten/);
+    });
+
+    it("rejects non-array lists and non-object entries", async () => {
+      expect(await err({ data: { tasks: {} } })).toMatch(/keine Liste/);
+      expect(await err({ data: { tasks: ["x"] } })).toMatch(/kein Objekt/);
+      expect(await err({ data: { tasks: [null] } })).toMatch(/kein Objekt/);
+    });
+
+    it("requires string keys per entity", async () => {
+      expect(await err({ data: { tasks: [{ title: "x" }] } })).toMatch(/"id"/);
+      expect(await err({ data: { tasks: [{ id: 5 }] } })).toMatch(/"id"/);
+      expect(await err({ data: { notes: [{ id: "n" }] } })).toMatch(/"date"/);
+      expect(await err({ data: { dayPlans: [{ id: "p" }] } })).toMatch(/"date"/);
+      expect(await err({ data: { billingItems: [{ id: "b" }] } })).toMatch(/"projectId"/);
+      expect(await err({ data: { billingItemTasks: [{ billingItemId: "b", taskId: "t" }] } })).toMatch(/"createdAt"/);
+      expect(await err({ data: { weekPlans: [{ focusProjectIds: [] }] } })).toMatch(/"weekStart"/);
+    });
+
+    it("does not call the database for an invalid file", async () => {
+      const { importFromJSON } = await import("./exportService");
+      expect(await importFromJSON(JSON.stringify({ data: { tasks: [{ title: "x" }] } }))).toBe(false);
+      expect(command).not.toHaveBeenCalled();
+    });
+  });
+
+  it("summarises current and incoming counts", async () => {
+    storage.set("etasks:tasks", JSON.stringify([{ id: "a" }, { id: "b" }]));
+    const { importSummary } = await import("./exportService");
+    expect(importSummary({ tasks: [{ id: "x" }], clients: [] })).toEqual([
+      { name: "tasks", current: 2, incoming: 1 },
+      { name: "clients", current: 0, incoming: 0 },
+    ]);
+  });
+
+  it("writes the pre-import backup into the export folder and surfaces failures", async () => {
+    command.mockResolvedValueOnce("/exports/vor.json");
+    const { writePreImportBackup } = await import("./exportService");
+    expect(await writePreImportBackup()).toBe("/exports/vor.json");
+    expect(command).toHaveBeenCalledWith("export_to_file", {
+      json: expect.any(String),
+      filename: expect.stringMatching(/^etasks-vor-import-buro-muller-sohne-\d{4}-\d{2}-\d{2}\.json$/),
+      directory: null,
+    });
+
+    command.mockRejectedValueOnce(new Error("Ordner nicht erreichbar"));
+    await expect(writePreImportBackup()).rejects.toThrow("Ordner nicht erreichbar");
   });
 
   it("puts the workspace into snapshot and export file names", async () => {

@@ -21,19 +21,6 @@
     async function importBackup(event: Event) {
         const file = (event.currentTarget as HTMLInputElement).files?.[0];
         if (!file) return;
-        const activeTenant = config.tenants.find(
-            (tenant) => tenant.path === config.active_tenant,
-        );
-        const targetLabel = isTauriAvailable()
-            ? (activeTenant?.name ?? "den aktiven Arbeitsbereich")
-            : "den aktuellen Browser-Speicher";
-        const confirmed = confirm(
-            `Backup "${file.name}" wirklich in ${targetLabel} importieren? Bestehende Daten werden überschrieben.`,
-        );
-        if (!confirmed) {
-            if (importInput) importInput.value = "";
-            return;
-        }
         await restoreFromBackupFile(file);
         if (importInput) importInput.value = "";
     }
