@@ -55,6 +55,12 @@
         window.addEventListener('etasks:nav', navHandler);
         const navUnsub = navItemStore.subscribe(v => { nav = v; });
 
+        // The snapshot is also due after midnight while the app stays open.
+        const snapshotCheck = () => { if (appReady && !showSetup) scheduleDailySnapshot(); };
+        const snapshotTimer = setInterval(snapshotCheck, 60 * 60 * 1000);
+        const onVisible = () => { if (document.visibilityState === 'visible') snapshotCheck(); };
+        document.addEventListener('visibilitychange', onVisible);
+
         (async () => {
             try {
                 const config = await loadAppConfig();
@@ -76,7 +82,6 @@
                     } else {
                         logger.info(`Starte Tenant: ${config.active_tenant}`);
                         await activateTenant(config.active_tenant!);
-                        scheduleDailySnapshot();
                         showSetup = false;
                         logger.info("App bereit");
                     }
@@ -102,6 +107,8 @@
         return () => {
             document.removeEventListener("keydown", onKey);
             window.removeEventListener('etasks:nav', navHandler);
+            clearInterval(snapshotTimer);
+            document.removeEventListener('visibilitychange', onVisible);
             navUnsub();
         };
     });

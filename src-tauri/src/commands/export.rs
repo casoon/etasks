@@ -67,6 +67,9 @@ pub async fn save_to_icloud(
     json: String,
     filename: String,
 ) -> Result<(), String> {
+    if !cfg!(target_os = "macos") {
+        return Err("iCloud-Snapshots sind nur unter macOS verfügbar".to_string());
+    }
     let home = app.path().home_dir().map_err(|e| e.to_string())?;
     let icloud_base = home.join("Library/Mobile Documents/dev~jseidel~etasks/Documents");
     std::fs::create_dir_all(&icloud_base).map_err(|e| e.to_string())?;

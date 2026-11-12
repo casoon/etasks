@@ -19,7 +19,7 @@ import { $bridgeServices as $services, $bridgeInvoices as $invoices } from "../s
 import { $appConfig } from "../stores/configStore";
 import { metaAll } from "./metaStore";
 import { today } from "../domain/dateUtils";
-import { isTauriAvailable } from "./platform";
+import { isTauriAvailable, isMac } from "./platform";
 import { command } from "@casoon/origin-client";
 
 export async function buildSnapshot() {
@@ -49,10 +49,25 @@ export async function buildSnapshot() {
   };
 }
 
+/** File-name safe slug of the active workspace, so workspaces never share a file. */
+function workspaceSlug(): string {
+  const config = $appConfig.get();
+  const tenant = config?.tenants?.find((t) => t.path === config.active_tenant);
+  const name = tenant?.displayName || tenant?.name || "";
+  const slug = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ß/g, "ss")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "arbeitsbereich";
+}
+
 export async function exportToFile(): Promise<void> {
   const snapshot = await buildSnapshot();
   const json = JSON.stringify(snapshot, null, 2);
-  const filename = `etasks-export-${today()}.json`;
+  const filename = `etasks-export-${workspaceSlug()}-${today()}.json`;
 
   if (isTauriAvailable()) {
     try {
@@ -77,11 +92,11 @@ export async function exportToFile(): Promise<void> {
 }
 
 export async function saveToICloud(): Promise<boolean> {
-  if (!isTauriAvailable()) return false;
+  if (!isTauriAvailable() || !isMac()) return false;
 
   const snapshot = await buildSnapshot();
   const json = JSON.stringify(snapshot, null, 2);
-  const filename = `snapshot-${today()}.json`;
+  const filename = `snapshot-${workspaceSlug()}-${today()}.json`;
 
   try {
     await command("save_to_icloud", { json, filename });
@@ -94,6 +109,7 @@ export async function saveToICloud(): Promise<boolean> {
 }
 
 export async function scheduleDailySnapshot(): Promise<void> {
+  if (!isTauriAvailable() || !isMac()) return;
   const meta = storageGet<{ lastSnapshotDate: string }>(KEYS.exportMeta);
   if (meta?.lastSnapshotDate === today()) return;
   await saveToICloud();

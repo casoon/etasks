@@ -8,6 +8,7 @@ const syncFromDatabase = vi.fn();
 
 vi.mock("./platform", () => ({
   isTauriAvailable: () => tauri,
+  isMac: () => true,
 }));
 
 vi.mock("@casoon/origin-client", () => ({
@@ -68,7 +69,11 @@ vi.mock("../stores/coreBridge", () => ({
 
 vi.mock("../stores/configStore", () => ({
   $appConfig: {
-    get: () => ({ profile: { company: "Test Co" } }),
+    get: () => ({
+      profile: { company: "Test Co" },
+      active_tenant: "/ws/a.db",
+      tenants: [{ path: "/ws/a.db", name: "a", displayName: "Büro Müller & Söhne" }],
+    }),
   },
 }));
 
@@ -221,5 +226,23 @@ describe("exportService", () => {
       false,
     );
     expect(command).not.toHaveBeenCalled();
+  });
+
+  it("puts the workspace into snapshot and export file names", async () => {
+    command.mockResolvedValue(undefined);
+    const { saveToICloud, exportToFile } = await import("./exportService");
+
+    expect(await saveToICloud()).toBe(true);
+    await exportToFile();
+
+    expect(command).toHaveBeenCalledWith("save_to_icloud", {
+      json: expect.any(String),
+      filename: expect.stringMatching(/^snapshot-buro-muller-sohne-\d{4}-\d{2}-\d{2}\.json$/),
+    });
+    expect(command).toHaveBeenCalledWith("export_to_file", {
+      json: expect.any(String),
+      filename: expect.stringMatching(/^etasks-export-buro-muller-sohne-\d{4}-\d{2}-\d{2}\.json$/),
+      directory: null,
+    });
   });
 });

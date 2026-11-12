@@ -1,7 +1,7 @@
 import { importFromJSON, exportToFile, saveToICloud } from "./exportService";
 import { reinitStores } from "./storeInit";
 import { toast } from "../stores/toastStore";
-import { isTauriAvailable } from "./platform";
+import { isTauriAvailable, isMac } from "./platform";
 
 export async function runExportWithFeedback(): Promise<void> {
   try {
@@ -13,9 +13,9 @@ export async function runExportWithFeedback(): Promise<void> {
 }
 
 export async function runSnapshotWithFeedback(): Promise<void> {
-  if (!isTauriAvailable()) {
+  if (!isTauriAvailable() || !isMac()) {
     toast(
-      "iCloud-Snapshots sind nur in der Desktop-App verfügbar.",
+      "iCloud-Snapshots sind nur in der macOS-Desktop-App verfügbar.",
       "info",
       4000,
     );
