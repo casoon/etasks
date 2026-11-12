@@ -1,6 +1,8 @@
 // @core
 export function toDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${m}-${d}`;
 }
 
 export function today(): string {

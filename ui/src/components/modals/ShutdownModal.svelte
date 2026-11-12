@@ -2,7 +2,7 @@
 <script lang="ts">
   import { $showShutdown as showStore } from '../../stores/uiStore';
   import { $todayTasks as todayTasksStore, updateTask } from '../../stores/taskStore';
-  import { today } from '../../domain/dateUtils';
+  import { today, toDateKey } from '../../domain/dateUtils';
   import { upsertNote, loadTimeEntries, loadProjects } from '../../lib/db';
 
   $: show = $showStore;
@@ -63,7 +63,7 @@
   function handlePostpone(id: string) {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    updateTask(id, { plannedDate: tomorrow.toISOString().slice(0, 10), scheduledStart: null });
+    updateTask(id, { plannedDate: toDateKey(tomorrow), scheduledStart: null });
   }
 
   function handleCancel() {

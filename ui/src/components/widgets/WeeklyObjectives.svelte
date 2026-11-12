@@ -1,7 +1,7 @@
 <!-- @module:planning -->
 <script lang="ts">
   import { $currentWeekGoals as goalsStore, addGoal, toggleGoal, removeGoal, toggleGoalDay } from '../../stores/weeklyGoalStore';
-  import { getWeekStart, today } from '../../domain/dateUtils';
+  import { getWeekStart, today, toDateKey } from '../../domain/dateUtils';
 
   $: goals = $goalsStore;
   let inputValue = '';
@@ -13,9 +13,9 @@
 
   function getWeekDates(ws: string): string[] {
     return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(ws);
+      const d = new Date(ws + 'T00:00:00');
       d.setDate(d.getDate() + i);
-      return d.toISOString().slice(0, 10);
+      return toDateKey(d);
     });
   }
 
@@ -27,7 +27,7 @@
     for (let i = 0; i < 30; i++) {
       const d = new Date(base);
       d.setDate(base.getDate() - i);
-      const dateStr = d.toISOString().slice(0, 10);
+      const dateStr = toDateKey(d);
       if (!(goal.daysCompleted ?? []).includes(dateStr)) break;
       streak++;
     }

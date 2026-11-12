@@ -20,6 +20,7 @@
         saveAppConfig,
     } from "../../stores/configStore";
     import { toast } from "../../stores/toastStore";
+    import { today as todayKey, toDateKey } from "../../domain/dateUtils";
     import { PROJECT_COLORS, type Task } from "../../domain/types";
     import {
         $billingItems as billingItemsStore,
@@ -75,7 +76,7 @@
 
     let addingTerminProject = false;
     let newPTerminTitle = '';
-    let newPTerminDate = new Date().toISOString().slice(0, 10);
+    let newPTerminDate = todayKey();
     let newPTerminTime = '09:00';
     let newPTerminDuration = 60;
     let newPTerminType: TerminType = 'video';
@@ -234,8 +235,8 @@
         const offerData: OfferData = {
             metadata: {
                 offer_number: offerNumber,
-                offer_date: { date: today.toISOString().slice(0, 10) },
-                valid_until: { date: validUntil.toISOString().slice(0, 10) },
+                offer_date: { date: toDateKey(today) },
+                valid_until: { date: toDateKey(validUntil) },
                 customer_number:
                     selectedClient.customerNumber?.trim() || undefined,
                 project_reference: selectedProject.name,
@@ -567,9 +568,9 @@
                     {@const tracked = projectTrackedMinutes(project.id)}
                     {@const client = project.clientId ? clientMap.get(project.clientId) : null}
                     {@const pct = total > 0 ? Math.round((done / total) * 100) : 0}
-                    {@const today = new Date().toISOString().slice(0, 10)}
+                    {@const today = todayKey()}
                     {@const isOverdue = !!project.deadline && project.status !== 'done' && project.deadline < today}
-                    {@const isDueSoon = !!project.deadline && !isOverdue && project.status !== 'done' && project.deadline <= (() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10); })()}
+                    {@const isDueSoon = !!project.deadline && !isOverdue && project.status !== 'done' && project.deadline <= (() => { const d = new Date(); d.setDate(d.getDate() + 7); return toDateKey(d); })()}
                     <button
                         class="flex flex-col gap-1.5 py-3 px-3 rounded-lg w-full text-left transition-colors hover:bg-surface border border-transparent hover:border-border"
                         on:click={() => { selectedProjectIdStore.set(project.id); projectsViewStore.set('project'); }}

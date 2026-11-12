@@ -1,7 +1,7 @@
 // @core
 import { atom, computed } from 'nanostores';
 import type { Task, KanbanStatus } from '../domain/types';
-import { today } from '../domain/dateUtils';
+import { today, toDateKeyFromIso } from '../domain/dateUtils';
 import { createTask } from '../domain/taskService';
 import { loadTasks, upsertTask, deleteTask as dbDeleteTask } from '../lib/db';
 
@@ -18,8 +18,23 @@ export const $completionRate = computed([$todayTasks, $doneTasks], (all, done) =
   all.length === 0 ? 0 : Math.round((done.length / all.length) * 100)
 );
 
+let dayKey = today();
+let rolloverWatching = false;
+
+// Follow the day change while the app stays open, but only if the user is on "today".
+function rollOverActiveDate(): void {
+  const now = today();
+  if (now === dayKey) return;
+  if ($activeDate.get() === dayKey) $activeDate.set(now);
+  dayKey = now;
+}
+
 export function initTasks(): void {
   $tasks.set(loadTasks());
+  if (rolloverWatching || typeof document === 'undefined') return;
+  rolloverWatching = true;
+  document.addEventListener('visibilitychange', rollOverActiveDate);
+  setInterval(rollOverActiveDate, 60_000);
 }
 
 export function addTask(
@@ -62,7 +77,7 @@ export function updateTask(id: string, patch: Partial<Task>): void {
   // Auto-derive plannedDate from scheduledStart if not explicitly set
   const resolved: Partial<Task> =
     patch.scheduledStart && !patch.plannedDate
-      ? { ...patch, plannedDate: patch.scheduledStart.slice(0, 10) }
+      ? { ...patch, plannedDate: toDateKeyFromIso(patch.scheduledStart) ?? today() }
       : patch;
   $tasks.set(upsertTask({ ...task, ...resolved, updatedAt: now }));
 }

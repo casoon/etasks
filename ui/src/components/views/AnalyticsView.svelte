@@ -4,7 +4,7 @@
     import { $bridgeTimeEntries as timeEntriesStore } from "../../stores/coreBridge";
     import { $projects as projectsStore } from "../../stores/projectStore";
     import { TAG_COLORS } from "../../domain/types";
-    import { diffDays, getWeekStart, today } from "../../domain/dateUtils";
+    import { diffDays, getWeekStart, today, toDateKey, toDateKeyFromIso } from "../../domain/dateUtils";
 
     $: tasks = $tasksStore;
     $: timeEntries = $timeEntriesStore;
@@ -103,7 +103,7 @@
     // Heute-Ansicht: Zeiterfassung heute nach Projekt
     $: todayStr = today();
     $: todayEntries = timeEntries.filter(
-        (e) => e.startAt.slice(0, 10) === todayStr && (e.durationMinutes ?? 0) > 0,
+        (e) => toDateKeyFromIso(e.startAt) === todayStr && (e.durationMinutes ?? 0) > 0,
     );
     $: todayByProject = (() => {
         const m: Record<string, number> = {};
@@ -136,7 +136,7 @@
         });
     })();
 
-    $: weekDayIsos = weekDays.map((d) => d.toISOString().slice(0, 10));
+    $: weekDayIsos = weekDays.map((d) => toDateKey(d));
 
     // entries in current week
     $: weekEntries = timeEntries.filter(
@@ -165,8 +165,8 @@
     $: chartData = (() => {
         const data: Record<string, number>[] = Array.from({ length: 7 }, () => ({}));
         for (const e of weekEntries) {
-            const dayIso = e.startAt.slice(0, 10);
-            const dayIdx = weekDayIsos.indexOf(dayIso);
+            const dayIso = toDateKeyFromIso(e.startAt);
+            const dayIdx = weekDayIsos.indexOf(dayIso ?? "");
             if (dayIdx < 0) continue;
             const pid = e.projectId ?? "ohne-projekt";
             data[dayIdx][pid] = (data[dayIdx][pid] ?? 0) + (e.durationMinutes ?? 0);

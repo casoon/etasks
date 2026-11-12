@@ -6,11 +6,12 @@
   import { $projects as projectsStore } from '../../stores/projectStore';
   import CalendarBlockComponent from '../widgets/CalendarBlock.svelte';
   import { getBlockTop, getBlockHeight, snapToGrid } from '../../domain/calendarService';
+  import { today } from '../../domain/dateUtils';
   import type { CalendarBlock, Task, TerminType } from '../../domain/types';
   import { getTaskDragData, hasTaskDragData } from '../../lib/taskDrag';
 
   export let planningMode = false;
-  export let activeDate: string = new Date().toISOString().slice(0, 10);
+  export let activeDate: string = today();
 
   const DAY_START = 6;
   const DAY_END = 20;

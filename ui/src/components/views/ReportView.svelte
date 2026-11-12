@@ -2,6 +2,7 @@
 <script lang="ts">
   import { $tasks as tasksStore } from '../../stores/taskStore';
   import { $timeEntries as timeEntriesStore } from '../../stores/timerStore';
+  import { today, toDateKey, toDateKeyFromIso } from '../../domain/dateUtils';
   import { $projects as projectsStore, $clients as clientsStore } from '../../stores/projectStore';
 
   type ReportMode = 'personal' | 'client';
@@ -13,9 +14,9 @@
   let dateFrom = (() => {
     const d = new Date();
     d.setDate(1);
-    return d.toISOString().slice(0, 10);
+    return toDateKey(d);
   })();
-  let dateTo = new Date().toISOString().slice(0, 10);
+  let dateTo = today();
 
   $: tasks = $tasksStore;
   $: timeEntries = $timeEntriesStore;
@@ -54,7 +55,7 @@
       if (task.status !== 'done') continue;
 
       // Date filter: use updatedAt as completion proxy
-      const completedDate = task.updatedAt.slice(0, 10);
+      const completedDate = toDateKeyFromIso(task.updatedAt) ?? '';
       if (completedDate < dateFrom || completedDate > dateTo) continue;
 
       // Scope filter
