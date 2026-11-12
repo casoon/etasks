@@ -41,10 +41,8 @@
       startDate: startDate || undefined,
       endDate: endDate || undefined,
     };
-    addTask(title.trim(), duration, [], projectId || undefined);
-    const all = tasksStore.get();
-    const last = [...all].reverse().find(t => !t.recurrence && !t.sourceTaskId);
-    if (last) updateTask(last.id, { recurrence: rule, plannedDate: null });
+    const template = addTask(title.trim(), duration, [], projectId || undefined, undefined, null);
+    updateTask(template.id, { recurrence: rule });
 
     title = ''; weekdays = [1, 2, 3, 4, 5]; endDate = ''; adding = false;
   }

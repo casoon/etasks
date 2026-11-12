@@ -97,7 +97,7 @@
   }
 
   $: poolTasksAll = tasks
-    .filter(t => t.status === 'todo' && t.plannedDate !== activeDate)
+    .filter(t => t.status === 'todo' && !t.recurrence && t.plannedDate !== activeDate)
     .sort(comparePoolTasks);
 
   $: poolTasks = (focusProjectIds.length === 0 || showAllProjects

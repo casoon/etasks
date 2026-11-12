@@ -26,7 +26,7 @@
   const COLLAPSE_KEY_PREFIX = 'etasks:kanban:collapsed:';
 
   $: allTasks = $tasksStore;
-  $: tasks = allTasks.filter(t => t.projectId === projectId);
+  $: tasks = allTasks.filter(t => t.projectId === projectId && !t.recurrence);
   $: todayKey = today();
   $: boardCollapseKey = `${COLLAPSE_KEY_PREFIX}${projectId}`;
   let collapsedColumns: KanbanStatus[] = [];

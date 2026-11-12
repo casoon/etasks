@@ -15,6 +15,7 @@ import { loadDayPlans } from './db';
 import { $dayPlans } from '../stores/planningStore';
 
 export function reinitStores(): void {
+  initRecurringTasks();
   initTasks();
   initBlocks();
   initGoals();
@@ -26,6 +27,5 @@ export function reinitStores(): void {
   initInvoices();
   initWeekPlans();
   initTermine();
-  initRecurringTasks();
   $dayPlans.set(loadDayPlans());
 }
