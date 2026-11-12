@@ -29,6 +29,8 @@
     let existingWorkspaces: string[] = [];
     let appPaths: AppPaths = {};
     let pathPreview: WorkspacePaths | null = null;
+    // Datenbank eines Arbeitsbereichs, der direkt im gewählten eigenen Ordner liegt.
+    let existingInCustomDir: string | null = null;
     let customWorkspaceDir = "";
     let customExportDir = "";
     let workspaceLocation: "documents" | "appdata" | "custom" = "documents";
@@ -133,17 +135,18 @@
     }
 
     async function refreshPathPreview() {
+        existingInCustomDir = null;
         if (!isTauriAvailable() || !tenantName.trim()) {
             pathPreview = null;
             return;
         }
         if (workspaceLocation === "custom" && customWorkspaceDir.trim()) {
-            pathPreview = {
-                workspaceDir: customWorkspaceDir,
-                databasePath: `${customWorkspaceDir}/etasks.sqlite3`,
-                assetsDir: `${customWorkspaceDir}/assets`,
-            };
-            return;
+            const direct = await command<WorkspacePaths>("workspace_paths", {
+                path: customWorkspaceDir.trim(),
+            }).catch(() => null);
+            if (direct && (await command<boolean>("file_exists", { path: direct.databasePath }).catch(() => false))) {
+                existingInCustomDir = direct.databasePath;
+            }
         }
         const baseDir = currentWorkspaceBaseDir();
         pathPreview = await command<WorkspacePaths>("default_workspace_paths", {
@@ -185,12 +188,10 @@
                 return;
             }
             const displayName = tenantName.trim() || "Mein Arbeitsbereich";
-            const path = workspaceLocation === "custom" && customWorkspaceDir.trim()
-                ? `${customWorkspaceDir}/etasks.sqlite3`
-                : await command<string>("default_tenant_path", {
-                    tenantName: displayName,
-                    baseDir: currentWorkspaceBaseDir(),
-                });
+            const path = await command<string>("default_tenant_path", {
+                tenantName: displayName,
+                baseDir: currentWorkspaceBaseDir(),
+            });
             const updated: AppConfig = {
                 ...config,
                 setup_done: true,
@@ -360,6 +361,16 @@
                         </div>
                     </div>
 
+                    {#if existingInCustomDir}
+                        <div class="rounded-xl border border-border bg-bg/60 p-3 text-xs text-secondary flex flex-col gap-2">
+                            <span>In diesem Ordner liegt bereits ein Arbeitsbereich. Ein neuer Arbeitsbereich wird in einem eigenen Unterordner angelegt; der vorhandene bleibt unverändert.</span>
+                            <button
+                                class="self-start px-3 py-1.5 rounded-lg border border-border text-[12px] text-primary hover:bg-bg transition-colors"
+                                disabled={saving}
+                                on:click={() => existingInCustomDir && openExisting(existingInCustomDir)}
+                            >Vorhandenen Arbeitsbereich öffnen</button>
+                        </div>
+                    {/if}
                     {#if pathPreview}
                         <div class="rounded-lg bg-accent/5 border border-accent/20 px-3 py-2.5 text-xs text-secondary flex flex-col gap-1.5">
                             <div><span class="font-medium text-accent">Ordner:</span> <span class="font-mono break-all">{pathPreview.workspaceDir}</span></div>
