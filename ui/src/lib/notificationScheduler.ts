@@ -13,7 +13,7 @@ let shutdownInterval: ReturnType<typeof setInterval> | null = null;
 let breakInterval: ReturnType<typeof setInterval> | null = null;
 let lastBreakAt = Date.now();
 
-// Track which HH:MM we already fired shutdown for (prevent double-fire within same minute)
+// Track which day + HH:MM we already fired shutdown for (prevent double-fire within same minute, re-arm daily)
 let lastShutdownFired = "";
 
 function nowHHMM(): string {
@@ -27,8 +27,9 @@ function checkShutdown() {
   if (!shutdownTime) return;
 
   const now = nowHHMM();
-  if (now === shutdownTime && lastShutdownFired !== now) {
-    lastShutdownFired = now;
+  const firedKey = `${new Date().toDateString()} ${now}`;
+  if (now === shutdownTime && lastShutdownFired !== firedKey) {
+    lastShutdownFired = firedKey;
     notify(
       "Tagesabschluss 🌙",
       "Zeit, den Tag abzuschließen. Wie war heute?"

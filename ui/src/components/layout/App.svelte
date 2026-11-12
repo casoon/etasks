@@ -12,6 +12,7 @@
     import { isTauriAvailable } from "../../lib/platform";
     import { command } from "@casoon/origin-client";
     import { startNotificationScheduler, stopNotificationScheduler } from "../../lib/notificationScheduler";
+    import { startPomodoroTicker, stopPomodoroTicker } from "../../lib/pomodoroTimer";
     import { logger } from "../../lib/logger";
     import TodayView from "../views/TodayView.svelte";
     import WeeklyPlanningView from "../views/WeeklyPlanningView.svelte";
@@ -37,7 +38,10 @@
     let showSetup = true;
     let appReady = false;
 
-    onDestroy(stopNotificationScheduler);
+    onDestroy(() => {
+        stopNotificationScheduler();
+        stopPomodoroTicker();
+    });
 
     function initStores() {
         reinitStores();
@@ -46,6 +50,7 @@
     }
 
     onMount(() => {
+        startPomodoroTicker();
         const navHandler = (e: Event) => { nav = (e as CustomEvent<string>).detail; };
         window.addEventListener('etasks:nav', navHandler);
         const navUnsub = navItemStore.subscribe(v => { nav = v; });

@@ -2,6 +2,7 @@
 import { openTenant } from '../stores/configStore';
 import { syncFromDatabase } from './storage';
 import { reinitStores } from './storeInit';
+import { startNotificationScheduler } from './notificationScheduler';
 
 /**
  * Opens a tenant, hydrates browser storage from SQLite, then reinitializes all stores.
@@ -11,4 +12,5 @@ export async function activateTenant(path: string, displayName?: string): Promis
   await openTenant(path, displayName);
   await syncFromDatabase();
   reinitStores();
+  startNotificationScheduler();
 }

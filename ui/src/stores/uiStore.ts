@@ -10,6 +10,8 @@ export const $projectsView = atom<ProjectsView>('project');
 export const $focusTaskId = atom<string | null>(null);
 export const $pomodoroRunning = atom<boolean>(false);
 export const $pomodoroSeconds = atom<number>(25 * 60);
+/** Wall-clock end (ms) of the running session; null while paused/stopped. */
+export const $pomodoroEndAt = atom<number | null>(null);
 export const $pomodoroSessionMinutes = atom<number>(25);
 export const $pomodoroMode = atom<'work' | 'break'>('work');
 export const $pomodoroSessionCount = atom<number>(0);
