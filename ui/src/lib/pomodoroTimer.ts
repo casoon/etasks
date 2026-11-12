@@ -14,6 +14,7 @@ import {
   $focusTaskId,
 } from '../stores/uiStore';
 import { $tasks } from '../stores/taskStore';
+import { $activeEntry, addTimeEntry } from '../stores/timerStore';
 import { notifyPomodoroComplete } from './notifications';
 
 export const BREAK_DURATION = 5 * 60;
@@ -30,6 +31,11 @@ function finish() {
   if ($pomodoroMode.get() === 'work') {
     $pomodoroSessionCount.set($pomodoroSessionCount.get() + 1);
     const focusId = $focusTaskId.get();
+    // Record the session as time entry, unless a running timer already counts this task.
+    if (focusId && $activeEntry.get()?.taskId !== focusId && $tasks.get().some(t => t.id === focusId)) {
+      const end = Date.now();
+      addTimeEntry(focusId, new Date(end - $pomodoroSessionMinutes.get() * 60_000).toISOString(), new Date(end).toISOString());
+    }
     notifyPomodoroComplete(focusId ? $tasks.get().find(t => t.id === focusId)?.title : undefined);
   } else {
     $pomodoroMode.set('work');

@@ -18,6 +18,7 @@
   import RecurringTasksPanel from '../widgets/RecurringTasksPanel.svelte';
   import type { Task } from '../../domain/types';
   import { getTaskDragData, setTaskDragData } from '../../lib/taskDrag';
+  import TimerButton from '../widgets/TimerButton.svelte';
 
   type PoolSortMode = 'manual' | 'date' | 'project';
 
@@ -749,7 +750,7 @@
           {@const col = projectColor(task)}
           <!-- svelte-ignore a11y-no-static-element-interactions -->
           <div
-            class="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-[9px] border-b border-border/60 cursor-grab select-none
+            class="group flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-[9px] border-b border-border/60 cursor-grab select-none
               {isMit ? 'bg-accent-subtle border-l-[3px] border-l-accent' : 'hover:bg-bg/60'}
               {draggingId === task.id && dragSource === 'today' ? 'opacity-30' : ''}
               {dragOverId === task.id && dragSource === 'today' ? 'border-t-2 border-t-accent' : ''}"
@@ -817,6 +818,8 @@
               >13</button>
             </div>
 
+            <TimerButton taskId={task.id} />
+
             <!-- Remove -->
             <button
               on:click={() => removeFromToday(task)}
@@ -840,7 +843,7 @@
           {@const isMit = mitIds.includes(task.id)}
           {@const col = projectColor(task)}
           <div
-            class="flex items-center gap-2 px-3 py-[9px] border-b border-border/60 cursor-grab select-none bg-accent-subtle/10
+            class="group flex items-center gap-2 px-3 py-[9px] border-b border-border/60 cursor-grab select-none bg-accent-subtle/10
               {draggingId === task.id && dragSource === 'today' ? 'opacity-30' : ''}"
             draggable="true"
             on:dragstart={e => onDragStartToday(e, task.id)}
@@ -871,6 +874,7 @@
               class="px-1.5 py-0.5 rounded text-[10px] text-muted hover:bg-bg hover:text-accent flex-shrink-0"
               title="Zeitslot lösen"
             >Zeit lösen</button>
+            <TimerButton taskId={task.id} />
             <button
               on:click={() => removeFromToday(task)}
               class="w-5 h-5 flex items-center justify-center rounded text-muted/50 hover:text-secondary hover:bg-bg transition-colors flex-shrink-0 text-[11px]"
