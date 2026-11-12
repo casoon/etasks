@@ -1,6 +1,6 @@
 // @module:billing
 // Rechnungspositionen aus Abrechnungsdaten: Projekt-Positionen und erfasste Zeit.
-import type { BillingItem, InvoiceLineItem, Project, TimeEntry } from "../domain/types";
+import type { BillingItem, InvoiceLineItem, Project, TimeEntry, Termin } from "../domain/types";
 import { entrySeconds, formatDateDe, toDateKeyFromIso } from "../domain/dateUtils";
 
 const UNIT_BY_TYPE = { hourly: "Stunde", fixed: "Pauschal", unit: "Einheit" } as const;
@@ -83,6 +83,46 @@ export function trackedTimeToLineItem(
     unit: "Stunde",
     unitPrice: hourlyRate,
     quantity: minutesToQuarterHours(row.minutes),
+    vatRate,
+    taskIds: [],
+  };
+}
+
+/** Abrechenbare Termine des Kunden im Zeitraum [from, to]: Kunde über das Projekt, sonst direkt am Termin. */
+export function billableTermineForClient(
+  termine: readonly Termin[],
+  projects: readonly Pick<Project, "id" | "clientId">[],
+  clientId: string,
+  from: string,
+  to: string,
+): { count: number; minutes: number } {
+  let count = 0;
+  let minutes = 0;
+  for (const t of termine) {
+    if (!t.billable || t.durationMinutes <= 0) continue;
+    if ((from && t.date < from) || (to && t.date > to)) continue;
+    const owner = t.projectId ? projects.find((p) => p.id === t.projectId)?.clientId : t.clientId;
+    if (owner !== clientId) continue;
+    count += 1;
+    minutes += t.durationMinutes;
+  }
+  return { count, minutes };
+}
+
+export function termineToLineItem(
+  summary: { count: number; minutes: number },
+  hourlyRate: number,
+  vatRate: number,
+  from: string,
+  to: string,
+): InvoiceLineItem {
+  return {
+    id: crypto.randomUUID(),
+    name: "Termine",
+    description: `${summary.count} Termin${summary.count === 1 ? "" : "e"}${from || to ? ` ${formatDateDe(from)}–${formatDateDe(to)}` : ""}`,
+    unit: "Stunde",
+    unitPrice: hourlyRate,
+    quantity: minutesToQuarterHours(summary.minutes),
     vatRate,
     taskIds: [],
   };

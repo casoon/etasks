@@ -2,22 +2,24 @@
 <script lang="ts">
   import { $todayBlocks as todayBlocksStore, moveBlock, dropTaskOnCalendar, removeBlock } from '../../stores/calendarStore';
   import { $tasks as tasksStore, updateTask } from '../../stores/taskStore';
-  import { $termine as termineStore, addTermin, removeTermin } from '../../stores/terminStore';
+  import { $termine as termineStore, addTermin, updateTermin, removeTermin } from '../../stores/terminStore';
   import { $projects as projectsStore } from '../../stores/projectStore';
   import CalendarBlockComponent from '../widgets/CalendarBlock.svelte';
-  import { getBlockTop, getBlockHeight, snapToGrid } from '../../domain/calendarService';
+  import { getBlockTop, getBlockHeight, snapToGrid, dayHourRange } from '../../domain/calendarService';
   import { today } from '../../domain/dateUtils';
-  import type { CalendarBlock, Task, TerminType } from '../../domain/types';
+  import type { CalendarBlock, Task, Termin, TerminType } from '../../domain/types';
   import { getTaskDragData, hasTaskDragData } from '../../lib/taskDrag';
 
   export let planningMode = false;
   export let activeDate: string = today();
 
-  const DAY_START = 6;
-  const DAY_END = 20;
   const HOUR_HEIGHT = 64;
-  const HOURS = Array.from({ length: DAY_END - DAY_START }, (_, i) => DAY_START + i);
-  const GRID_HEIGHT = (DAY_END - DAY_START) * HOUR_HEIGHT;
+  // 06–20 Uhr, wird für Termine außerhalb davon erweitert (siehe termine unten)
+  let DAY_START = 6;
+  let DAY_END = 20;
+  $: ({ start: DAY_START, end: DAY_END } = dayHourRange(6, 20, termine));
+  $: HOURS = Array.from({ length: DAY_END - DAY_START }, (_, i) => DAY_START + i);
+  $: GRID_HEIGHT = (DAY_END - DAY_START) * HOUR_HEIGHT;
 
   $: blocks = $todayBlocksStore;
 
@@ -188,41 +190,64 @@
   const TERMIN_TYPE_ICONS: Record<TerminType, string> = { video: '📹', phone: '📞', onsite: '🏢' };
   const TERMIN_TYPE_LABELS: Record<TerminType, string> = { video: 'Video', phone: 'Telefon', onsite: 'Vor Ort' };
 
-  function getTerminTop(startTime: string): number {
+  function getTerminTop(startTime: string, dayStart: number): number {
     const [h, m] = startTime.split(':').map(Number);
-    return ((h - DAY_START) + m / 60) * HOUR_HEIGHT;
+    return ((h - dayStart) + m / 60) * HOUR_HEIGHT;
   }
   function getTerminHeight(durationMinutes: number): number {
     return (durationMinutes / 60) * HOUR_HEIGHT;
   }
 
   let addingTermin = false;
+  let editingTerminId: string | null = null;
   let newTerminTitle = '';
+  let newTerminDate = activeDate;
   let newTerminTime = '09:00';
   let newTerminDuration = 60;
   let newTerminType: TerminType = 'video';
   let newTerminProjectId = '';
   let newTerminBillable = false;
+  const TERMIN_DURATIONS = [15, 30, 45, 60, 90, 120];
 
-  function handleAddTermin(e: Event) {
-    e.preventDefault();
-    if (!newTerminTitle.trim()) return;
-    addTermin({
-      date: activeDate,
-      startTime: newTerminTime,
-      durationMinutes: newTerminDuration,
-      type: newTerminType,
-      title: newTerminTitle.trim(),
-      projectId: newTerminProjectId || undefined,
-      billable: newTerminBillable,
-    });
+  function resetTerminForm() {
+    editingTerminId = null;
     newTerminTitle = '';
+    newTerminDate = activeDate;
     newTerminTime = '09:00';
     newTerminDuration = 60;
     newTerminType = 'video';
     newTerminProjectId = '';
     newTerminBillable = false;
     addingTermin = false;
+  }
+
+  function startEditTermin(termin: Termin) {
+    editingTerminId = termin.id;
+    newTerminTitle = termin.title;
+    newTerminDate = termin.date;
+    newTerminTime = termin.startTime;
+    newTerminDuration = termin.durationMinutes;
+    newTerminType = termin.type;
+    newTerminProjectId = termin.projectId ?? '';
+    newTerminBillable = termin.billable;
+    addingTermin = true;
+  }
+
+  function handleAddTermin(e: Event) {
+    e.preventDefault();
+    if (!newTerminTitle.trim() || !newTerminDate || !newTerminTime) return;
+    const fields = {
+      date: newTerminDate,
+      startTime: newTerminTime,
+      durationMinutes: newTerminDuration,
+      type: newTerminType,
+      title: newTerminTitle.trim(),
+      projectId: newTerminProjectId || undefined,
+      billable: newTerminBillable,
+    };
+    if (editingTerminId) updateTermin(editingTerminId, fields);
+    else addTermin(fields);
+    resetTerminForm();
   }
 </script>
 
@@ -233,7 +258,7 @@
       <span class="text-[10px] text-muted hidden lg:inline">Tasks aus „Heute“ hier hineinziehen oder Slots direkt setzen</span>
       <button
         class="text-[11px] px-2 py-0.5 rounded-md border border-dashed border-border text-muted hover:border-accent hover:text-accent transition-colors flex-shrink-0"
-        on:click={() => addingTermin = !addingTermin}
+        on:click={() => { if (addingTermin) resetTerminForm(); else { newTerminDate = activeDate; addingTermin = true; } }}
         title="Termin hinzufügen"
       >+ Termin</button>
     {/if}
@@ -258,8 +283,12 @@
           <option value="phone">📞 Telefon</option>
           <option value="onsite">🏢 Vor Ort</option>
         </select>
+        <input type="date" class="border border-border rounded-md px-1.5 py-1 text-[11px] bg-bg outline-none" bind:value={newTerminDate} />
         <input type="time" class="border border-border rounded-md px-1.5 py-1 text-[11px] bg-bg outline-none" bind:value={newTerminTime} />
         <select class="border border-border rounded-md px-1.5 py-1 text-[11px] bg-bg outline-none" bind:value={newTerminDuration}>
+          {#if !TERMIN_DURATIONS.includes(newTerminDuration)}
+            <option value={newTerminDuration}>{newTerminDuration} min</option>
+          {/if}
           <option value={15}>15 min</option>
           <option value={30}>30 min</option>
           <option value={45}>45 min</option>
@@ -281,8 +310,8 @@
         Abrechenbar
       </label>
       <div class="flex gap-2">
-        <button type="submit" class="flex-1 px-3 py-1.5 bg-accent text-white rounded-lg text-[12px] font-medium hover:opacity-90 transition-opacity">Speichern</button>
-        <button type="button" class="px-3 py-1.5 text-secondary rounded-lg text-[12px] hover:bg-bg transition-colors" on:click={() => addingTermin = false}>Abbrechen</button>
+        <button type="submit" class="flex-1 px-3 py-1.5 bg-accent text-white rounded-lg text-[12px] font-medium hover:opacity-90 transition-opacity">{editingTerminId ? 'Speichern' : 'Anlegen'}</button>
+        <button type="button" class="px-3 py-1.5 text-secondary rounded-lg text-[12px] hover:bg-bg transition-colors" on:click={resetTerminForm}>Abbrechen</button>
       </div>
     </form>
   {/if}
@@ -375,7 +404,7 @@
       {/each}
 
       {#each termine as termin (termin.id)}
-        {@const top = getTerminTop(termin.startTime)}
+        {@const top = getTerminTop(termin.startTime, DAY_START)}
         {@const height = Math.max(getTerminHeight(termin.durationMinutes), 20)}
         {@const proj = termin.projectId ? projects.find(p => p.id === termin.projectId) : null}
         <!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -390,6 +419,13 @@
                 <p class="text-[10px] opacity-70 leading-tight">{TERMIN_TYPE_LABELS[termin.type]}{termin.billable ? ' · €' : ''}</p>
               {/if}
             </div>
+            {#if planningMode}
+              <button
+                class="opacity-0 group-hover:opacity-100 text-[11px] leading-none text-muted hover:text-accent transition-all flex-shrink-0"
+                on:click={() => startEditTermin(termin)}
+                title="Termin bearbeiten"
+              >✎</button>
+            {/if}
             <button
               class="opacity-0 group-hover:opacity-100 text-[11px] leading-none text-muted hover:text-red-500 transition-all flex-shrink-0"
               on:click={() => removeTermin(termin.id)}

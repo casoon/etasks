@@ -40,3 +40,23 @@ export function getBlockHeight(start: Date, end: Date, hourHeight: number): numb
   const durationMinutes = (end.getTime() - start.getTime()) / 60000;
   return (durationMinutes / 60) * hourHeight;
 }
+/**
+ * Hour range of a day grid: the default range, widened so that every appointment
+ * (HH:MM start, duration in minutes) lies inside it.
+ */
+export function dayHourRange(
+  defaultStart: number,
+  defaultEnd: number,
+  termine: ReadonlyArray<{ startTime: string; durationMinutes: number }>,
+): { start: number; end: number } {
+  let start = defaultStart;
+  let end = defaultEnd;
+  for (const t of termine) {
+    const [h, m] = t.startTime.split(':').map(Number);
+    if (Number.isNaN(h) || Number.isNaN(m)) continue;
+    const startMin = h * 60 + m;
+    start = Math.min(start, Math.floor(startMin / 60));
+    end = Math.max(end, Math.min(24, Math.ceil((startMin + t.durationMinutes) / 60)));
+  }
+  return { start, end };
+}

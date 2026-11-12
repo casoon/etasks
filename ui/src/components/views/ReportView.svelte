@@ -4,7 +4,8 @@
   import { $timeEntries as timeEntriesStore } from '../../stores/timerStore';
   import { today, toDateKey } from '../../domain/dateUtils';
   import { $projects as projectsStore, $clients as clientsStore } from '../../stores/projectStore';
-  import { buildReportRows } from '../../lib/reportService';
+  import { $termine as termineStore } from '../../stores/terminStore';
+  import { buildReportRows, buildTerminRows } from '../../lib/reportService';
 
   type ReportMode = 'personal' | 'client';
 
@@ -21,6 +22,7 @@
 
   $: tasks = $tasksStore;
   $: timeEntries = $timeEntriesStore;
+  $: termine = $termineStore;
   $: projects = $projectsStore;
   $: clients = $clientsStore;
 
@@ -53,12 +55,16 @@
       return true;
     };
 
-    return buildReportRows(tasks, timeEntries, dateFrom, dateTo, inScope).map((r): ViewRow => {
+    const reportRows = [
+      ...buildReportRows(tasks, timeEntries, dateFrom, dateTo, inScope),
+      ...buildTerminRows(termine, dateFrom, dateTo, inScope),
+    ].sort((a, b) => a.completedDate.localeCompare(b.completedDate));
+    return reportRows.map((r): ViewRow => {
       const proj = r.projectId ? projectMap.get(r.projectId) : null;
       const client = proj?.clientId ? clientMap.get(proj.clientId) : null;
       return {
         taskId: r.taskId,
-        title: r.task?.title ?? 'Gelöschte Aufgabe',
+        title: r.terminTitle ? `Termin: ${r.terminTitle}` : r.task?.title ?? 'Gelöschte Aufgabe',
         done: r.done,
         projectName: proj?.name ?? '—',
         clientName: client?.name ?? '—',
@@ -184,7 +190,7 @@
     <div class="flex-1" />
 
     <div class="text-[12px] text-muted">
-      {rows.length} Aufgabe{rows.length !== 1 ? 'n' : ''} ·
+      {rows.length} {rows.length !== 1 ? 'Einträge' : 'Eintrag'} ·
       <span class="font-semibold text-primary">{formatDuration(totalMinutes)}</span> erfasst
     </div>
 

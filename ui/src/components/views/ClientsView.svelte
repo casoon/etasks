@@ -6,6 +6,7 @@
     } from "../../stores/projectStore";
     import { $tasks as tasksStore } from "../../stores/taskStore";
     import { $timeEntries as timeEntriesStore } from "../../stores/timerStore";
+    import { $termine as termineStore } from "../../stores/terminStore";
     import {
         $billingItems as billingItemsStore,
         $unlockedBillingItemIds as unlockedBillingItemIdsStore,
@@ -432,6 +433,7 @@
                 billingItems={$billingItemsStore}
                 unlockedBillingItemIds={$unlockedBillingItemIdsStore}
                 timeEntries={$timeEntriesStore}
+                termine={$termineStore}
                 {blockedTaskIds}
                 {otherInvoiceNumbers}
                 pdfBusy={generatingPdf}

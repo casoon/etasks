@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { BillingItem, TimeEntry } from "../domain/types";
+import type { BillingItem, TimeEntry, Termin } from "../domain/types";
 import { calcInvoiceTotals } from "./invoiceMoney";
 import {
+  billableTermineForClient,
   billingItemToLineItem,
+  termineToLineItem,
   minutesToQuarterHours,
   trackedTimeByProject,
   trackedTimeToLineItem,
@@ -68,5 +70,30 @@ describe("trackedTimeByProject", () => {
     expect(li).toMatchObject({ unit: "Stunde", unitPrice: 87.5, quantity: 1.5 });
     expect(li.description).toBe("Erfasste Zeit 01.11.2026–30.11.2026");
     expect(calcInvoiceTotals([li]).nettoCents).toBe(13125);
+  });
+});
+
+describe("billableTermineForClient", () => {
+  const termin = (patch: Partial<Termin>): Termin => ({
+    id: "m1", date: "2026-03-10", startTime: "10:00", durationMinutes: 60, type: "video", title: "T",
+    billable: true, createdAt: "", updatedAt: "", projectId: "p1", ...patch,
+  });
+  const projects = [{ id: "p1", clientId: "c1" }, { id: "p2", clientId: "c2" }];
+
+  it("sums billable appointments of the client in the range", () => {
+    const termine = [
+      termin({}),
+      termin({ id: "m2", durationMinutes: 30, projectId: undefined, clientId: "c1" }),
+      termin({ id: "m3", billable: false }),
+      termin({ id: "m4", projectId: "p2" }),
+      termin({ id: "m5", date: "2026-04-01" }),
+    ];
+    expect(billableTermineForClient(termine, projects, "c1", "2026-03-01", "2026-03-31")).toEqual({ count: 2, minutes: 90 });
+  });
+
+  it("builds a line item at the hourly rate", () => {
+    expect(termineToLineItem({ count: 2, minutes: 90 }, 80, 19, "", "")).toMatchObject({
+      name: "Termine", unit: "Stunde", unitPrice: 80, quantity: 1.5, vatRate: 19,
+    });
   });
 });

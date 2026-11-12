@@ -6,6 +6,7 @@ import {
   snapToGrid,
   getBlockTop,
   getBlockHeight,
+  dayHourRange,
 } from './calendarService';
 import type { Task } from './types';
 
@@ -153,5 +154,23 @@ describe('getBlockHeight', () => {
     const start = new Date('2026-03-27T09:00:00');
     const end = new Date('2026-03-27T10:30:00');
     expect(getBlockHeight(start, end, 64)).toBe(96);
+  });
+});
+
+describe('dayHourRange', () => {
+  it('keeps the default range for appointments inside it', () => {
+    expect(dayHourRange(6, 20, [{ startTime: '09:00', durationMinutes: 60 }])).toEqual({ start: 6, end: 20 });
+  });
+
+  it('widens the range for early and late appointments', () => {
+    const r = dayHourRange(6, 20, [
+      { startTime: '05:30', durationMinutes: 30 },
+      { startTime: '20:30', durationMinutes: 90 },
+    ]);
+    expect(r).toEqual({ start: 5, end: 22 });
+  });
+
+  it('never goes past midnight', () => {
+    expect(dayHourRange(6, 20, [{ startTime: '23:00', durationMinutes: 180 }]).end).toBe(24);
   });
 });
