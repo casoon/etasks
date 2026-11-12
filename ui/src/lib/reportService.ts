@@ -1,6 +1,6 @@
 // @module:reporting
 import { command } from '@casoon/origin-client';
-import type { Task, Project, TimeEntry } from '../domain/types';
+import type { Task, Project, TimeEntry, Termin } from '../domain/types';
 import { entrySeconds, toDateKeyFromIso } from '../domain/dateUtils';
 import { $appConfig } from '../stores/configStore';
 
@@ -18,6 +18,8 @@ export interface ProjectReportInput {
 export interface ReportRow {
   taskId: string;
   task: Task | null; // null = Aufgabe wurde gelöscht, die Zeit bleibt erhalten
+  projectId?: string; // bei gelöschter Aufgabe aus dem Zeiteintrag
+  terminTitle?: string; // gesetzt bei abrechenbaren Terminen (task ist dann null)
   completedDate: string; // Tag der Erledigung, sonst Tag des letzten Zeiteintrags im Zeitraum
   done: boolean;
   trackedMinutes: number; // erfasste Zeit im Zeitraum, nach Tag des Zeiteintrags
@@ -57,6 +59,7 @@ export function buildReportRows(
     rows.push({
       taskId: task.id,
       task,
+      projectId: task.projectId,
       completedDate: doneInRange ? doneDay! : t!.lastDay,
       done: doneInRange,
       trackedMinutes: Math.round((t?.seconds ?? 0) / 60),
@@ -68,6 +71,7 @@ export function buildReportRows(
     rows.push({
       taskId,
       task: null,
+      projectId: t.projectId,
       completedDate: t.lastDay,
       done: false,
       trackedMinutes: Math.round(t.seconds / 60),
@@ -78,12 +82,33 @@ export function buildReportRows(
   return rows;
 }
 
+// Billable appointments in [from, to] as report rows (duration counts as tracked time).
+export function buildTerminRows(
+  termine: readonly Termin[],
+  from: string,
+  to: string,
+  inScope: (projectId: string | undefined) => boolean,
+): ReportRow[] {
+  return termine
+    .filter((t) => t.billable && t.date >= from && t.date <= to && inScope(t.projectId))
+    .map((t) => ({
+      taskId: t.id,
+      task: null,
+      projectId: t.projectId,
+      terminTitle: t.title,
+      completedDate: t.date,
+      done: true,
+      trackedMinutes: t.durationMinutes,
+      estimatedMinutes: 0,
+    }));
+}
+
 export function buildProjectReportInput(
   project: Project,
   tasks: Task[],
   timeEntries: TimeEntry[],
 ): ProjectReportInput {
-  const projectTasks = tasks.filter((t) => t.projectId === project.id);
+  const projectTasks = tasks.filter((t) => t.projectId === project.id && !t.recurrence);
   const doneTasks = projectTasks.filter((t) => t.status === 'done');
 
   // Entries of deleted tasks count via the entry's own projectId.

@@ -76,7 +76,6 @@ pub fn run() {
             commands::entities::delete_invoice,
             commands::export::export_to_file,
             commands::export::save_to_icloud,
-            commands::export::open_ics_file,
             commands::export::import_snapshot,
             commands::invoice::generate_invoice,
             commands::invoice::generate_offer,

@@ -8,7 +8,6 @@ A local-first productivity desktop app for focused daily planning, time tracking
 - Task list for today with duration estimates and progress bar
 - Drag tasks into the calendar for visual timeboxing
 - Auto-scheduling: fills free time slots automatically
-- Board view (Kanban) as an alternative to the day view
 
 **Calendar & Time Tracking**
 - Day view with drag-and-drop scheduling
@@ -17,7 +16,7 @@ A local-first productivity desktop app for focused daily planning, time tracking
 
 **Projects & Clients**
 - Project management with Kanban board per project
-- Client management with hourly rate and billing overview
+- Client management with hourly rate; tracked time and billable appointments are imported into invoices at that rate
 - CSV export per client for invoicing
 - Project templates for recurring setups
 - **PDF status reports** generated locally via [renderreport](https://github.com/casoon/renderreport)
@@ -27,7 +26,7 @@ A local-first productivity desktop app for focused daily planning, time tracking
 - Weekly planning with focus projects and a weekly outcome note
 - Quick add with Cmd/Ctrl+K
 - Guided morning planning and daily shutdown workflow
-- Recurring tasks (daily / weekly / monthly)
+- Recurring tasks on selected weekdays
 
 **Data & Privacy**
 - All data stored locally in a SQLite database per workspace — no account, no sync, no telemetry

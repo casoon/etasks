@@ -7,6 +7,9 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Added
 
+- **Daily close:** the "Highlight des Tages" is pre-filled when the dialog is opened again and shown in Heute.
+- **Tasks:** tags can be set when editing a task (double-click, comma-separated); Analytics groups the week's tracked time by the first tag.
+- **Appointments:** today's Termine appear in the Tagesplan of Heute and can be edited (title, date, time, duration, type, project, billable) in the Tagesplanung. Billable Termine are listed in Berichte (as "Termin: …") and can be added as one line to an invoice via "Erfasste Zeit übernehmen", priced with the client's hourly rate.
 - **Time tracking:** time entries can be edited (task, day, start, end) and deleted in the Zeiterfassung list, and added by hand with "Eintrag hinzufügen".
 - **Time tracking:** if a timer was left running (started on an earlier day or open for over 12 hours), the app asks at start whether to stop it now, stop it at a time you enter, or discard it.
 - **Time tracking:** the timer button (▶/⏹) is available in Heute, in the Tagesplanung rows and on project board cards. A finished Pomodoro work session records a time entry for the focus task.
@@ -23,10 +26,18 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Removed
 
+- **Settings:** the unused workspace fields "Typ" and "Währung" (documents are always in EUR).
+- **Cleanup:** the unused energy check log, the unmounted weekly objectives widget, the unused `open_ics_file` command and the dead card drag in Fokus.
 - **Releases:** the macOS Intel (`x64`) build; macOS installers are Apple Silicon only.
 
 ### Fixed
 
+- **Navigation:** the sidebar highlight follows every view change, including "Fokus starten", "Tag planen" and "Zur Tagesplanung".
+- **Analytics:** the weekly figures (completion rate, planned time, tracked time) only count the calendar week Monday–Sunday instead of everything planned from Monday on, "Zeit pro Kategorie" shows tracked time instead of estimates, and "Diese Woche" in Zeiterfassung uses the same calendar week.
+- **Appointments:** the day grid widens for Termine before 06:00 or after 20:00 instead of drawing them outside the grid.
+- **Reports:** time on a deleted task keeps its project and client in the report table and the client report.
+- **Board:** dropping a card no longer changes the "updated" time of cards that only moved position, so old done cards stay out of today's report and the backlog age is kept. "Heute einplanen" (board) and pulling a task scheduled on another day into Heute also remove its calendar block; calendar blocks left over from deleted or unscheduled tasks are cleaned up at start.
+- **Recurring tasks:** a generated instance that is removed from "Heute" or deleted does not come back at the next start; the template remembers which days were generated. New instances are also created at midnight while the app is open, and templates no longer count as open tasks in project progress, delete confirmations, the billing item task picker and the project report.
 - **Time tracking:** entries are stored to the second; short sessions no longer round to 0 min and sums, reports, invoices import and CSV add up exact seconds. The running timer shows a live clock, appears as "läuft" in the day list and counts in the totals.
 - **Time tracking:** switching the timer to another task refreshes the task times; marking a task done stops its running timer.
 - **Daily close:** "Zeit heute" uses the local day and includes the running timer.

@@ -4,25 +4,19 @@
     import { $bridgeTimeEntries as timeEntriesStore } from "../../stores/coreBridge";
     import { $projects as projectsStore } from "../../stores/projectStore";
     import { TAG_COLORS } from "../../domain/types";
-    import { diffDays, entrySeconds, getWeekStart, today, toDateKey, toDateKeyFromIso } from "../../domain/dateUtils";
+    import { diffDays, entrySeconds, getWeekRange, today, toDateKey, toDateKeyFromIso } from "../../domain/dateUtils";
+    import { tasksPlannedInWeek, trackedMinutesByTag } from "../../lib/analyticsService";
 
+    $: todayStr = today();
     $: tasks = $tasksStore;
     $: timeEntries = $timeEntriesStore;
     $: projects = $projectsStore;
 
-    $: recent = (() => {
-        const weekStart = getWeekStart(new Date());
-        return tasks.filter((t) => (t.plannedDate ?? "") >= weekStart);
-    })();
+    // Calendar week Monday–Sunday (same definition as in Zeiterfassung)
+    $: weekRange = getWeekRange(new Date(`${todayStr}T00:00:00`));
+    $: recent = tasksPlannedInWeek(tasks, weekRange.start, weekRange.end);
 
-    $: tagMinutes = (() => {
-        const m: Record<string, number> = {};
-        for (const task of recent) {
-            const tag = task.tags[0] ?? "sonstige";
-            m[tag] = (m[tag] ?? 0) + (task.estimatedMinutes ?? 0);
-        }
-        return m;
-    })();
+    $: tagMinutes = trackedMinutesByTag(timeEntries, tasks, weekRange.start, weekRange.end);
 
     $: total = Object.values(tagMinutes).reduce((s, v) => s + v, 0);
     $: sortedEntries = Object.entries(tagMinutes).sort((a, b) => b[1] - a[1]);
@@ -30,7 +24,7 @@
     $: completion =
         recent.length > 0 ? Math.round((done / recent.length) * 100) : 0;
     $: trackedThisWeek = timeEntries
-        .filter((entry) => (toDateKeyFromIso(entry.startAt) ?? "") >= weekStartIso())
+        .filter((entry) => inWeek(entry.startAt))
         .reduce((sum, entry) => sum + entrySeconds(entry) / 60, 0);
     $: plannedThisWeek = recent.reduce(
         (sum, task) => sum + (task.estimatedMinutes ?? 0),
@@ -42,9 +36,7 @@
             : 0;
     $: projectMinutes = (() => {
         const byProject: Record<string, number> = {};
-        for (const entry of timeEntries.filter(
-            (item) => (toDateKeyFromIso(item.startAt) ?? "") >= weekStartIso(),
-        )) {
+        for (const entry of timeEntries.filter((item) => inWeek(item.startAt))) {
             const projectId = entry.projectId ?? "ohne-projekt";
             byProject[projectId] =
                 (byProject[projectId] ?? 0) + entrySeconds(entry) / 60;
@@ -93,15 +85,15 @@
             .slice(0, 5);
     })();
 
-    function weekStartIso(): string {
-        return getWeekStart(new Date());
+    function inWeek(iso: string): boolean {
+        const day = toDateKeyFromIso(iso) ?? "";
+        return day >= weekRange.start && day <= weekRange.end;
     }
 
     // --- Ansichts-Toggle ---
     let chartView: 'woche' | 'heute' = 'woche';
 
     // Heute-Ansicht: Zeiterfassung heute nach Projekt
-    $: todayStr = today();
     $: todayEntries = timeEntries.filter(
         (e) => toDateKeyFromIso(e.startAt) === todayStr && entrySeconds(e) > 0,
     );
@@ -128,7 +120,7 @@
     const DAY_LABELS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 
     $: weekDays = (() => {
-        const ws = new Date(weekStartIso());
+        const ws = new Date(`${weekRange.start}T00:00:00`);
         return Array.from({ length: 7 }, (_, i) => {
             const d = new Date(ws);
             d.setDate(ws.getDate() + i);
@@ -140,9 +132,7 @@
 
     // entries in current week
     $: weekEntries = timeEntries.filter(
-        (e) =>
-            (toDateKeyFromIso(e.startAt) ?? "") >= weekStartIso() &&
-            entrySeconds(e) > 0,
+        (e) => inWeek(e.startAt) && entrySeconds(e) > 0,
     );
 
     // total minutes tracked this week (for headline)
@@ -402,7 +392,7 @@
                 >Zeit pro Kategorie</span
             >
             {#if sortedEntries.length === 0}
-                <p class="text-[13px] text-muted">Noch keine Daten.</p>
+                <p class="text-[13px] text-muted">Noch keine erfasste Zeit diese Woche. Tags setzt du beim Bearbeiten einer Aufgabe (Doppelklick).</p>
             {/if}
             <ul class="list-none flex flex-col gap-2">
                 {#each sortedEntries as [tag, minutes] (tag)}

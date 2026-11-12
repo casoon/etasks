@@ -10,6 +10,7 @@
         ServiceItem,
         Task,
         TimeEntry,
+        Termin,
     } from "../../domain/types";
     import { formatDateDe, formatTrackedTime, today } from "../../domain/dateUtils";
 
@@ -22,8 +23,10 @@
         lineTotalCents,
     } from "../../lib/invoiceMoney";
     import {
+        billableTermineForClient,
         billingItemToLineItem,
         minutesToQuarterHours,
+        termineToLineItem,
         trackedTimeByProject,
         trackedTimeToLineItem,
     } from "../../lib/invoiceImport";
@@ -47,6 +50,7 @@
     export let billingItems: readonly BillingItem[] = [];
     export let unlockedBillingItemIds: readonly string[] = [];
     export let timeEntries: readonly TimeEntry[] = [];
+    export let termine: readonly Termin[] = [];
     export let blockedTaskIds: Set<string> = new Set();
     export let otherInvoiceNumbers: string[] = [];
     export let pdfAvailable = false;
@@ -110,6 +114,9 @@
               timeTo,
           )
         : [];
+    $: terminSummary = invoice.clientId
+        ? billableTermineForClient(termine, projects, invoice.clientId, timeFrom, timeTo)
+        : { count: 0, minutes: 0 };
     $: newItemSuggestions =
         newItemInput.trim().length >= 1
             ? services.filter((s) =>
@@ -246,6 +253,15 @@
                     timeFrom,
                     timeTo,
                 ),
+            ],
+        });
+    }
+
+    function addTermineLine() {
+        onUpdate({
+            lineItems: [
+                ...invoice.lineItems,
+                termineToLineItem(terminSummary, hourlyRate ?? 0, vatDefault, timeFrom, timeTo),
             ],
         });
     }
@@ -582,7 +598,7 @@
                         {/if}
                     </p>
                 </div>
-                {#if trackedRows.length === 0}
+                {#if trackedRows.length === 0 && terminSummary.count === 0}
                     <p class="text-[12px] text-muted px-3 py-2">
                         Keine erfasste Zeit für diesen Kunden im Zeitraum.
                     </p>
@@ -598,6 +614,16 @@
                         <span class="text-[11px] text-primary tabular-nums">{formatHours(minutesToQuarterHours(row.minutes))} h</span>
                     </button>
                 {/each}
+                {#if terminSummary.count > 0}
+                    <button
+                        class="w-full flex items-center gap-2 px-3 py-2 hover:bg-surface text-left border-b border-border last:border-b-0 transition-colors"
+                        on:click={addTermineLine}
+                    >
+                        <span class="flex-1 text-[12px] text-primary">Abrechenbare Termine ({terminSummary.count})</span>
+                        <span class="text-[11px] text-muted tabular-nums">{formatTrackedTime(terminSummary.minutes * 60)}</span>
+                        <span class="text-[11px] text-primary tabular-nums">{formatHours(minutesToQuarterHours(terminSummary.minutes))} h</span>
+                    </button>
+                {/if}
                 <button
                     class="w-full text-[11px] text-muted text-center py-2 hover:bg-surface border-t border-border"
                     on:click={() => (importPanel = null)}>Schließen</button

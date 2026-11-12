@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('@casoon/origin-client', () => ({ command: vi.fn() }));
 vi.mock('../stores/configStore', () => ({ $appConfig: { get: () => null } }));
 
-import { buildProjectReportInput, buildReportRows } from './reportService';
-import type { Project, Task, TimeEntry } from '../domain/types';
+import { buildProjectReportInput, buildReportRows, buildTerminRows } from './reportService';
+import type { Project, Task, TimeEntry, Termin } from '../domain/types';
 
 const task = (o: Partial<Task>): Task =>
   ({ id: 't', title: 'T', status: 'backlog', tags: [], createdAt: '2026-01-01T10:00:00', updatedAt: '2026-01-01T10:00:00', ...o }) as Task;
@@ -46,6 +46,7 @@ describe('buildReportRows', () => {
     const rows = buildReportRows([], [entry({ taskId: 'gone', projectId: 'p' })], '2026-03-01', '2026-03-31', all);
     expect(rows).toHaveLength(1);
     expect(rows[0].task).toBeNull();
+    expect(rows[0].projectId).toBe('p');
     expect(rows[0].trackedMinutes).toBe(60);
   });
 });
@@ -67,5 +68,31 @@ describe('buildProjectReportInput', () => {
   it('never carries the internal project notes into the report', () => {
     const input = buildProjectReportInput({ ...project, notes: 'Zugang: geheim' } as Project, [], []);
     expect(JSON.stringify(input)).not.toContain('geheim');
+  });
+});
+
+describe('buildProjectReportInput templates', () => {
+  it('does not count recurring templates as tasks', () => {
+    const tmpl = task({ id: 'tmpl', projectId: 'p', recurrence: { weekdays: [1] } });
+    const input = buildProjectReportInput(
+      { id: 'p', name: 'P', status: 'active' } as Project,
+      [tmpl, task({ projectId: 'p' })],
+      [],
+    );
+    expect(input.total_tasks).toBe(1);
+  });
+});
+
+describe('buildTerminRows', () => {
+  const termin = (o: Partial<Termin>): Termin =>
+    ({ id: 'm', date: '2026-03-10', startTime: '10:00', durationMinutes: 45, type: 'video', title: 'Call', billable: true, createdAt: '', updatedAt: '', ...o }) as Termin;
+
+  it('takes billable appointments in range as tracked time', () => {
+    const rows = buildTerminRows(
+      [termin({ projectId: 'p' }), termin({ id: 'x', billable: false }), termin({ id: 'y', date: '2026-05-01' })],
+      '2026-03-01', '2026-03-31', all,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ terminTitle: 'Call', projectId: 'p', trackedMinutes: 45, completedDate: '2026-03-10' });
   });
 });

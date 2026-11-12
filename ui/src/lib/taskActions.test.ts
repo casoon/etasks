@@ -15,12 +15,13 @@ vi.mock('../stores/coreBridge', () => ({
   $bridgeInvoices: { set: () => {}, get: () => [] },
 }));
 
-import { $tasks } from '../stores/taskStore';
+import { $tasks, updateTask } from '../stores/taskStore';
+import { $blocks } from '../stores/calendarStore';
 import { $timeEntries } from '../stores/timerStore';
 import { $billingItems, $billingItemTasks, $unlockedBillingItemIds } from '../stores/billingStore';
 import { $termine } from '../stores/terminStore';
 import { $clients, $projects } from '../stores/projectStore';
-import { deleteClientCascade, deleteProjectCascade, deleteTaskCascade } from './taskActions';
+import { deleteClientCascade, deleteProjectCascade, deleteTaskCascade, removeOrphanedBlocks } from './taskActions';
 
 const now = '2026-03-10T10:00:00.000Z';
 const task = (id: string, projectId: string, status = 'todo') =>
@@ -79,5 +80,28 @@ describe('deleteClientCascade', () => {
     expect($projects.get().map((p) => p.id)).toEqual(['p2']);
     expect($tasks.get().map((t) => t.id)).toEqual(['t3']);
     expect($termine.get().map((t) => t.id)).toEqual(['m3']);
+  });
+});
+
+describe('removeOrphanedBlocks', () => {
+  it('removes blocks of missing or unscheduled tasks and keeps the rest', () => {
+    seed($tasks, 'tasks', [
+      { ...(task('t1', 'p1') as object), scheduledStart: '2026-03-10T09:00:00.000Z' } as never,
+      task('t2', 'p1'),
+    ]);
+    const block = (id: string, taskId?: string) =>
+      ({ id, taskId, start: now, end: now, date: '2026-03-10' }) as never;
+    seed($blocks, 'blocks', [block('b1', 't1'), block('b2', 't2'), block('b3', 'gone'), block('b4')]);
+    removeOrphanedBlocks();
+    expect($blocks.get().map((b) => b.id)).toEqual(['b1', 'b4']);
+  });
+});
+
+describe('updateTask', () => {
+  it('keeps updatedAt when touch is false', () => {
+    updateTask('t1', { sortOrder: 5 }, { touch: false });
+    const t = $tasks.get().find((x) => x.id === 't1')!;
+    expect(t.sortOrder).toBe(5);
+    expect(t.updatedAt).toBe(now);
   });
 });

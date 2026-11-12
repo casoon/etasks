@@ -9,10 +9,13 @@
   } from '../../stores/taskStore';
   import { $mitTaskIds as mitTaskIdsStore } from '../../stores/planningStore';
   import { $projects as projectsStore } from '../../stores/projectStore';
-  import { $focusTaskId as focusTaskIdStore } from '../../stores/uiStore';
+  import { $focusTaskId as focusTaskIdStore, $navItem as navItemStore, $showShutdown as showShutdownStore } from '../../stores/uiStore';
   import { $todayBlocks as todayBlocksStore, moveBlock } from '../../stores/calendarStore';
+  import { $termine as termineStore } from '../../stores/terminStore';
+  import { dayHourRange } from '../../domain/calendarService';
   import { $bridgeTimeEntries as timeEntriesStore } from '../../stores/coreBridge';
   import { entrySeconds, toDateKeyFromIso } from '../../domain/dateUtils';
+  import { loadNotes } from '../../lib/db';
   import type { Task } from '../../domain/types';
   import TimerButton from '../widgets/TimerButton.svelte';
   import { onMount, onDestroy } from 'svelte';
@@ -25,6 +28,13 @@
   $: todayBlocks = $todayBlocksStore;
   $: allTimeEntries = $timeEntriesStore;
   $: activeDate = $activeDateStore;
+  $: todayTermine = $termineStore
+    .filter(t => t.date === activeDate)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+  // Highlight des Tages from the Tagesabschluss; re-read when that dialog closes
+  const highlightFor = (date: string, _dialogOpen: boolean) => loadNotes().find(n => n.date === date)?.highlight ?? '';
+  $: todayHighlight = highlightFor(activeDate, $showShutdownStore);
 
   $: mitTasks = mitIds
     .map(id => tasks.find(t => t.id === id))
@@ -50,19 +60,22 @@
   }
   function startFocus(task: Task) {
     focusTaskIdStore.set(task.id);
-    (document.querySelector('[data-nav="focus"]') as HTMLElement)?.click();
+    navItemStore.set('focus');
   }
   function goToPlanning() {
-    (document.querySelector('[data-nav="planning-daily"]') as HTMLElement)?.click();
+    navItemStore.set('planning-daily');
   }
 
   // ── Calendar panel ─────────────────────────────────────────────────────────
 
-  const CAL_START_H = 7;   // 07:00
-  const CAL_END_H   = 20;  // 20:00
+  // 07–20 Uhr, erweitert für Termine außerhalb davon
+  let CAL_START_H = 7;
+  let CAL_END_H   = 20;
   const HOUR_PX     = 64;
-  const TOTAL_PX    = (CAL_END_H - CAL_START_H) * HOUR_PX; // 832px
-  const HOURS       = Array.from({ length: CAL_END_H - CAL_START_H + 1 }, (_, i) => CAL_START_H + i);
+  $: ({ start: CAL_START_H, end: CAL_END_H } = dayHourRange(7, 20, todayTermine));
+  $: TOTAL_PX = (CAL_END_H - CAL_START_H) * HOUR_PX;
+  $: HOURS = Array.from({ length: CAL_END_H - CAL_START_H + 1 }, (_, i) => CAL_START_H + i);
+  const TERMIN_ICONS = { video: '📹', phone: '📞', onsite: '🏢' } as const;
 
   /** Parse "HH:MM" or ISO string → minutes since midnight. Returns -1 on failure. */
   function parseTimeToMinutes(time: string): number {
@@ -194,6 +207,9 @@
       <!-- ── Seitenheader ── -->
       <div>
         <h1 class="text-[22px] font-bold text-primary leading-tight">Dein Überblick für heute</h1>
+        {#if todayHighlight}
+          <p class="mt-1.5 text-[12px] text-secondary">★ Highlight: {todayHighlight}</p>
+        {/if}
         {#if tasks.length > 0}
           <div class="flex items-center gap-2 mt-3 flex-wrap">
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-bg rounded-full text-[12px] font-medium text-secondary border border-border">
@@ -372,7 +388,8 @@
         </div>
       </div>
 
-      <!-- Calendar grid -->
+      <!-- Calendar grid (neu aufgebaut, wenn sich der Stundenbereich ändert) -->
+      {#key `${CAL_START_H}-${CAL_END_H}`}
       <!-- svelte-ignore a11y-no-static-element-interactions -->
       <div
         bind:this={calendarEl}
@@ -459,6 +476,24 @@
           </div>
         {/each}
 
+        <!-- Termine (left half, like in the Tagesplanung) -->
+        {#each todayTermine as termin (termin.id)}
+          {@const startMin = parseTimeToMinutes(termin.startTime)}
+          {@const top = minutesToTop(startMin)}
+          {@const height = blockHeight(top, termin.durationMinutes)}
+          {@const col = (termin.projectId ? (projectMap.get(termin.projectId)?.color ?? null) : null) ?? '#6366f1'}
+          <div
+            class="absolute rounded-md px-2 py-1 overflow-hidden cursor-default select-none"
+            style="top:{top}px; height:{height}px; left:36px; right:calc(50% + 2px); background:{col}33; border-left: 3px solid {col}; z-index:5;"
+            title="{termin.startTime} · {termin.title}{termin.billable ? ' · abrechenbar' : ''}"
+          >
+            <p class="text-[11px] font-semibold truncate leading-tight" style="color:{col};">{TERMIN_ICONS[termin.type]} {termin.title}</p>
+            {#if height >= 40}
+              <p class="text-[10px] leading-tight opacity-70" style="color:{col};">{termin.startTime}{termin.billable ? ' · €' : ''}</p>
+            {/if}
+          </div>
+        {/each}
+
         <!-- Time entry blocks TATSÄCHLICH (right half, solid) -->
         {#each todayEntries as entry (entry.id)}
           {@const startMin = parseTimeToMinutes(entry.startAt)}
@@ -497,6 +532,7 @@
           </div>
         {/if}
       </div>
+      {/key}
     </div>
   </div>
 

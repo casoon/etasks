@@ -11,7 +11,6 @@ import { deleteTaskCascade } from '../../lib/taskActions';
   import RecurringBadge from './RecurringBadge.svelte';
 
   export let task: Task;
-  export let onDragStart: ((task: Task, e: PointerEvent) => void) | undefined = undefined;
 
   $: isDone = task.status === 'done';
   $: projects = $projectsStore;
@@ -41,17 +40,20 @@ import { deleteTaskCascade } from '../../lib/taskActions';
   let editing = false;
   let editTitle = '';
   let editDuration = 30;
+  let editTags = '';
 
   function startEdit() {
     editTitle = task.title;
     editDuration = task.estimatedMinutes ?? 30;
+    editTags = task.tags.join(', ');
     editing = true;
   }
 
   function saveEdit() {
     const t = editTitle.trim();
-    if (t && (t !== task.title || editDuration !== (task.estimatedMinutes ?? 30))) {
-      updateTask(task.id, { title: t, estimatedMinutes: editDuration });
+    const tags = editTags.split(',').map(x => x.trim()).filter(Boolean);
+    if (t && (t !== task.title || editDuration !== (task.estimatedMinutes ?? 30) || tags.join(',') !== task.tags.join(','))) {
+      updateTask(task.id, { title: t, estimatedMinutes: editDuration, tags });
     }
     editing = false;
   }
@@ -82,17 +84,11 @@ import { deleteTaskCascade } from '../../lib/taskActions';
     navItemStore.set('focus');
   }
 
-  function handlePointerDown(e: PointerEvent) {
-    if ((e.target as HTMLElement).closest('button, input, select')) return;
-    if (editing) return;
-    onDragStart?.(task, e);
-  }
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-  class="task-card group flex items-center gap-2 px-2 py-[7px] rounded-lg cursor-grab transition-colors hover:bg-bg select-none min-w-0 border-l-[3px] {isDone ? 'task-card--done' : ''} {recentMarkerClass}"
-  on:pointerdown={handlePointerDown}
+  class="task-card group flex items-center gap-2 px-2 py-[7px] rounded-lg transition-colors hover:bg-bg select-none min-w-0 border-l-[3px] {isDone ? 'task-card--done' : ''} {recentMarkerClass}"
   data-task-id={task.id}
   title={recentMarkerTitle}
   style="border-left-color:{accentColor};"
@@ -131,6 +127,12 @@ import { deleteTaskCascade } from '../../lib/taskActions';
         <option value={90}>1,5 h</option>
         <option value={120}>2 h</option>
       </select>
+      <input
+        bind:value={editTags}
+        on:keydown={handleEditKey}
+        placeholder="Tags, kommagetrennt"
+        style="margin-top:3px; font-size:11px; border:1px solid var(--color-border); border-radius:4px; padding:1px 4px; width:100%; outline:none;"
+      />
     {:else}
       <!-- svelte-ignore a11y-no-static-element-interactions -->
       <span

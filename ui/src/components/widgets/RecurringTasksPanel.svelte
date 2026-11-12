@@ -1,6 +1,6 @@
 <!-- @core -->
 <script lang="ts">
-  import { $tasks as tasksStore, addTask, updateTask } from '../../stores/taskStore';
+  import { $tasks as tasksStore, $activeDate as activeDateStore, addTask, updateTask } from '../../stores/taskStore';
   import { $projects as projectsStore } from '../../stores/projectStore';
   import { isRecurringDueOn } from '../../domain/dateUtils';
   import { today } from '../../domain/dateUtils';
@@ -24,7 +24,7 @@
   let adding = false;
   let title = '';
   let weekdays: number[] = [1, 2, 3, 4, 5]; // Mo–Fr default
-  let startDate = today();
+  let startDate = '';
   let endDate = '';
   let duration = 30;
   let projectId = '';
@@ -61,9 +61,12 @@
     return [];
   }
 
-  const todayStr = today();
-  function isDueToday(rule: RecurrenceRule): boolean {
-    return isRecurringDueOn(rule, todayStr);
+  // $activeDate rolls over at midnight, so re-read today() with it
+  const todayAt = (_rollover: string) => today();
+  $: todayStr = todayAt($activeDateStore);
+  $: if (!adding) startDate = todayStr;
+  function isDueToday(rule: RecurrenceRule, day: string): boolean {
+    return isRecurringDueOn(rule, day);
   }
 </script>
 
@@ -77,7 +80,7 @@
 
   {#each recurring as task (task.id)}
     {@const project = task.projectId ? projects.find(p => p.id === task.projectId) : null}
-    {@const due = task.recurrence ? isDueToday(task.recurrence) : false}
+    {@const due = task.recurrence ? isDueToday(task.recurrence, todayStr) : false}
     <div class="group flex items-center gap-2 px-2 py-2 rounded-lg transition-colors hover:bg-bg/80">
       {#if project}<span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:{project.color}" />{/if}
       <div class="flex-1 min-w-0">

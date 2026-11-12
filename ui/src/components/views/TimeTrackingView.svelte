@@ -10,9 +10,10 @@
     deleteTimeEntryById,
   } from '../../stores/timerStore';
   import { $tasks as tasksStore } from '../../stores/taskStore';
+  import { $navItem as navItemStore } from '../../stores/uiStore';
   import { $projects as projectsStore } from '../../stores/projectStore';
   import { formatTrackedTime, entrySeconds } from '../../domain/dateUtils';
-  import { formatTime, toDateKey } from '../../domain/dateUtils';
+  import { formatTime, toDateKey, getWeekRange } from '../../domain/dateUtils';
   import type { TimeEntry } from '../../domain/types';
 
   $: entries = $timeEntriesStore;
@@ -50,9 +51,10 @@
     return map;
   })();
 
-  const weekMs = 7 * 24 * 60 * 60 * 1000;
+  // Calendar week Monday–Sunday, same as in Analytics
+  $: week = getWeekRange(new Date(now));
   $: weekSeconds = sorted
-    .filter(e => new Date(e.startAt).getTime() > now - weekMs)
+    .filter(e => { const d = toDateKey(new Date(e.startAt)); return d >= week.start && d <= week.end; })
     .reduce((s, e) => s + secondsOf(e, now), 0);
 
   function getTask(id: string) { return tasks.find(t => t.id === id); }
@@ -168,7 +170,7 @@
         <p class="text-[13px] text-muted leading-relaxed max-w-xs">Noch keine Zeiteinträge. Starte den Timer über den ▶-Button an einer Aufgabe in „Heute“ oder in der Tagesplanung, oder füge einen Eintrag von Hand hinzu.</p>
         <button
           class="px-4 py-2 rounded-lg border border-border text-[13px] text-secondary hover:bg-bg hover:text-primary transition-colors"
-          on:click={() => window.dispatchEvent(new CustomEvent('etasks:nav', { detail: 'planning-daily' }))}
+          on:click={() => navItemStore.set('planning-daily')}
         >Zur Tagesplanung →</button>
       </div>
     {/if}
