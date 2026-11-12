@@ -57,3 +57,8 @@ All notable changes to eTasks are listed here. eTasks follows
 - **Clients, project notes, invoices:** delayed saves no longer lose input or write into another record: the client form keeps one timer per client and field, project notes and invoice line item texts are bound to their record and saved on blur, when switching and when leaving the view.
 - **Project positions:** type labels are the same in the dropdown and the badge (Stundenbasiert, Festpreis, Einheit); positions can be edited after creating them, unit positions take a quantity, and prices show with a decimal comma.
 - **Export:** the client CSV uses a decimal comma for hours, starts with a UTF-8 BOM so Excel shows umlauts, and goes to the configured export folder; the project report creates the export folder if it is missing.
+
+### Security
+
+- **Dependencies:** `rusqlite` 0.41 bundles SQLite 3.54, which closes RUSTSEC-2026-0459 (a crafted
+  database with a mismatched `-wal` file could read uninitialised memory). Building needs Rust 1.89.
