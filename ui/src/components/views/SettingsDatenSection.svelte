@@ -74,10 +74,10 @@
         </button>
 
         <button class="action-card" on:click={runSnapshotWithFeedback}>
-            <span class="action-card__title">Snapshot speichern</span>
+            <span class="action-card__title">Sicherung jetzt anlegen</span>
             <span class="action-card__text"
                 >{isTauriAvailable()
-                    ? "Täglichen Snapshot in der Desktop-App anstoßen."
+                    ? "Täglich automatisch im Ordner „Sicherungen“ des Exportordners (die letzten 14), ohne IBAN, Steuernummer und Bankdaten. Der JSON-Export enthält das volle Profil. Das ist eine lokale Datei, keine Cloud-Sicherung."
                     : "Nur in der Desktop-App verfügbar."}</span
             >
         </button>

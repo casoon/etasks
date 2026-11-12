@@ -4,12 +4,12 @@ import {
   applyBackup,
   writePreImportBackup,
   exportToFile,
-  saveToICloud,
+  saveDailySnapshot,
 } from "./exportService";
 import { $appConfig } from "../stores/configStore";
 import { reinitStores } from "./storeInit";
 import { toast } from "../stores/toastStore";
-import { isTauriAvailable, isMac } from "./platform";
+import { isTauriAvailable } from "./platform";
 
 export async function runExportWithFeedback(): Promise<void> {
   try {
@@ -21,20 +21,16 @@ export async function runExportWithFeedback(): Promise<void> {
 }
 
 export async function runSnapshotWithFeedback(): Promise<void> {
-  if (!isTauriAvailable() || !isMac()) {
-    toast(
-      "iCloud-Snapshots sind nur in der macOS-Desktop-App verfügbar.",
-      "info",
-      4000,
-    );
+  if (!isTauriAvailable()) {
+    toast("Die Sicherung in einen Ordner gibt es nur in der Desktop-App.", "info", 4000);
     return;
   }
 
-  const ok = await saveToICloud();
-  if (ok) {
-    toast("Snapshot gespeichert.", "success");
-  } else {
-    toast("Snapshot konnte nicht gespeichert werden.", "error", 4500);
+  try {
+    const path = await saveDailySnapshot();
+    toast(`Sicherung gespeichert: ${path}`, "success", 6000);
+  } catch (error) {
+    toast(`Sicherung fehlgeschlagen: ${String(error)}`, "error", 4500);
   }
 }
 

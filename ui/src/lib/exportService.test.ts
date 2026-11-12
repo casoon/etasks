@@ -8,7 +8,6 @@ const syncFromDatabase = vi.fn();
 
 vi.mock("./platform", () => ({
   isTauriAvailable: () => tauri,
-  isMac: () => true,
 }));
 
 vi.mock("@casoon/origin-client", () => ({
@@ -70,7 +69,7 @@ vi.mock("../stores/coreBridge", () => ({
 vi.mock("../stores/configStore", () => ({
   $appConfig: {
     get: () => ({
-      profile: { company: "Test Co" },
+      profile: { company: "Test Co", iban: "DE00", tax_id: "123", bank_name: "Bank", bic: "BIC" },
       active_tenant: "/ws/a.db",
       tenants: [{ path: "/ws/a.db", name: "a", displayName: "Büro Müller & Söhne" }],
     }),
@@ -112,7 +111,7 @@ describe("exportService", () => {
       termine: [{ id: "termin-1" }],
       weekPlans: [{ weekStart: "2026-03-23", focusProjectIds: [] }],
     });
-    expect(snapshot.profile).toEqual({ company: "Test Co" });
+    expect(snapshot.profile).toMatchObject({ company: "Test Co" });
     expect(snapshot.tenantMeta).toEqual([
       { key: "tenant.name", value: "Test Co", valueType: "string" },
     ]);
@@ -310,20 +309,45 @@ describe("exportService", () => {
   });
 
   it("puts the workspace into snapshot and export file names", async () => {
-    command.mockResolvedValue(undefined);
-    const { saveToICloud, exportToFile } = await import("./exportService");
+    command.mockResolvedValue("/exports/x.json");
+    const { saveDailySnapshot, exportToFile } = await import("./exportService");
 
-    expect(await saveToICloud()).toBe(true);
+    expect(await saveDailySnapshot()).toBe("/exports/x.json");
     await exportToFile();
 
-    expect(command).toHaveBeenCalledWith("save_to_icloud", {
+    expect(command).toHaveBeenCalledWith("save_daily_snapshot", {
       json: expect.any(String),
       filename: expect.stringMatching(/^snapshot-buro-muller-sohne-\d{4}-\d{2}-\d{2}\.json$/),
+      directory: null,
     });
     expect(command).toHaveBeenCalledWith("export_to_file", {
       json: expect.any(String),
       filename: expect.stringMatching(/^etasks-export-buro-muller-sohne-\d{4}-\d{2}-\d{2}\.json$/),
       directory: null,
     });
+  });
+
+  it("leaves bank and tax data out of the daily snapshot but not the manual export", async () => {
+    command.mockResolvedValue("/exports/x.json");
+    const { saveDailySnapshot, exportToFile } = await import("./exportService");
+
+    await saveDailySnapshot();
+    await exportToFile();
+
+    const [daily, manual] = ["save_daily_snapshot", "export_to_file"].map((name) =>
+      JSON.parse(command.mock.calls.find((c) => c[0] === name)![1].json),
+    );
+    for (const field of ["iban", "tax_id", "bank_name", "bic"]) {
+      expect(daily.profile).not.toHaveProperty(field);
+      expect(manual.profile).toHaveProperty(field);
+    }
+    expect(daily.profile.company).toBe("Test Co");
+  });
+
+  it("reports a daily snapshot failure and does not mark the day as done", async () => {
+    command.mockRejectedValueOnce(new Error("Ordner nicht erreichbar"));
+    const { saveDailySnapshot } = await import("./exportService");
+    await expect(saveDailySnapshot()).rejects.toThrow("Ordner nicht erreichbar");
+    expect(storage.has("etasks:exportMeta")).toBe(false);
   });
 });

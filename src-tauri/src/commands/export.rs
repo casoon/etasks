@@ -61,21 +61,66 @@ pub async fn export_to_file(
     Ok(path.to_string_lossy().to_string())
 }
 
+/// Wie viele Tages-Sicherungen pro Arbeitsbereich im Ordner bleiben.
+const KEEP_DAILY_SNAPSHOTS: usize = 14;
+
+/// Zerlegt `snapshot-<slug>-<YYYY-MM-DD>.json` in Slug und Datum; alles andere ist keine eigene Sicherung.
+fn snapshot_parts(name: &str) -> Option<(&str, &str)> {
+    let rest = name.strip_prefix("snapshot-")?.strip_suffix(".json")?;
+    let (slug, date) = rest.split_at(rest.len().checked_sub(10)?);
+    let slug = slug.strip_suffix('-')?;
+    let b = date.as_bytes();
+    let is_date = b.iter().enumerate().all(|(i, c)| match i {
+        4 | 7 => *c == b'-',
+        _ => c.is_ascii_digit(),
+    });
+    (is_date && !slug.is_empty()).then_some((slug, date))
+}
+
+/// Löscht die ältesten Tages-Sicherungen desselben Arbeitsbereichs über `keep` hinaus.
+/// Angefasst werden nur Dateien, die exakt dem eigenen Namensmuster entsprechen.
+fn prune_snapshots(dir: &std::path::Path, slug: &str, keep: usize) -> Result<(), String> {
+    let mut own: Vec<(String, std::path::PathBuf)> = std::fs::read_dir(dir)
+        .map_err(|e| e.to_string())?
+        .filter_map(|entry| {
+            let entry = entry.ok()?;
+            let name = entry.file_name().to_string_lossy().to_string();
+            let (file_slug, date) = snapshot_parts(&name)?;
+            (file_slug == slug && entry.file_type().ok()?.is_file())
+                .then(|| (date.to_string(), entry.path()))
+        })
+        .collect();
+    own.sort();
+    let excess = own.len().saturating_sub(keep);
+    for (_, path) in own.into_iter().take(excess) {
+        std::fs::remove_file(path).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Schreibt die tägliche Sicherung in `<directory>/Sicherungen` (Standard: Downloads-Ordner)
+/// und behält die letzten 14 pro Arbeitsbereich.
 #[tauri::command]
-pub async fn save_to_icloud(
+pub async fn save_daily_snapshot(
     app: tauri::AppHandle,
     json: String,
     filename: String,
-) -> Result<(), String> {
-    if !cfg!(target_os = "macos") {
-        return Err("iCloud-Snapshots sind nur unter macOS verfügbar".to_string());
-    }
-    let home = app.path().home_dir().map_err(|e| e.to_string())?;
-    let icloud_base = home.join("Library/Mobile Documents/dev~jseidel~etasks/Documents");
-    std::fs::create_dir_all(&icloud_base).map_err(|e| e.to_string())?;
-    // Der Tages-Snapshot darf seine Datei desselben Tages überschreiben.
-    std::fs::write(icloud_base.join(plain_file_name(&filename)?), &json).map_err(|e| e.to_string())?;
-    Ok(())
+    directory: Option<String>,
+) -> Result<String, String> {
+    let base_dir = match directory {
+        Some(dir) if !dir.trim().is_empty() => std::path::PathBuf::from(dir),
+        _ => app.path().download_dir().map_err(|e| e.to_string())?,
+    };
+    let dir = base_dir.join("Sicherungen");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let filename = plain_file_name(&filename)?;
+    let (slug, _) = snapshot_parts(&filename).ok_or("Ungültiger Sicherungsname")?;
+    let slug = slug.to_string();
+    // Die Sicherung desselben Tages darf ihre Datei überschreiben.
+    let path = dir.join(&filename);
+    std::fs::write(&path, &json).map_err(|e| e.to_string())?;
+    prune_snapshots(&dir, &slug, KEEP_DAILY_SNAPSHOTS)?;
+    Ok(path.to_string_lossy().to_string())
 }
 
 #[tauri::command]
@@ -300,4 +345,64 @@ pub fn import_snapshot(
 
     tx.commit().map_err(|e| e.to_string())?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn touch(dir: &std::path::Path, name: &str) {
+        std::fs::write(dir.join(name), "{}").unwrap();
+    }
+
+    fn names(dir: &std::path::Path) -> Vec<String> {
+        let mut v: Vec<String> = std::fs::read_dir(dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().to_string())
+            .collect();
+        v.sort();
+        v
+    }
+
+    #[test]
+    fn only_own_pattern_is_recognised() {
+        assert_eq!(
+            snapshot_parts("snapshot-buero-a-2026-03-28.json"),
+            Some(("buero-a", "2026-03-28"))
+        );
+        assert_eq!(snapshot_parts("snapshot-2026-03-28.json"), None);
+        assert_eq!(snapshot_parts("snapshot-x-2026-3-28.json"), None);
+        assert_eq!(snapshot_parts("etasks-export-x-2026-03-28.json"), None);
+        assert_eq!(snapshot_parts("snapshot-x-2026-03-28.json.bak"), None);
+    }
+
+    #[test]
+    fn prune_keeps_newest_of_same_workspace_and_ignores_the_rest() {
+        let dir = std::env::temp_dir().join(format!("etasks-prune-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        for day in 1..=5 {
+            touch(&dir, &format!("snapshot-a-2026-03-0{day}.json"));
+        }
+        touch(&dir, "snapshot-a-b-2026-03-01.json");
+        touch(&dir, "snapshot-other-2026-01-01.json");
+        touch(&dir, "notes.json");
+        touch(&dir, "etasks-export-a-2026-01-01.json");
+
+        prune_snapshots(&dir, "a", 3).unwrap();
+
+        assert_eq!(
+            names(&dir),
+            vec![
+                "etasks-export-a-2026-01-01.json",
+                "notes.json",
+                "snapshot-a-2026-03-03.json",
+                "snapshot-a-2026-03-04.json",
+                "snapshot-a-2026-03-05.json",
+                "snapshot-a-b-2026-03-01.json",
+                "snapshot-other-2026-01-01.json",
+            ]
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

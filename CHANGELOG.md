@@ -20,6 +20,7 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Changed
 
+- **Backup:** the daily snapshot is a local backup, no longer called iCloud: it goes to `Sicherungen` inside the export folder on every platform, keeps the last 14 per workspace and leaves IBAN, tax number and bank data out (the JSON export keeps the full profile). Old files in the former iCloud folder are not touched.
 - **Contributors:** all calls into the Rust core go through `@casoon/origin-client`;
   `ui/src/lib/platform.ts` is the only file that still touches a Tauri webview API.
 - **Contributors:** the export snapshot test mocks `coreBridge` again, so CI on `main` is green.

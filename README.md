@@ -30,7 +30,7 @@ A local-first productivity desktop app for focused daily planning, time tracking
 
 **Data & Privacy**
 - All data stored locally in a SQLite database per workspace — no account, no sync, no telemetry
-- Daily JSON snapshots to iCloud (macOS)
+- Daily JSON snapshots to a local `Sicherungen` folder inside the export folder (last 14 kept, without bank and tax data)
 - Full JSON export/import at any time
 
 ## Tech Stack
@@ -101,7 +101,7 @@ etasks/
 ├── src-tauri/               # Tauri Rust backend
 │   ├── src/
 │   │   ├── commands/
-│   │   │   ├── export.rs    # File export, iCloud sync
+│   │   │   ├── export.rs    # File export, daily snapshots, import
 │   │   │   ├── notification.rs
 │   │   │   └── report.rs    # PDF generation via renderreport
 │   │   ├── lib.rs

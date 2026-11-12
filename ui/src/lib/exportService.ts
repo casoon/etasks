@@ -19,15 +19,24 @@ import { $bridgeServices as $services, $bridgeInvoices as $invoices } from "../s
 import { $appConfig } from "../stores/configStore";
 import { metaAll } from "./metaStore";
 import { today } from "../domain/dateUtils";
-import { isTauriAvailable, isMac } from "./platform";
+import { isTauriAvailable } from "./platform";
 import { command } from "@casoon/origin-client";
 
-export async function buildSnapshot() {
+/** Profilfelder, die nicht in die automatische Tagessicherung gehören. */
+const SENSITIVE_PROFILE_FIELDS = ["iban", "tax_id", "bank_name", "bic"] as const;
+
+/** `withoutBankData`: Bank- und Steuerdaten des Profils weglassen (automatische Tagessicherung). */
+export async function buildSnapshot(options: { withoutBankData?: boolean } = {}) {
   const tenantMeta = isTauriAvailable() ? await metaAll() : [];
+  let profile = $appConfig.get()?.profile ?? null;
+  if (profile && options.withoutBankData) {
+    profile = { ...profile };
+    for (const field of SENSITIVE_PROFILE_FIELDS) delete profile[field];
+  }
   return {
     version: "1.0",
     exportedAt: new Date().toISOString(),
-    profile: $appConfig.get()?.profile ?? null,
+    profile,
     tenantMeta,
     data: {
       tasks: loadTasks(),
@@ -91,28 +100,31 @@ export async function exportToFile(): Promise<string | null> {
   return saveJson(`etasks-export-${workspaceSlug()}-${today()}.json`, json);
 }
 
-export async function saveToICloud(): Promise<boolean> {
-  if (!isTauriAvailable() || !isMac()) return false;
-
-  const snapshot = await buildSnapshot();
-  const json = JSON.stringify(snapshot, null, 2);
-  const filename = `snapshot-${workspaceSlug()}-${today()}.json`;
-
-  try {
-    await command("save_to_icloud", { json, filename });
-    storageSet(KEYS.exportMeta, { lastSnapshotDate: today() });
-    return true;
-  } catch (e) {
-    console.warn("iCloud sync fehlgeschlagen:", e);
-    return false;
-  }
+/**
+ * Legt die tägliche Sicherung als `snapshot-<arbeitsbereich>-<datum>.json` im Ordner
+ * `Sicherungen` des Exportordners ab (die letzten 14 bleiben) und gibt den Pfad zurück.
+ * Ohne Bank- und Steuerdaten des Profils; der manuelle Export enthält das volle Profil.
+ */
+export async function saveDailySnapshot(): Promise<string> {
+  const json = JSON.stringify(await buildSnapshot({ withoutBankData: true }), null, 2);
+  const path = await command<string>("save_daily_snapshot", {
+    json,
+    filename: `snapshot-${workspaceSlug()}-${today()}.json`,
+    directory: $appConfig.get()?.default_export_dir ?? null,
+  });
+  storageSet(KEYS.exportMeta, { lastSnapshotDate: today() });
+  return path;
 }
 
 export async function scheduleDailySnapshot(): Promise<void> {
-  if (!isTauriAvailable() || !isMac()) return;
+  if (!isTauriAvailable()) return;
   const meta = storageGet<{ lastSnapshotDate: string }>(KEYS.exportMeta);
   if (meta?.lastSnapshotDate === today()) return;
-  await saveToICloud();
+  try {
+    await saveDailySnapshot();
+  } catch (e) {
+    console.warn("Tägliche Sicherung fehlgeschlagen:", e);
+  }
 }
 
 const IMPORT_LISTS = [

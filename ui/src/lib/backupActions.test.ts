@@ -13,7 +13,7 @@ vi.mock("./exportService", () => ({
   applyBackup,
   writePreImportBackup,
   exportToFile: vi.fn(),
-  saveToICloud: vi.fn(),
+  saveDailySnapshot: vi.fn(),
 }));
 vi.mock("./storeInit", () => ({ reinitStores }));
 vi.mock("../stores/toastStore", () => ({ toast }));
