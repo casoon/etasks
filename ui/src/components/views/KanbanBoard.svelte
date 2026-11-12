@@ -1,10 +1,11 @@
 <!-- @module:projects -->
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { $tasks as tasksStore, addTask, updateTask, removeTask } from '../../stores/taskStore';
+  import { $tasks as tasksStore, addTask, updateTask } from '../../stores/taskStore';
   import type { Task, KanbanStatus } from '../../domain/types';
   import { KANBAN_COLUMNS } from '../../domain/types';
   import { daysSince, formatDuration, isToday, today } from '../../domain/dateUtils';
+  import { deleteTaskCascade } from '../../lib/taskActions';
   import { getTaskDragData, hasTaskDragData, setTaskDragData } from '../../lib/taskDrag';
 
   export let projectId: string;
@@ -302,7 +303,7 @@
                 <button
                   class="text-[13px] text-muted px-1 py-0.5 rounded transition-colors hover:bg-bg hover:text-accent"
                   title="Löschen"
-                  on:click={() => removeTask(task.id)}
+                  on:click={() => deleteTaskCascade(task.id)}
                 >×</button>
               </div>
             </div>

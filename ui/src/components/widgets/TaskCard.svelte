@@ -2,8 +2,8 @@
 <script lang="ts">
   import type { Task } from '../../domain/types';
   import { daysSince, formatDuration, isToday, today } from '../../domain/dateUtils';
-  import { toggleTask, removeTask, updateTask } from '../../stores/taskStore';
-  import { removeBlockForTask } from '../../stores/calendarStore';
+  import { toggleTask, updateTask } from '../../stores/taskStore';
+import { deleteTaskCascade } from '../../lib/taskActions';
   import { $focusTaskId as focusTaskIdStore, $navItem as navItemStore } from '../../stores/uiStore';
   import { $projects as projectsStore } from '../../stores/projectStore';
   import { TAG_COLORS } from '../../domain/types';
@@ -73,8 +73,7 @@
 
   function handleDelete(e: MouseEvent) {
     e.stopPropagation();
-    removeBlockForTask(task.id);
-    removeTask(task.id);
+    deleteTaskCascade(task.id);
   }
 
   function handleFocus(e: MouseEvent) {

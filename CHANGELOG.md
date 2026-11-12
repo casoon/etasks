@@ -32,3 +32,4 @@ All notable changes to eTasks are listed here. eTasks follows
 - **Project board:** new cards appear immediately; column contents, counters and collapse state update reactively.
 - **Project board:** new cards and applied project templates no longer land in today's plan; dragging a card to or from "Erledigt" sets or clears the completion date, a drop only updates cards whose column or position changed, and the duration dropdown works in card edit mode.
 - **Planning:** dropping an already scheduled task on the calendar moves its block instead of creating a second one.
+- **Tasks:** deleting a task also removes its calendar blocks and stops a timer running on it; its time entries stay and show as "Gelöschte Aufgabe". "→ morgen" in the daily close removes today's block and clears the top-3 rank.
