@@ -116,9 +116,9 @@ describe('autoScheduleTasks', () => {
 
   it('avoids busy calendar blocks', () => {
     const tasks = [makeTask({ estimatedMinutes: 60 })];
-    const busyStart = new Date('2026-03-27');
+    const busyStart = new Date();
     busyStart.setHours(9, 0, 0, 0);
-    const busyEnd = new Date('2026-03-27');
+    const busyEnd = new Date();
     busyEnd.setHours(10, 0, 0, 0);
 
     const result = autoScheduleTasks(tasks, [{ start: busyStart, end: busyEnd }], 9, 18);
@@ -129,9 +129,9 @@ describe('autoScheduleTasks', () => {
   it('leaves task unscheduled if no slot fits before dayEnd', () => {
     const tasks = [makeTask({ estimatedMinutes: 60 })];
     // Tiny window: 9:00–9:30 only, task needs 60 min
-    const busyStart = new Date('2026-03-27');
+    const busyStart = new Date();
     busyStart.setHours(9, 30, 0, 0);
-    const busyEnd = new Date('2026-03-27');
+    const busyEnd = new Date();
     busyEnd.setHours(18, 0, 0, 0);
 
     const result = autoScheduleTasks(tasks, [{ start: busyStart, end: busyEnd }], 9, 18);

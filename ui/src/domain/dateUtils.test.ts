@@ -13,11 +13,19 @@ import {
 
 describe('toDateKey', () => {
   it('formats a date as YYYY-MM-DD', () => {
-    expect(toDateKey(new Date('2026-03-15T10:00:00Z'))).toBe('2026-03-15');
+    expect(toDateKey(new Date(2026, 2, 15, 10, 0))).toBe('2026-03-15');
   });
 
   it('pads month and day', () => {
-    expect(toDateKey(new Date('2026-01-05T00:00:00Z'))).toBe('2026-01-05');
+    expect(toDateKey(new Date(2026, 0, 5, 12, 0))).toBe('2026-01-05');
+  });
+
+  it('uses the local day just after midnight', () => {
+    expect(toDateKey(new Date(2026, 0, 5, 0, 30))).toBe('2026-01-05');
+  });
+
+  it('uses the local day just before midnight', () => {
+    expect(toDateKey(new Date(2026, 0, 5, 23, 59))).toBe('2026-01-05');
   });
 });
 
@@ -26,6 +34,10 @@ describe('getWeekStart', () => {
   it('returns Monday of the same week for a Wednesday', () => {
     const wed = new Date('2026-03-25T12:00:00');
     expect(getWeekStart(wed)).toBe('2026-03-23');
+  });
+
+  it('returns Monday itself shortly after local midnight', () => {
+    expect(getWeekStart(new Date(2026, 2, 23, 0, 30))).toBe('2026-03-23');
   });
 
   it('returns Monday itself when given a Monday', () => {
@@ -45,7 +57,7 @@ describe('toDateKeyFromIso', () => {
   });
 
   it('normalizes ISO timestamps to date keys', () => {
-    expect(toDateKeyFromIso('2026-03-23T09:15:00.000Z')).toBe('2026-03-23');
+    expect(toDateKeyFromIso(new Date(2026, 2, 23, 0, 15).toISOString())).toBe('2026-03-23');
   });
 
   it('returns null for invalid values', () => {
@@ -74,11 +86,11 @@ describe('diffDays and daysSince', () => {
 describe('isToday', () => {
   it('matches date keys and ISO timestamps against the same day', () => {
     expect(isToday('2026-03-23', '2026-03-23')).toBe(true);
-    expect(isToday('2026-03-23T09:15:00.000Z', '2026-03-23')).toBe(true);
+    expect(isToday(new Date(2026, 2, 23, 9, 15).toISOString(), '2026-03-23')).toBe(true);
   });
 
   it('returns false for other days', () => {
-    expect(isToday('2026-03-22T23:59:00.000Z', '2026-03-23')).toBe(false);
+    expect(isToday(new Date(2026, 2, 22, 23, 59).toISOString(), '2026-03-23')).toBe(false);
   });
 });
 

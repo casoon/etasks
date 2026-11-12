@@ -17,6 +17,7 @@
         saveAppConfig,
     } from "../../stores/configStore";
     import { toast } from "../../stores/toastStore";
+    import { today, toDateKey } from "../../domain/dateUtils";
     import { isTauriAvailable } from "../../lib/platform";
     import { generateInvoice, type InvoiceData } from "../../lib/invoiceService";
     import type { Invoice } from "../../domain/types";
@@ -59,8 +60,8 @@
             clientId: "",
             invoiceNumber: prefix + String(counter).padStart(3, "0"),
             customerNumber: "",
-            date: new Date().toISOString().slice(0, 10),
-            dueDate: dueDate.toISOString().slice(0, 10),
+            date: today(),
+            dueDate: toDateKey(dueDate),
             performancePeriod: "",
             projectReference: "",
             status: "draft",

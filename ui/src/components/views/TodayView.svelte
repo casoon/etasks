@@ -10,8 +10,9 @@
   import { $mitTaskIds as mitTaskIdsStore } from '../../stores/planningStore';
   import { $projects as projectsStore } from '../../stores/projectStore';
   import { $focusTaskId as focusTaskIdStore } from '../../stores/uiStore';
-  import { $todayBlocks as todayBlocksStore } from '../../stores/calendarStore';
+  import { $todayBlocks as todayBlocksStore, moveBlock } from '../../stores/calendarStore';
   import { $bridgeTimeEntries as timeEntriesStore } from '../../stores/coreBridge';
+  import { toDateKeyFromIso } from '../../domain/dateUtils';
   import type { Task } from '../../domain/types';
   import { onMount, onDestroy } from 'svelte';
 
@@ -65,15 +66,11 @@
   /** Parse "HH:MM" or ISO string → minutes since midnight. Returns -1 on failure. */
   function parseTimeToMinutes(time: string): number {
     if (!time) return -1;
-    // ISO string: "2026-03-28T09:00:00" or "2026-03-28T09:00:00.000Z"
+    // ISO string: converted to local time
     if (time.includes('T')) {
-      const timePart = time.split('T')[1];
-      if (!timePart) return -1;
-      const [hStr, mStr] = timePart.split(':');
-      const h = parseInt(hStr, 10);
-      const m = parseInt(mStr, 10);
-      if (isNaN(h) || isNaN(m)) return -1;
-      return h * 60 + m;
+      const d = new Date(time);
+      if (isNaN(d.getTime())) return -1;
+      return d.getHours() * 60 + d.getMinutes();
     }
     // "HH:MM"
     const parts = time.split(':');
@@ -91,7 +88,7 @@
 
   /** Returns height in px for estimatedMinutes, min 28px, clipped to cal end */
   function blockHeight(topPx: number, estimatedMinutes: number | null | undefined): number {
-    const raw = Math.max(28, estimatedMinutes ?? 28);
+    const raw = Math.max(28, (estimatedMinutes ?? 28) * (HOUR_PX / 60));
     const maxH = TOTAL_PX - topPx;
     return Math.min(raw, maxH);
   }
@@ -148,10 +145,11 @@
     const relativeY = e.clientY - rect.top;
     const rawMin = CAL_START_H * 60 + Math.round(((relativeY - dragging.offsetPx) / HOUR_PX) * 60 / 15) * 15;
     const newMin = Math.max(CAL_START_H * 60, Math.min((CAL_END_H - 0.25) * 60, rawMin));
-    const newTimeStr =
-      String(Math.floor(newMin / 60)).padStart(2, '0') + ':' +
-      String(newMin % 60).padStart(2, '0');
-    updateTask(dragging.taskId, { scheduledStart: newTimeStr });
+    const newStart = new Date(activeDate + 'T00:00:00');
+    newStart.setHours(Math.floor(newMin / 60), newMin % 60, 0, 0);
+    updateTask(dragging.taskId, { scheduledStart: newStart.toISOString(), plannedDate: activeDate });
+    const block = todayBlocks.find(b => b.taskId === dragging!.taskId);
+    if (block) moveBlock(block.id, newStart);
     dragging = null;
   }
 
@@ -162,7 +160,7 @@
   // Actual time entries for today within calendar range
   $: todayEntries = allTimeEntries.filter(e => {
     if (!e.startAt || !e.durationMinutes) return false;
-    const entryDate = e.startAt.slice(0, 10);
+    const entryDate = toDateKeyFromIso(e.startAt);
     const m = parseTimeToMinutes(e.startAt);
     return entryDate === activeDate && m >= CAL_START_H * 60 && m < CAL_END_H * 60;
   });
@@ -176,6 +174,8 @@
 
   // CalendarBlocks within range
   $: visibleBlocks = todayBlocks.filter(b => {
+    // Blocks of scheduled tasks are already drawn as task blocks
+    if (b.taskId && tasks.some(t => t.id === b.taskId && t.scheduledStart)) return false;
     const m = parseTimeToMinutes(b.start);
     return m >= CAL_START_H * 60 && m < CAL_END_H * 60;
   });
