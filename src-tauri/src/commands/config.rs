@@ -601,6 +601,61 @@ pub fn list_workspace_files(app: tauri::AppHandle) -> Result<Vec<String>, String
     Ok(found)
 }
 
+const SQLITE_MAGIC: &[u8] = b"SQLite format 3\0";
+
+/// Darf `db_open` diesen Pfad öffnen (und dort bei Bedarf eine Datenbank anlegen)? Erlaubt sind
+/// `etasks.sqlite3`, bereits bekannte Arbeitsbereiche und Datenbankdateien unter den
+/// Arbeitsbereichsordnern. Eine vorhandene Datei muss eine SQLite-Datenbank sein.
+fn check_db_open_path(
+    path: &Path,
+    known_tenants: &[String],
+    workspace_roots: &[PathBuf],
+) -> Result<(), String> {
+    use std::io::Read;
+    let denied = || "Dieser Pfad ist kein eTasks-Arbeitsbereich".to_string();
+    if path
+        .components()
+        .any(|c| matches!(c, std::path::Component::ParentDir))
+    {
+        return Err(denied());
+    }
+    let is_default_name = path.file_name().and_then(|n| n.to_str()) == Some(WORKSPACE_DB_FILENAME);
+    let is_known = known_tenants.iter().any(|t| Path::new(t) == path);
+    let has_db_extension = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| matches!(e, "sqlite" | "sqlite3" | "db" | "etasks"))
+        .unwrap_or(false);
+    let in_root = has_db_extension && workspace_roots.iter().any(|root| path.starts_with(root));
+    if !(is_default_name || is_known || in_root) {
+        return Err(denied());
+    }
+    if let Ok(mut file) = std::fs::File::open(path) {
+        let mut header = [0u8; 16];
+        let read = file.read(&mut header).unwrap_or(0);
+        if read > 0 && header[..read] != SQLITE_MAGIC[..read.min(16)] {
+            return Err("Die Datei ist keine SQLite-Datenbank".to_string());
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn ensure_db_open_allowed(app: &tauri::AppHandle, path: &str) -> Result<(), String> {
+    let config = read_config(app);
+    let known: Vec<String> = config.tenants.iter().map(|t| t.path.clone()).collect();
+    let mut roots: Vec<PathBuf> = vec![];
+    if let Ok(root) = documents_workspace_root(app) {
+        roots.push(root);
+    }
+    if let Ok(app_data) = app.path().app_data_dir() {
+        roots.push(app_data.join("Workspaces"));
+    }
+    if let Some(dir) = config.default_workspace_dir {
+        roots.push(PathBuf::from(dir));
+    }
+    check_db_open_path(Path::new(path), &known, &roots)
+}
+
 /// Schreibt einen Log-Eintrag in `app.log` neben der geöffneten Datenbank.
 #[tauri::command]
 pub fn write_log(
@@ -862,6 +917,42 @@ mod tests {
         let rolled = std::fs::read_to_string(&log).unwrap();
         assert!(rolled.len() < 400 * 1024);
         assert!(rolled.trim_end().ends_with("after roll"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn db_open_accepts_known_workspaces_and_rejects_foreign_paths() {
+        let dir = temp_dir("dbopen");
+        let root = dir.join("Arbeitsbereiche");
+        std::fs::create_dir_all(root.join("a")).unwrap();
+        let roots = vec![root.clone()];
+        let known = vec![dir.join("alt").join("mandant.etasks").to_string_lossy().to_string()];
+
+        // default name anywhere, new or existing
+        assert!(check_db_open_path(&dir.join("x").join(WORKSPACE_DB_FILENAME), &known, &roots).is_ok());
+        // previously known tenant with another name
+        assert!(check_db_open_path(Path::new(&known[0]), &known, &roots).is_ok());
+        // database file under a workspace root
+        assert!(check_db_open_path(&root.join("a").join("daten.db"), &known, &roots).is_ok());
+        // foreign names/locations and traversal
+        assert!(check_db_open_path(&dir.join("daten.db"), &known, &roots).is_err());
+        assert!(check_db_open_path(Path::new("/etc/passwd"), &known, &roots).is_err());
+        assert!(check_db_open_path(&root.join("..").join("daten.db"), &known, &roots).is_err());
+        assert!(check_db_open_path(&root.join("a").join("notes.txt"), &known, &roots).is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn db_open_rejects_existing_files_that_are_not_sqlite() {
+        let dir = temp_dir("dbopen-magic");
+        let file = dir.join(WORKSPACE_DB_FILENAME);
+        std::fs::write(&file, "").unwrap();
+        assert!(check_db_open_path(&file, &[], &[]).is_ok());
+        std::fs::write(&file, "just some text, not a database").unwrap();
+        assert!(check_db_open_path(&file, &[], &[]).is_err());
+        std::fs::remove_file(&file).unwrap();
+        rusqlite::Connection::open(&file).unwrap().execute_batch("CREATE TABLE t (x);").unwrap();
+        assert!(check_db_open_path(&file, &[], &[]).is_ok());
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

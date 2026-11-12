@@ -3,6 +3,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use tauri::Manager;
 
+use crate::commands::fsutil::{free_path, plain_file_name};
 use crate::state::DbState;
 
 #[derive(Deserialize)]
@@ -55,7 +56,7 @@ pub async fn export_to_file(
         _ => app.path().download_dir().map_err(|e| e.to_string())?,
     };
     std::fs::create_dir_all(&base_dir).map_err(|e| e.to_string())?;
-    let path = base_dir.join(&filename);
+    let path = free_path(&base_dir, &plain_file_name(&filename)?, None);
     std::fs::write(&path, &json).map_err(|e| e.to_string())?;
     Ok(path.to_string_lossy().to_string())
 }
@@ -72,7 +73,8 @@ pub async fn save_to_icloud(
     let home = app.path().home_dir().map_err(|e| e.to_string())?;
     let icloud_base = home.join("Library/Mobile Documents/dev~jseidel~etasks/Documents");
     std::fs::create_dir_all(&icloud_base).map_err(|e| e.to_string())?;
-    std::fs::write(icloud_base.join(&filename), &json).map_err(|e| e.to_string())?;
+    // Der Tages-Snapshot darf seine Datei desselben Tages überschreiben.
+    std::fs::write(icloud_base.join(plain_file_name(&filename)?), &json).map_err(|e| e.to_string())?;
     Ok(())
 }
 

@@ -1,6 +1,8 @@
 use serde::Deserialize;
 use tauri::Manager;
 
+use crate::commands::fsutil::{free_path, safe_file_name};
+
 #[derive(Deserialize)]
 pub struct TaskReportRow {
     pub title: String,
@@ -35,9 +37,8 @@ pub async fn generate_project_report(
         _ => app.path().download_dir().map_err(|e| e.to_string())?,
     };
     std::fs::create_dir_all(&downloads).map_err(|e| e.to_string())?;
-    let safe_name = project_safe_name(&pdf.0);
-    let filename = format!("{}-bericht.pdf", safe_name);
-    let path = downloads.join(&filename);
+    let filename = safe_file_name(&format!("{}-bericht.pdf", project_safe_name(&pdf.0)));
+    let path = free_path(&downloads, &filename, None);
     std::fs::write(&path, &pdf.1).map_err(|e| e.to_string())?;
     Ok(path.to_string_lossy().to_string())
 }

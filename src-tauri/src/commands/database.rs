@@ -166,7 +166,8 @@ const SCHEMA_V1: &str =
         ";
 
 #[tauri::command]
-pub fn db_open(state: State<DbState>, path: String) -> Result<(), String> {
+pub fn db_open(app: tauri::AppHandle, state: State<DbState>, path: String) -> Result<(), String> {
+    crate::commands::config::ensure_db_open_allowed(&app, &path)?;
     if let Some(parent) = std::path::Path::new(&path).parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }

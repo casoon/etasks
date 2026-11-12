@@ -5,6 +5,7 @@ use typst_business_templates::types::{BankAccount, CompanyAddress, CompanyContac
 use typst_business_templates::{CompanyData, DocgenCompiler};
 
 use crate::commands::config::UserProfile;
+use crate::commands::fsutil::{free_path, safe_file_name};
 
 /// Input from the frontend — company info comes from the stored UserProfile.
 #[derive(Deserialize)]
@@ -59,9 +60,9 @@ pub fn generate_invoice(
         .as_str()
         .unwrap_or("rechnung")
         .replace(['/', '\\', ' '], "-");
-    let path = free_pdf_path(
+    let path = free_path(
         &downloads,
-        &format!("Rechnung-{}", invoice_number),
+        &safe_file_name(&format!("Rechnung-{}.pdf", invoice_number)),
         replace_path.as_deref().map(std::path::Path::new),
     );
 
@@ -70,22 +71,6 @@ pub fn generate_invoice(
     Ok(GenerateInvoiceResult {
         path: path.to_string_lossy().to_string(),
     })
-}
-
-/// `<stem>.pdf` in `dir`, or `<stem>-2.pdf`, `-3`, … if that file already exists.
-/// `replace` is the PDF this invoice produced last time; it may be overwritten.
-fn free_pdf_path(
-    dir: &std::path::Path,
-    stem: &str,
-    replace: Option<&std::path::Path>,
-) -> std::path::PathBuf {
-    let mut path = dir.join(format!("{stem}.pdf"));
-    let mut n = 2;
-    while path.exists() && Some(path.as_path()) != replace {
-        path = dir.join(format!("{stem}-{n}.pdf"));
-        n += 1;
-    }
-    path
 }
 
 fn render_invoice(invoice: &Value, company: &CompanyData) -> Result<Vec<u8>, String> {
@@ -130,7 +115,11 @@ pub fn generate_offer(
         .as_str()
         .unwrap_or("angebot")
         .replace(['/', '\\', ' '], "-");
-    let path = free_pdf_path(&downloads, &format!("Angebot-{}", offer_number), None);
+    let path = free_path(
+        &downloads,
+        &safe_file_name(&format!("Angebot-{}.pdf", offer_number)),
+        None,
+    );
 
     std::fs::write(&path, &pdf_bytes).map_err(|e| e.to_string())?;
 
@@ -407,16 +396,7 @@ mod tests {
     }
 
     #[test]
-    fn pdf_path_gets_a_suffix_unless_it_is_the_invoices_own_file() {
-        let dir = std::env::temp_dir().join(format!("etasks-pdf-path-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
-        let first = free_pdf_path(&dir, "Rechnung-RE-001", None);
-        assert_eq!(first, dir.join("Rechnung-RE-001.pdf"));
-        std::fs::write(&first, b"x").unwrap();
-
-        let second = free_pdf_path(&dir, "Rechnung-RE-001", None);
-        assert_eq!(second, dir.join("Rechnung-RE-001-2.pdf"));
-        assert_eq!(free_pdf_path(&dir, "Rechnung-RE-001", Some(&first)), first);
-        std::fs::remove_dir_all(&dir).unwrap();
+    fn invoice_numbers_with_reserved_characters_give_valid_file_names() {
+        assert_eq!(safe_file_name("Rechnung-RE:2026-1.pdf"), "Rechnung-RE-2026-1.pdf");
     }
 }
