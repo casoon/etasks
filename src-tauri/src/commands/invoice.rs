@@ -130,8 +130,7 @@ pub fn generate_offer(
         .as_str()
         .unwrap_or("angebot")
         .replace(['/', '\\', ' '], "-");
-    let filename = format!("Angebot-{}.pdf", offer_number);
-    let path = downloads.join(&filename);
+    let path = free_pdf_path(&downloads, &format!("Angebot-{}", offer_number), None);
 
     std::fs::write(&path, &pdf_bytes).map_err(|e| e.to_string())?;
 

@@ -30,7 +30,7 @@
     );
     $: offerPrefixPreview = buildNumberPreview(
         profile.offer_number_prefix,
-        profile.offer_number_counter,
+        1,
         "ANG-",
     );
     $: invoicePrefixError = validatePrefix(profile.invoice_number_prefix);
@@ -426,7 +426,8 @@
                         placeholder="ANG-2026-"
                     />
                     <span class="text-[11px] text-muted">
-                        Nächste Nummer: {offerPrefixPreview}
+                        Beispiel: {offerPrefixPreview} · der Zähler läuft pro
+                        Arbeitsbereich
                     </span>
                     {#if offerPrefixError}
                         <span class="text-[11px] text-red-500">
@@ -436,18 +437,7 @@
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium">
-                        Angebots-Zähler
-                    </span>
-                    <input
-                        class="input font-mono"
-                        type="number"
-                        bind:value={profile.offer_number_counter}
-                        placeholder="1"
-                    />
-                </label>
-                <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">
-                        Gueltigkeit (Tage)
+                        Gültigkeit (Tage)
                     </span>
                     <input
                         class="input"

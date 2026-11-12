@@ -20,7 +20,6 @@
         $appConfig as appConfigStore,
         missingPdfProfileFields,
         missingProfileMessage,
-        saveAppConfig,
     } from "../../stores/configStore";
     import { toast } from "../../stores/toastStore";
     import { today as todayKey, toDateKey } from "../../domain/dateUtils";
@@ -41,6 +40,7 @@
         generateProjectReport,
     } from "../../lib/reportService";
     import { generateOffer, type OfferData } from "../../lib/offerService";
+    import { commitOfferCounter, peekOfferNumber } from "../../lib/invoiceNumber";
     import KanbanBoard from "./KanbanBoard.svelte";
     import { $termine as termineStore, addTermin, removeTermin } from "../../stores/terminStore";
     import {
@@ -160,7 +160,15 @@
     }
 
     async function handleGenerateOffer() {
-        if (!selectedProject || !selectedClient || !appConfig) return;
+        if (!selectedProject || !appConfig || offerGenerating) return;
+        if (!selectedClient) {
+            toast(
+                "Für ein Angebot braucht das Projekt einen Kunden. Interne Projekte haben keinen.",
+                "error",
+                4500,
+            );
+            return;
+        }
         if (!isTauriAvailable()) {
             toast(
                 "Angebote können nur in der Desktop-App als PDF erzeugt werden.",
@@ -194,9 +202,22 @@
         }
         const today = new Date();
         const year = today.getFullYear();
-        const counter = profile.offer_number_counter ?? 1;
         const prefix = profile.offer_number_prefix?.trim() || `ANG-${year}-`;
-        const offerNumber = prefix + String(counter).padStart(3, "0");
+        offerGenerating = true;
+        let offerNumber: string;
+        let nextOfferCounter: number;
+        try {
+            ({ number: offerNumber, next: nextOfferCounter } =
+                await peekOfferNumber(prefix, profile.offer_number_counter));
+        } catch (error) {
+            offerGenerating = false;
+            toast(
+                `Angebotsnummer konnte nicht vergeben werden: ${String(error)}`,
+                "error",
+                5000,
+            );
+            return;
+        }
         const validUntil = new Date(today);
         validUntil.setDate(
             validUntil.getDate() + (profile.offer_validity_days ?? 30),
@@ -290,7 +311,7 @@
                 total: money(offerTotals.totalCents),
             },
             terms: {
-                validity: `Dieses Angebot ist gueltig bis ${validUntil.toLocaleDateString("de-DE")}`,
+                validity: `Dieses Angebot ist gültig bis ${validUntil.toLocaleDateString("de-DE")}`,
                 payment_terms: profile.offer_payment_terms?.trim() || undefined,
                 delivery_terms:
                     profile.offer_delivery_terms?.trim() || undefined,
@@ -299,17 +320,10 @@
             },
         };
 
-        offerGenerating = true;
         reportMessage = "";
         try {
             const path = await generateOffer(offerData, appConfig);
-            await saveAppConfig({
-                ...appConfig,
-                profile: {
-                    ...appConfig.profile,
-                    offer_number_counter: counter + 1,
-                },
-            });
+            await commitOfferCounter(nextOfferCounter);
             reportMessage = `Angebot gespeichert: ${path}`;
             toast(`Angebot gespeichert: ${path}`, "success", 5000);
         } catch (error) {

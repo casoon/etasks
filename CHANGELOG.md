@@ -62,6 +62,7 @@ All notable changes to eTasks are listed here. eTasks follows
 - **Profile:** a new profile starts empty instead of with sample data (Max Mustermann, sample IBAN); the examples are only input placeholders. Invoice and offer PDFs need a complete profile (name, email, company, address, tax number, IBAN) and say what is missing; old sample values still in a profile count as missing.
 - **Projects:** the internal project notes no longer appear in the offer PDF or the project report; the offer introduction comes from a separate optional "Angebotstext" field.
 - **Invoices:** an empty "Projektbezug" stays empty in the PDF instead of printing the client's first project.
+- **Offers:** the PDF says "gültig" and the setting "Gültigkeit (Tage)" uses real umlauts; the offer number counter is kept per workspace (starting from the profile counter, only advanced after the PDF was created); the PDF never overwrites an earlier offer (suffix `-2`, `-3`, …); "PDF-Angebot" on an internal project (no client) shows a notice instead of doing nothing, and a missing profile entry is reported.
 
 ### Security
 
