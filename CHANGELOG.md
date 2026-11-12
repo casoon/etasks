@@ -35,6 +35,7 @@ All notable changes to eTasks are listed here. eTasks follows
 ### Fixed
 
 - **Build:** the production UI starts again; the manual view/modal chunk split caused a circular chunk and the main view never rendered in release builds.
+- **Profile:** the tax number placeholder no longer suggests `DE123456789`, which counts as a missing legacy sample value for PDFs.
 - **Quick add:** the input field keeps typed text instead of being cleared immediately, so tasks can be added again.
 - **Backup:** a failing export is reported as an error with the reason instead of "Backup exportiert." (the silent download fallback inside the desktop app is gone), a successful one shows the file path, and the sidebar "Exportieren" now gives that feedback too.
 - **Weekly planning:** the outcome note is saved on blur and when leaving the view, for the week it was typed in.

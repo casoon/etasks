@@ -317,7 +317,7 @@
                     <span class="text-xs text-muted font-medium"
                         >Steuernummer / USt-IdNr. (Fußzeile: „USt-IdNr.“)</span
                     >
-                    <input class="input" bind:value={profile.tax_id} placeholder="DE123456789" />
+                    <input class="input" bind:value={profile.tax_id} placeholder="z. B. 12/345/67890 oder USt-IdNr." />
                 </label>
                 <label class="flex flex-col gap-1 col-span-2">
                     <span class="text-xs text-muted font-medium">IBAN</span>
