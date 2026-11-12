@@ -28,11 +28,14 @@ All notable changes to eTasks are listed here. eTasks follows
 ### Removed
 
 - **Settings:** the unused workspace fields "Typ" and "Währung" (documents are always in EUR).
+- **Security:** the unused file-system and dialog permissions of the webview and the `tauri-plugin-fs` and `@tauri-apps/plugin-dialog` dependencies; file dialogs and file access stay in the Rust core.
 - **Cleanup:** the unused energy check log, the unmounted weekly objectives widget, the unused `open_ics_file` command and the dead card drag in Fokus.
 - **Releases:** the macOS Intel (`x64`) build; macOS installers are Apple Silicon only.
 
 ### Fixed
 
+- **Build:** the production UI starts again; the manual view/modal chunk split caused a circular chunk and the main view never rendered in release builds.
+- **Quick add:** the input field keeps typed text instead of being cleared immediately, so tasks can be added again.
 - **Backup:** a failing export is reported as an error with the reason instead of "Backup exportiert." (the silent download fallback inside the desktop app is gone), a successful one shows the file path, and the sidebar "Exportieren" now gives that feedback too.
 - **Weekly planning:** the outcome note is saved on blur and when leaving the view, for the week it was typed in.
 - **Backup:** the import in the right panel asks like the one in Settings, with the number of entries that get replaced; both use the same path. The file is checked first (version, lists, required fields) and an invalid file is rejected before anything is touched. Before importing, the current state is saved to the export folder as `etasks-vor-import-…json`; if that fails, nothing is imported.
@@ -94,6 +97,7 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Security
 
+- **App:** the webview runs under a restrictive Content Security Policy (own files only, no frames or plugins; IPC and data/blob images allowed) instead of none.
 - **Dependencies:** `rusqlite` 0.41 bundles SQLite 3.54, which closes RUSTSEC-2026-0459 (a crafted
   database with a mismatched `-wal` file could read uninitialised memory). Building needs Rust 1.89.
 - **Configuration:** `config.json` is written atomically and the last good file is kept as `config.json.bak`. A damaged file is no longer replaced by defaults: the backup is restored automatically, otherwise an error screen offers a fresh setup. If the database of the last workspace is missing at start, "Arbeitsbereich nicht gefunden" offers the other workspaces instead of resetting the setup.

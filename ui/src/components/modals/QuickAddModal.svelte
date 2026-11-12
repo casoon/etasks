@@ -15,11 +15,16 @@
   $: projects = $projectsStore;
   $: activeProjects = projects.filter(p => p.status === 'active');
 
-  $: if (open) {
-    title = '';
-    duration = 30;
-    projectId = $projectIdStore ?? '';
-    setTimeout(() => inputEl?.focus(), 50);
+  // Nur beim Öffnen zurücksetzen, nicht bei jeder Eingabe (sonst wird `title` sofort wieder geleert).
+  let wasOpen = false;
+  $: if (open !== wasOpen) {
+    wasOpen = open;
+    if (open) {
+      title = '';
+      duration = 30;
+      projectId = $projectIdStore ?? '';
+      setTimeout(() => inputEl?.focus(), 50);
+    }
   }
 
   function handleSubmit(e: Event) {
