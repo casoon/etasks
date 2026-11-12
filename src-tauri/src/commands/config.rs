@@ -5,6 +5,7 @@ use tauri::Manager;
 const WORKSPACE_DB_FILENAME: &str = "etasks.sqlite3";
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(default)]
 pub struct UserProfile {
     pub first_name: String,
     pub last_name: String,
@@ -87,6 +88,7 @@ pub struct TenantInfo {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(default)]
 pub struct AppConfig {
     pub version: u32,
     pub setup_done: bool,
@@ -507,6 +509,28 @@ mod tests {
         let p = UserProfile::default();
         assert!(p.first_name.is_empty() && p.company.is_empty() && p.iban.is_empty());
         assert!(p.street.is_empty() && p.tax_id.is_empty() && p.email.is_empty());
+    }
+
+    #[test]
+    fn old_config_without_newer_profile_fields_still_loads() {
+        let cfg: AppConfig = serde_json::from_str(
+            r#"{"version":1,"setup_done":true,"active_tenant":null,"tenants":[],
+                "profile":{"first_name":"Ada","hourly_rate":80.5}}"#,
+        )
+        .unwrap();
+        assert!(cfg.setup_done);
+        assert_eq!(cfg.profile.first_name, "Ada");
+        assert_eq!(cfg.profile.hourly_rate, 80.5);
+        assert_eq!(cfg.profile.payment_days, Some(14));
+        assert_eq!(cfg.profile.country, "Deutschland");
+    }
+
+    #[test]
+    fn config_with_empty_options_and_missing_sections_loads() {
+        let cfg: AppConfig = serde_json::from_str(r#"{"profile":{"payment_days":null}}"#).unwrap();
+        assert_eq!(cfg.profile.payment_days, None);
+        assert!(!cfg.setup_done);
+        assert!(cfg.tenants.is_empty());
     }
 
     #[test]

@@ -29,6 +29,7 @@ All notable changes to eTasks are listed here. eTasks follows
 - **Daily close:** Escape and a close button dismiss the dialog without saving, and the summary updates after moving a task to tomorrow.
 - **Planning:** task titles in the "Noch einplanen" list stay readable at narrow window widths; the row actions wrap to a second line.
 - **UI:** texts that spelled umlauts as ae/oe/ue now use real umlauts.
+- **Settings:** empty or decimal number fields in the profile no longer block saving; values are checked before saving with a message at the field, the save error and "Gespeichert ✓" appear next to the button, and saving the Arbeitsbereich tab keeps unsaved profile edits. Older `config.json` files missing newer fields load again.
 - **Invoices:** "Gesendet" and "Bezahlt" need a client and at least one line item (dropdown and buttons alike); "PDF erzeugen" no longer changes the status; setting a sent or paid invoice back to "Entwurf" asks first, and sent or paid invoices show a hint when number or date are edited.
 - **Dates:** day keys use the local date instead of UTC, so "today", the week start, invoice and offer dates are correct around midnight; the active day follows midnight while the app stays open.
 - **Today:** the day plan shows scheduled and tracked times in local time instead of UTC, block heights match their duration, and dragging a block keeps a full timestamp; tasks with a calendar block are no longer drawn twice.

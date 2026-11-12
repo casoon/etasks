@@ -7,6 +7,10 @@
     } from "../../stores/configStore";
     import { isTauriAvailable } from "../../lib/platform";
     import type { UserProfile } from "../../stores/configStore";
+    import {
+        normalizeProfileNumbers,
+        type ProfileNumberErrors,
+    } from "../../lib/profileNumbers";
     import SettingsDatenSection from "./SettingsDatenSection.svelte";
     import SettingsArbeitsbereichSection from "./SettingsArbeitsbereichSection.svelte";
 
@@ -15,6 +19,7 @@
     let saved = false;
     let saving = false;
     let errorMsg = "";
+    let numberErrors: ProfileNumberErrors = {};
     let logoImporting = false;
     let logoPreviewError = false;
     type SettingsSection = "profil" | "arbeitsbereich" | "daten";
@@ -36,11 +41,19 @@
     $: invoicePrefixError = validatePrefix(profile.invoice_number_prefix);
     $: offerPrefixError = validatePrefix(profile.offer_number_prefix);
 
+    // Änderungen aus anderen Tabs (z. B. Arbeitsbereich) übernehmen, ohne ungespeicherte Profil-Eingaben zu verwerfen.
     appConfigStore.subscribe((c) => {
-        if (c) {
-            config = c;
-            profile = { ...c.profile };
+        if (!c) return;
+        const previous = config.profile as unknown as Record<string, unknown>;
+        const incoming = c.profile as unknown as Record<string, unknown>;
+        const merged: Record<string, unknown> = {
+            ...(profile as unknown as Record<string, unknown>),
+        };
+        for (const key of Object.keys(incoming)) {
+            if (incoming[key] !== previous[key]) merged[key] = incoming[key];
         }
+        config = c;
+        profile = merged as unknown as UserProfile;
     });
 
     async function saveProfile() {
@@ -56,11 +69,18 @@
                 saving = false;
                 return;
             }
-            await saveAppConfig({ ...config, profile });
+            const normalized = normalizeProfileNumbers(profile);
+            numberErrors = normalized.errors;
+            if (Object.keys(numberErrors).length > 0) {
+                errorMsg = "Bitte korrigiere die markierten Felder.";
+                return;
+            }
+            await saveAppConfig({ ...config, profile: normalized.profile });
+            profile = { ...normalized.profile };
             saved = true;
             setTimeout(() => (saved = false), 2500);
         } catch (e) {
-            errorMsg = String(e);
+            errorMsg = `Speichern fehlgeschlagen: ${String(e)}`;
         } finally {
             saving = false;
         }
@@ -289,6 +309,9 @@
                         type="number"
                         bind:value={profile.hourly_rate}
                     />
+                {#if numberErrors.hourly_rate}
+                        <span class="text-[11px] text-red-500">{numberErrors.hourly_rate}</span>
+                    {/if}
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium"
@@ -312,6 +335,9 @@
                 </button>
                 {#if saved}
                     <span class="text-xs text-green-500">Gespeichert ✓</span>
+                {/if}
+                {#if errorMsg}
+                    <span class="text-xs text-red-500">{errorMsg}</span>
                 {/if}
             </div>
         </section>
@@ -351,9 +377,14 @@
                     <input
                         class="input"
                         type="number"
+                        min="0"
+                        step="1"
                         bind:value={profile.payment_days}
                         placeholder="14"
                     />
+                {#if numberErrors.payment_days}
+                        <span class="text-[11px] text-red-500">{numberErrors.payment_days}</span>
+                    {/if}
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium"
@@ -365,6 +396,9 @@
                         bind:value={profile.default_vat_rate}
                         placeholder="19"
                     />
+                {#if numberErrors.default_vat_rate}
+                        <span class="text-[11px] text-red-500">{numberErrors.default_vat_rate}</span>
+                    {/if}
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium">Bankname</span>
@@ -405,6 +439,9 @@
                 {#if saved}
                     <span class="text-xs text-green-500">Gespeichert ✓</span>
                 {/if}
+                {#if errorMsg}
+                    <span class="text-xs text-red-500">{errorMsg}</span>
+                {/if}
             </div>
         </section>
 
@@ -442,9 +479,14 @@
                     <input
                         class="input"
                         type="number"
+                        min="0"
+                        step="1"
                         bind:value={profile.offer_validity_days}
                         placeholder="30"
                     />
+                {#if numberErrors.offer_validity_days}
+                        <span class="text-[11px] text-red-500">{numberErrors.offer_validity_days}</span>
+                    {/if}
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium">
@@ -490,6 +532,9 @@
                 {#if saved}
                     <span class="text-xs text-green-500">Gespeichert ✓</span>
                 {/if}
+                {#if errorMsg}
+                    <span class="text-xs text-red-500">{errorMsg}</span>
+                {/if}
             </div>
         </section>
 
@@ -515,10 +560,14 @@
                         type="number"
                         min="0"
                         max="240"
+                        step="1"
                         bind:value={profile.break_interval_minutes}
                         placeholder="90"
                     />
                     <span class="text-[11px] text-muted">0 = deaktiviert</span>
+                {#if numberErrors.break_interval_minutes}
+                        <span class="text-[11px] text-red-500">{numberErrors.break_interval_minutes}</span>
+                    {/if}
                 </label>
             </div>
             <div class="flex items-center gap-3">
@@ -532,12 +581,12 @@
                 {#if saved}
                     <span class="text-xs text-green-500">Gespeichert ✓</span>
                 {/if}
+                {#if errorMsg}
+                    <span class="text-xs text-red-500">{errorMsg}</span>
+                {/if}
             </div>
         </section>
 
-        {#if errorMsg}
-            <p class="text-xs text-red-500">{errorMsg}</p>
-        {/if}
     {/if}
 
     {#if activeSection === "daten"}
