@@ -41,6 +41,7 @@ pub fn generate_invoice(
     app: tauri::AppHandle,
     input: GenerateInvoiceInput,
     output_dir: Option<String>,
+    replace_path: Option<String>,
 ) -> Result<GenerateInvoiceResult, String> {
     let company = profile_to_company(&input.profile);
 
@@ -58,14 +59,33 @@ pub fn generate_invoice(
         .as_str()
         .unwrap_or("rechnung")
         .replace(['/', '\\', ' '], "-");
-    let filename = format!("Rechnung-{}.pdf", invoice_number);
-    let path = downloads.join(&filename);
+    let path = free_pdf_path(
+        &downloads,
+        &format!("Rechnung-{}", invoice_number),
+        replace_path.as_deref().map(std::path::Path::new),
+    );
 
     std::fs::write(&path, &pdf_bytes).map_err(|e| e.to_string())?;
 
     Ok(GenerateInvoiceResult {
         path: path.to_string_lossy().to_string(),
     })
+}
+
+/// `<stem>.pdf` in `dir`, or `<stem>-2.pdf`, `-3`, … if that file already exists.
+/// `replace` is the PDF this invoice produced last time; it may be overwritten.
+fn free_pdf_path(
+    dir: &std::path::Path,
+    stem: &str,
+    replace: Option<&std::path::Path>,
+) -> std::path::PathBuf {
+    let mut path = dir.join(format!("{stem}.pdf"));
+    let mut n = 2;
+    while path.exists() && Some(path.as_path()) != replace {
+        path = dir.join(format!("{stem}-{n}.pdf"));
+        n += 1;
+    }
+    path
 }
 
 fn render_invoice(invoice: &Value, company: &CompanyData) -> Result<Vec<u8>, String> {
@@ -291,5 +311,19 @@ mod tests {
         if let Ok(dir) = std::env::var("ETASKS_TEST_PDF_DIR") {
             std::fs::write(std::path::Path::new(&dir).join("offer.pdf"), &pdf).unwrap();
         }
+    }
+
+    #[test]
+    fn pdf_path_gets_a_suffix_unless_it_is_the_invoices_own_file() {
+        let dir = std::env::temp_dir().join(format!("etasks-pdf-path-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let first = free_pdf_path(&dir, "Rechnung-RE-001", None);
+        assert_eq!(first, dir.join("Rechnung-RE-001.pdf"));
+        std::fs::write(&first, b"x").unwrap();
+
+        let second = free_pdf_path(&dir, "Rechnung-RE-001", None);
+        assert_eq!(second, dir.join("Rechnung-RE-001-2.pdf"));
+        assert_eq!(free_pdf_path(&dir, "Rechnung-RE-001", Some(&first)), first);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

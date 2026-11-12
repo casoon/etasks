@@ -12,14 +12,15 @@
         updateInvoice,
         removeInvoice,
     } from "../../stores/invoiceStore";
-    import {
-        $appConfig as appConfigStore,
-        saveAppConfig,
-    } from "../../stores/configStore";
+    import { $appConfig as appConfigStore } from "../../stores/configStore";
     import { toast } from "../../stores/toastStore";
     import { today, toDateKey } from "../../domain/dateUtils";
     import { isTauriAvailable } from "../../lib/platform";
     import { generateInvoice, type InvoiceData } from "../../lib/invoiceService";
+    import {
+        allocateInvoiceNumber,
+        isInvoiceNumberTaken,
+    } from "../../lib/invoiceNumber";
     import { calcInvoiceTotals, fromCents, lineTotalCents } from "../../lib/invoiceMoney";
     import type { Invoice } from "../../domain/types";
     import ClientManager from "../modals/ClientManager.svelte";
@@ -42,45 +43,56 @@
     $: selectedInvoice = selectedInvoiceId
         ? (invoices.find((i) => i.id === selectedInvoiceId) ?? null)
         : null;
+    $: otherInvoiceNumbers = invoices
+        .filter((i) => i.id !== selectedInvoiceId)
+        .map((i) => i.invoiceNumber);
     $: blockedTaskIds = new Set(
         invoices
             .filter((i) => i.id !== selectedInvoiceId)
             .flatMap((i) => i.lineItems.flatMap((li) => li.taskIds)),
     );
 
+    let creatingInvoice = false;
+
     async function createNewInvoice() {
-        const config = appConfig;
-        const prefix = config?.profile.invoice_number_prefix ?? "RE-";
-        const counter = config?.profile.invoice_number_counter ?? 1;
-        const dueDate = new Date();
-        dueDate.setDate(
-            dueDate.getDate() + (config?.profile.payment_days ?? 14),
-        );
+        if (creatingInvoice) return;
+        creatingInvoice = true;
+        try {
+            const config = appConfig;
+            const prefix = config?.profile.invoice_number_prefix ?? "RE-";
+            const dueDate = new Date();
+            dueDate.setDate(
+                dueDate.getDate() + (config?.profile.payment_days ?? 14),
+            );
 
-        const inv = addInvoice({
-            clientId: "",
-            invoiceNumber: prefix + String(counter).padStart(3, "0"),
-            customerNumber: "",
-            date: today(),
-            dueDate: toDateKey(dueDate),
-            performancePeriod: "",
-            projectReference: "",
-            status: "draft",
-            lineItems: [],
-        });
-
-        if (config) {
-            await saveAppConfig({
-                ...config,
-                profile: {
-                    ...config.profile,
-                    invoice_number_counter: counter + 1,
-                },
+            const invoiceNumber = await allocateInvoiceNumber(
+                prefix,
+                config?.profile.invoice_number_counter,
+                () => invoicesStore.get().map((i) => i.invoiceNumber),
+            );
+            const inv = addInvoice({
+                clientId: "",
+                invoiceNumber,
+                customerNumber: "",
+                date: today(),
+                dueDate: toDateKey(dueDate),
+                performancePeriod: "",
+                projectReference: "",
+                status: "draft",
+                lineItems: [],
             });
-        }
 
-        selectedInvoiceId = inv.id;
-        rightView = "invoice";
+            selectedInvoiceId = inv.id;
+            rightView = "invoice";
+        } catch (error) {
+            toast(
+                `Rechnungsnummer konnte nicht vergeben werden: ${String(error)}`,
+                "error",
+                5000,
+            );
+        } finally {
+            creatingInvoice = false;
+        }
     }
 
     function updateSelectedInvoice(
@@ -201,6 +213,20 @@
             toast("Die Rechnung enthält noch keine Positionen.", "error", 4000);
             return;
         }
+        if (
+            !selectedInvoice.invoiceNumber.trim() ||
+            isInvoiceNumberTaken(
+                selectedInvoice.invoiceNumber,
+                otherInvoiceNumbers,
+            )
+        ) {
+            toast(
+                "Die Rechnungsnummer fehlt oder ist bereits vergeben.",
+                "error",
+                4500,
+            );
+            return;
+        }
 
         const invoicePayload: InvoiceData = {
             metadata: {
@@ -266,10 +292,17 @@
 
         generatingPdf = true;
         try {
-            const path = await generateInvoice(invoicePayload, appConfig);
-            if (selectedInvoice.status === "draft") {
-                updateInvoice(selectedInvoice.id, { status: "sent" });
-            }
+            const path = await generateInvoice(
+                invoicePayload,
+                appConfig,
+                selectedInvoice.pdfPath,
+            );
+            updateInvoice(selectedInvoice.id, {
+                pdfPath: path,
+                ...(selectedInvoice.status === "draft"
+                    ? { status: "sent" as const }
+                    : {}),
+            });
             toast(`PDF gespeichert: ${path}`, "success", 5500);
         } catch (error) {
             toast(
@@ -398,6 +431,7 @@
                 {projects}
                 {appConfig}
                 {blockedTaskIds}
+                {otherInvoiceNumbers}
                 pdfBusy={generatingPdf}
                 pdfAvailable={isTauriAvailable()}
                 onUpdate={updateSelectedInvoice}

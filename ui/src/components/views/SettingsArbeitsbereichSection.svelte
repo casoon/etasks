@@ -11,6 +11,7 @@
     import { activateTenant, tenantDbExists } from "../../lib/appBootstrap";
     import { toast } from "../../stores/toastStore";
     import { metaGet, metaSet } from "../../lib/metaStore";
+    import { INVOICE_COUNTER_KEY } from "../../lib/invoiceNumber";
     import { isTauriAvailable } from "../../lib/platform";
 
     interface AppPaths {
@@ -111,9 +112,6 @@
                 invoice_number_prefix:
                     workspaceInvoicePrefix.trim() ||
                     config.profile.invoice_number_prefix,
-                invoice_number_counter: invoiceCounterReset
-                    ? 1
-                    : config.profile.invoice_number_counter,
             };
             const nextTenants = config.tenants.map((tenant) =>
                 tenant.path === config.active_tenant
@@ -135,6 +133,9 @@
             });
 
             if (isTauriAvailable() && config.active_tenant) {
+                if (invoiceCounterReset) {
+                    await metaSet(INVOICE_COUNTER_KEY, "1");
+                }
                 await metaSet(
                     "tenant.name",
                     workspaceName.trim() || activeTenant?.name || "Workspace",
@@ -409,7 +410,9 @@
     >
         <input type="checkbox" bind:checked={invoiceCounterReset} />
         <span
-            >Rechnungszähler beim Speichern auf `1` zurücksetzen</span
+            >Rechnungszähler dieses Arbeitsbereichs beim Speichern auf `1`
+            zurücksetzen (bereits vergebene Nummern werden nicht erneut
+            vergeben)</span
         >
     </label>
 

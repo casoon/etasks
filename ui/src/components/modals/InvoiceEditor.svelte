@@ -17,6 +17,7 @@
         isValidVatRate,
         lineTotalCents,
     } from "../../lib/invoiceMoney";
+    import { isInvoiceNumberTaken } from "../../lib/invoiceNumber";
     import { toast } from "../../stores/toastStore";
 
     export let invoice: Invoice;
@@ -25,9 +26,11 @@
     export let tasks: Task[] = [];
     export let projects: Array<{ id: string; name: string; clientId: string }> =
         [];
-    export let appConfig: { profile?: { default_vat_rate?: number } } | null =
-        null;
+    export let appConfig: {
+        profile?: { default_vat_rate?: number; invoice_number_prefix?: string };
+    } | null = null;
     export let blockedTaskIds: Set<string> = new Set();
+    export let otherInvoiceNumbers: string[] = [];
     export let pdfAvailable = false;
     export let pdfBusy = false;
     export let onUpdate: (
@@ -60,7 +63,14 @@
               )
             : [];
     $: invoiceTotals = calcInvoiceTotals(invoice.lineItems);
-    $: sendBlockedReason = !invoice.clientId
+    $: numberProblem = !invoice.invoiceNumber.trim()
+        ? "Bitte eine Rechnungsnummer angeben."
+        : isInvoiceNumberTaken(invoice.invoiceNumber, otherInvoiceNumbers)
+          ? "Diese Rechnungsnummer ist bereits vergeben."
+          : "";
+    $: sendBlockedReason = numberProblem
+        ? numberProblem
+        : !invoice.clientId
         ? "Wähle zuerst einen Kunden."
         : invoice.lineItems.length === 0
           ? "Füge mindestens eine Position hinzu."
@@ -285,8 +295,9 @@
                 >
                 <input
                     class="input font-mono"
+                    class:border-red-500={Boolean(numberProblem)}
                     value={invoice.invoiceNumber}
-                    placeholder="RE-2026-001"
+                    placeholder={`${appConfig?.profile?.invoice_number_prefix?.trim() || "RE-"}001`}
                     on:input={handleInvoiceNumberChange}
                 />
             </label>
@@ -339,10 +350,10 @@
             <button
                 class="ml-auto rounded-lg border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-primary transition-colors hover:bg-bg disabled:opacity-50"
                 on:click={onGeneratePdf}
-                disabled={!pdfAvailable || pdfBusy}
+                disabled={!pdfAvailable || pdfBusy || Boolean(numberProblem)}
                 title={!pdfAvailable
                     ? "Nur in der Desktop-App verfügbar"
-                    : "PDF im Standard-Exportordner erzeugen"}
+                    : numberProblem || "PDF im Standard-Exportordner erzeugen"}
             >
                 {pdfBusy ? "PDF wird erstellt…" : "PDF erzeugen"}
             </button>
@@ -365,7 +376,10 @@
                 </button>
             {/if}
         </div>
-        {#if invoice.status === "draft" && sendBlockedReason}
+        {#if numberProblem}
+            <p class="mt-2 text-[11px] text-red-500">{numberProblem}</p>
+        {/if}
+        {#if invoice.status === "draft" && sendBlockedReason && !numberProblem}
             <p class="mt-2 text-[11px] text-muted">
                 „Als gesendet markieren“ ist noch nicht möglich. {sendBlockedReason}
             </p>

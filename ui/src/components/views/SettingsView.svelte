@@ -24,9 +24,10 @@
         isTauriAvailable() && profile.logo?.trim()
             ? assetUrl(profile.logo)
             : profile.logo?.trim() || "";
+    // Der Rechnungszähler gehört zum Arbeitsbereich; hier nur das Format.
     $: invoicePrefixPreview = buildNumberPreview(
         profile.invoice_number_prefix,
-        profile.invoice_number_counter,
+        1,
         "RE-",
     );
     $: offerPrefixPreview = buildNumberPreview(
@@ -339,24 +340,14 @@
                         placeholder="RE-2026-"
                     />
                     <span class="text-[11px] text-muted">
-                        Nächste Nummer: {invoicePrefixPreview}
+                        Beispiel: {invoicePrefixPreview} · der Zähler läuft pro
+                        Arbeitsbereich
                     </span>
                     {#if invoicePrefixError}
                         <span class="text-[11px] text-red-500">
                             {invoicePrefixError}
                         </span>
                     {/if}
-                </label>
-                <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium"
-                        >Aktueller Zähler</span
-                    >
-                    <input
-                        class="input font-mono"
-                        type="number"
-                        bind:value={profile.invoice_number_counter}
-                        placeholder="1"
-                    />
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium"

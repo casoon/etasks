@@ -59,7 +59,8 @@ export interface InvoiceData {
 
 export async function generateInvoice(
   invoice: InvoiceData,
-  config: AppConfig
+  config: AppConfig,
+  replacePath?: string,
 ): Promise<string> {
   if (!isTauriAvailable()) {
     throw new Error('Rechnungsgenerierung ist nur in der Desktop-App verfügbar.');
@@ -67,10 +68,10 @@ export async function generateInvoice(
   const result = await command<{ path: string }>('generate_invoice', {
     input: { invoice, profile: config.profile },
     outputDir: config.default_export_dir ?? null,
+    replacePath: replacePath ?? null,
   });
   return result.path;
 }
-
 
 /**
  * Build a minimal InvoiceData from time entries and project info.
