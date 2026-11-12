@@ -8,7 +8,8 @@
         writeTenantMeta,
         removeTenant,
     } from "../../stores/configStore";
-    import { activateTenant } from "../../lib/appBootstrap";
+    import { activateTenant, tenantDbExists } from "../../lib/appBootstrap";
+    import { toast } from "../../stores/toastStore";
     import { metaGet, metaSet } from "../../lib/metaStore";
     import { isTauriAvailable } from "../../lib/platform";
 
@@ -63,12 +64,13 @@
         workspaceError = "";
         workspaceSaved = false;
         workspaceName = activeTenant?.name ?? "";
+        // Zahlungsziel und Rechnungspräfix gehören dem Profil (eine Quelle).
+        workspacePaymentDays = String(config.profile.payment_days ?? 14);
+        workspaceInvoicePrefix = config.profile.invoice_number_prefix ?? "";
 
         if (!isTauriAvailable() || !config.active_tenant) {
             workspaceType = "browser";
             workspaceCurrency = "EUR";
-            workspacePaymentDays = String(config.profile.payment_days ?? 14);
-            workspaceInvoicePrefix = config.profile.invoice_number_prefix ?? "RE";
             workspaceCreatedAt = "";
             defaultWorkspaceDir = config.default_workspace_dir ?? "";
             defaultExportDir = config.default_export_dir ?? "";
@@ -80,13 +82,6 @@
             (await metaGet("tenant.display_name")) ?? activeTenant?.name ?? "";
         workspaceType = (await metaGet("tenant.type")) ?? "";
         workspaceCurrency = (await metaGet("defaults.currency")) ?? "EUR";
-        workspacePaymentDays =
-            (await metaGet("defaults.payment_term_days")) ??
-            String(config.profile.payment_days ?? 14);
-        workspaceInvoicePrefix =
-            (await metaGet("defaults.invoice_prefix")) ??
-            config.profile.invoice_number_prefix ??
-            "RE";
         workspaceCreatedAt = (await metaGet("app.created_at")) ?? "";
         defaultWorkspaceDir =
             config.default_workspace_dir ??
@@ -155,14 +150,6 @@
                     "defaults.currency",
                     workspaceCurrency.trim() || "EUR",
                 );
-                await metaSet(
-                    "defaults.payment_term_days",
-                    String(Number.parseInt(workspacePaymentDays, 10) || 14),
-                );
-                await metaSet(
-                    "defaults.invoice_prefix",
-                    workspaceInvoicePrefix.trim() || "RE",
-                );
             }
 
             invoiceCounterReset = false;
@@ -185,10 +172,14 @@
                 return;
             }
             if (!tenantDir.trim()) {
-                errorMsg = "Bitte wähle zuerst einen Projektordner.";
+                errorMsg = "Bitte wähle zuerst einen Ordner.";
                 return;
             }
-            const path = `${tenantDir}/etasks.sqlite3`;
+            // Eigener Unterordner pro Arbeitsbereich; ein vorhandener Ordner wird nie wiederverwendet.
+            const path = await command<string>("default_tenant_path", {
+                tenantName: tenantName.trim(),
+                baseDir: tenantDir,
+            });
             await activateTenant(path, tenantName.trim());
             await writeTenantMeta(tenantName.trim());
             config = appConfigStore.get()!;
@@ -253,6 +244,14 @@
         if (path === config.active_tenant) return;
         errorMsg = "";
         try {
+            if (!(await tenantDbExists(path))) {
+                toast(
+                    "Die Datenbank dieses Arbeitsbereichs wurde nicht gefunden. Wurde der Ordner verschoben oder gelöscht?",
+                    "error",
+                    6000,
+                );
+                return;
+            }
             await activateTenant(path);
             config = appConfigStore.get()!;
             await loadWorkspaceSettings();
@@ -536,7 +535,7 @@
 
             <div class="flex flex-col gap-1">
                 <span class="text-xs text-muted font-medium"
-                    >Projektordner</span
+                    >Übergeordneter Ordner (darin entsteht ein eigener Unterordner)</span
                 >
                 <div class="flex items-center gap-2">
                     <button
@@ -547,7 +546,7 @@
                         Ordner wählen
                     </button>
                     <span class="text-xs text-muted truncate"
-                        >{tenantDir || "Noch kein Projektordner gewählt"}</span
+                        >{tenantDir || "Noch kein Ordner gewählt"}</span
                     >
                 </div>
             </div>

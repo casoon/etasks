@@ -1,7 +1,7 @@
 // @core
 import { atom, computed } from "nanostores";
 import { command } from "@casoon/origin-client";
-import { metaSet } from "../lib/metaStore";
+import { metaGet, metaSet } from "../lib/metaStore";
 import { isTauriAvailable } from "../lib/platform";
 
 export interface UserProfile {
@@ -172,26 +172,36 @@ export async function openTenant(
   await command("db_open", { path });
   const config = $appConfig.get();
   const now = new Date().toISOString();
-  const name = displayName ?? tenantNameFromPath(path);
   const existing = config.tenants.find((t) => t.path === path);
+  // Ohne übergebenen Namen den gespeicherten Namen behalten (Start, Wechsel);
+  // fehlt er (alte Config), aus den Meta-Daten der Datenbank holen.
+  const storedName =
+    displayName ??
+    existing?.displayName ??
+    (await metaGet("tenant.display_name").catch(() => null)) ??
+    undefined;
+  const name = storedName ?? existing?.name ?? tenantNameFromPath(path);
   const tenants = existing
     ? config.tenants.map((t) =>
         t.path === path
-          ? {
-              ...t,
-              name,
-              displayName: displayName ?? t.displayName,
-              last_opened: now,
-            }
+          ? { ...t, name, displayName: storedName, last_opened: now }
           : t,
       )
-    : [...config.tenants, { path, name, displayName, last_opened: now }];
+    : [
+        ...config.tenants,
+        { path, name, displayName: storedName, last_opened: now },
+      ];
   await saveAppConfig({ ...config, active_tenant: path, tenants });
 }
 
 export function tenantNameFromPath(path: string): string {
-  const filename = path.split("/").pop() ?? path;
-  return filename.replace(/\.db$/i, "");
+  const parts = path.split(/[\\/]/).filter(Boolean);
+  const filename = parts.pop() ?? path;
+  const base = filename.replace(/\.(db|sqlite3?|etasks)$/i, "");
+  // Der Standard-Dateiname trägt keine Information, dann zählt der Ordner.
+  return base.toLowerCase() === "etasks" && parts.length
+    ? parts[parts.length - 1]
+    : base;
 }
 
 export async function writeTenantMeta(
@@ -203,8 +213,6 @@ export async function writeTenantMeta(
   await metaSet("tenant.display_name", displayName);
   if (tenantType) await metaSet("tenant.type", tenantType);
   await metaSet("defaults.currency", "EUR");
-  await metaSet("defaults.payment_term_days", "14");
-  await metaSet("defaults.invoice_prefix", "RE");
   await metaSet("app.schema_version", "1");
   await metaSet("app.created_at", now);
 }

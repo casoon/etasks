@@ -6,6 +6,7 @@
         $appConfig as appConfigStore,
         saveAppConfig,
         writeTenantMeta,
+        tenantNameFromPath,
     } from "../../stores/configStore";
     import { activateTenant } from "../../lib/appBootstrap";
     import { isTauriAvailable } from "../../lib/platform";
@@ -151,9 +152,7 @@
         }).catch(() => null);
     }
 
-    $: if (isTauriAvailable()) {
-        void refreshPathPreview();
-    }
+    $: tenantName, workspaceLocation, customWorkspaceDir, appPaths, void refreshPathPreview();
 
     async function pickWorkspaceDirectory() {
         const picked = await command<string | null>("pick_directory", {
@@ -269,7 +268,7 @@
                     <div class="rounded-xl border border-border bg-bg/60 p-4 flex flex-col gap-2">
                         <div class="text-xs font-medium text-secondary">Vorhandene Arbeitsbereiche</div>
                         {#each existingWorkspaces as wp}
-                            {@const name = wp.split('/').pop()?.replace(/\.(etasks|sqlite3|sqlite|db)$/, '') ?? wp}
+                            {@const name = tenantNameFromPath(wp)}
                             <button
                                 class="text-left text-sm text-accent hover:underline truncate"
                                 disabled={saving}

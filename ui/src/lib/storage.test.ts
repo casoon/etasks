@@ -40,3 +40,90 @@ describe("storage entity key routing", () => {
     });
   });
 });
+
+describe("syncFromDatabase", () => {
+  const store = new Map<string, string>();
+  const toast = vi.fn();
+
+  beforeEach(() => {
+    store.clear();
+    command.mockReset();
+    toast.mockReset();
+    vi.resetModules();
+    vi.doMock("./logger", () => ({
+      logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+    }));
+    vi.doMock("../stores/toastStore", () => ({ toast }));
+    vi.stubGlobal("window", { localStorage: {} });
+    vi.stubGlobal("localStorage", {
+      get length() {
+        return store.size;
+      },
+      key: (i: number) => [...store.keys()][i] ?? null,
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    });
+  });
+
+  function mockDb(failing: string[] = [], kv: Record<string, string> = {}) {
+    command.mockImplementation(((cmd: string, args?: { key: string }) => {
+      if (failing.includes(cmd)) return Promise.reject(new Error("boom"));
+      if (cmd === "db_all_keys") return Promise.resolve(Object.keys(kv));
+      if (cmd === "db_get") return Promise.resolve(kv[args!.key] ?? null);
+      return Promise.resolve([]);
+    }) as never);
+  }
+
+  it("drops KV data of the previous workspace but keeps UI prefs", async () => {
+    store.set("etasks:termine", '[{"id":"a"}]');
+    store.set("etasks:weekPlans", "[1]");
+    store.set("etasks:exportMeta", '{"lastSnapshotDate":"2026-01-01"}');
+    store.set("etasks:kanban:collapsed:x", "1");
+    mockDb([], { "etasks:termine": '[{"id":"b"}]' });
+    const { syncFromDatabase } = await import("./storage");
+
+    await syncFromDatabase();
+
+    expect(store.get("etasks:termine")).toBe('[{"id":"b"}]');
+    expect(store.has("etasks:weekPlans")).toBe(false);
+    expect(store.has("etasks:exportMeta")).toBe(false);
+    expect(store.get("etasks:kanban:collapsed:x")).toBe("1");
+    expect(store.get("etasks:tasks")).toBe("[]");
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a failing list command and does not keep old rows", async () => {
+    store.set("etasks:tasks", '[{"id":"old"}]');
+    mockDb(["list_tasks"]);
+    const { syncFromDatabase } = await import("./storage");
+
+    await syncFromDatabase();
+
+    expect(store.has("etasks:tasks")).toBe(false);
+    expect(store.get("etasks:projects")).toBe("[]");
+    expect(toast).toHaveBeenCalledWith(expect.any(String), "error", 6000);
+  });
+});
+
+describe("DB write failures", () => {
+  it("logs every failure but shows a single toast per burst", async () => {
+    const toast = vi.fn();
+    const error = vi.fn();
+    vi.resetModules();
+    vi.doMock("./logger", () => ({ logger: { error } }));
+    vi.doMock("../stores/toastStore", () => ({ toast }));
+    command.mockReset();
+    command.mockRejectedValue(new Error("disk full"));
+    const { storageSet, storageRemove, KEYS } = await import("./storage");
+
+    storageSet(KEYS.exportMeta, { a: 1 });
+    storageSet(KEYS.weekPlans, []);
+    storageRemove(KEYS.termine);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(error).toHaveBeenCalledTimes(3);
+    expect(toast).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledWith(expect.stringContaining("Speichern fehlgeschlagen"), "error", 6000);
+  });
+});

@@ -1,6 +1,8 @@
 // @core
 import { isTauriAvailable } from "./platform";
 import { command } from "@casoon/origin-client";
+import { logger } from "./logger";
+import { toast } from "../stores/toastStore";
 
 const memoryFallback = new Map<string, string>();
 
@@ -10,17 +12,55 @@ function isLocalStorageAvailable(): boolean {
   );
 }
 
+const WRITE_ERROR_TOAST_INTERVAL_MS = 10_000;
+let lastWriteErrorToast = 0;
+
+/** Logs every failed DB write; shows one toast per burst so a broken DB doesn't spam. */
+export function reportDbWriteError(cmd: string, error: unknown): void {
+  logger.error(`DB-Schreibfehler (${cmd}): ${error}`);
+  const now = Date.now();
+  if (now - lastWriteErrorToast < WRITE_ERROR_TOAST_INTERVAL_MS) return;
+  lastWriteErrorToast = now;
+  toast(
+    "Speichern fehlgeschlagen. Änderungen gehen beim Neustart verloren.",
+    "error",
+    6000,
+  );
+}
+
 function isEntityBackedKey(key: string): boolean {
   return ENTITY_BACKED_KEYS.has(key);
+}
+
+// Pure UI preferences that are not tenant data survive a workspace switch.
+const UI_PREF_PREFIXES = ["etasks:kanban:", "etasks:planning:"];
+
+function clearTenantData(): void {
+  if (!isLocalStorageAvailable()) return;
+  const stale: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (
+      key?.startsWith("etasks:") &&
+      !UI_PREF_PREFIXES.some((p) => key.startsWith(p))
+    ) {
+      stale.push(key);
+    }
+  }
+  for (const key of stale) localStorage.removeItem(key);
 }
 
 /**
  * Sync all entity tables from the open SQLite DB into localStorage.
  * Called once after db_open() so all existing store code continues
  * to work against localStorage without modification.
+ *
+ * Tenant data of a previously open workspace is cleared first, so nothing
+ * leaks into the new one. A failing load is reported, never silently ignored.
  */
 export async function syncFromDatabase(): Promise<void> {
   if (!isTauriAvailable()) return;
+  clearTenantData();
   try {
     const entityLoads: Array<[string, string]> = [
       ["list_tasks", KEYS.tasks],
@@ -37,28 +77,44 @@ export async function syncFromDatabase(): Promise<void> {
       ["list_templates", KEYS.templates],
       ["list_invoices", KEYS.invoices],
     ];
-    const results = await Promise.all(
-      entityLoads.map(([cmd]) => command<unknown[]>(cmd).catch(() => null)),
+    const results = await Promise.allSettled(
+      entityLoads.map(([cmd]) => command<unknown[]>(cmd)),
     );
-    if (isLocalStorageAvailable()) {
-      for (let i = 0; i < entityLoads.length; i++) {
-        const rows = results[i];
-        if (rows !== null) {
-          localStorage.setItem(entityLoads[i][1], JSON.stringify(rows));
-        }
-      }
-    }
-    // Also load legacy KV keys not covered by entity tables
     const keys = await command<string[]>("db_all_keys");
+    const kvRows: Array<[string, string | null]> = [];
     for (const key of keys) {
       if (isEntityBackedKey(key)) continue;
-      const raw = await command<string | null>("db_get", { key });
-      if (raw !== null && isLocalStorageAvailable()) {
-        localStorage.setItem(key, raw);
+      kvRows.push([key, await command<string | null>("db_get", { key })]);
+    }
+
+    if (isLocalStorageAvailable()) {
+      const failed: string[] = [];
+      for (let i = 0; i < entityLoads.length; i++) {
+        const result = results[i];
+        if (result.status === "fulfilled") {
+          localStorage.setItem(
+            entityLoads[i][1],
+            JSON.stringify(result.value),
+          );
+        } else {
+          failed.push(entityLoads[i][0]);
+          logger.error(`${entityLoads[i][0]} fehlgeschlagen: ${result.reason}`);
+        }
+      }
+      for (const [key, raw] of kvRows) {
+        if (raw !== null) localStorage.setItem(key, raw);
+      }
+      if (failed.length > 0) {
+        toast(
+          "Daten konnten nicht vollständig geladen werden. Bitte die App neu starten.",
+          "error",
+          6000,
+        );
       }
     }
   } catch (e) {
-    console.warn("syncFromDatabase fehlgeschlagen:", e);
+    logger.error(`syncFromDatabase fehlgeschlagen: ${e}`);
+    toast("Daten konnten nicht geladen werden.", "error", 6000);
   }
 }
 
@@ -83,7 +139,9 @@ export function storageSet<T>(key: string, value: T): void {
   }
   // Only legacy key/value state belongs in the KV table.
   if (isTauriAvailable() && !isEntityBackedKey(key)) {
-    command("db_set", { key, value: raw }).catch(console.error);
+    command("db_set", { key, value: raw }).catch((e) =>
+      reportDbWriteError("db_set", e),
+    );
   }
 }
 
@@ -94,7 +152,9 @@ export function storageRemove(key: string): void {
     memoryFallback.delete(key);
   }
   if (isTauriAvailable() && !isEntityBackedKey(key)) {
-    command("db_remove", { key }).catch(console.error);
+    command("db_remove", { key }).catch((e) =>
+      reportDbWriteError("db_remove", e),
+    );
   }
 }
 

@@ -11,13 +11,15 @@ import {
   loadBillingItems,
   loadBillingItemTasks,
   loadDayPlans,
+  loadTermine,
+  loadWeekPlans,
 } from "./db";
-import { storageGet, storageSet, KEYS } from "./storage";
+import { storageGet, storageSet, syncFromDatabase, KEYS } from "./storage";
 import { $bridgeServices as $services, $bridgeInvoices as $invoices } from "../stores/coreBridge";
-import { $appConfig, saveAppConfig } from "../stores/configStore";
+import { $appConfig } from "../stores/configStore";
 import { metaAll } from "./metaStore";
 import { today } from "../domain/dateUtils";
-import { isTauriAvailable } from "./platform";
+import { isTauriAvailable, isMac } from "./platform";
 import { command } from "@casoon/origin-client";
 
 export async function buildSnapshot() {
@@ -41,14 +43,31 @@ export async function buildSnapshot() {
       billingItemTasks: loadBillingItemTasks(),
       dayPlans: loadDayPlans(),
       invoices: $invoices.get(),
+      termine: loadTermine(),
+      weekPlans: loadWeekPlans(),
     },
   };
+}
+
+/** File-name safe slug of the active workspace, so workspaces never share a file. */
+function workspaceSlug(): string {
+  const config = $appConfig.get();
+  const tenant = config?.tenants?.find((t) => t.path === config.active_tenant);
+  const name = tenant?.displayName || tenant?.name || "";
+  const slug = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ß/g, "ss")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "arbeitsbereich";
 }
 
 export async function exportToFile(): Promise<void> {
   const snapshot = await buildSnapshot();
   const json = JSON.stringify(snapshot, null, 2);
-  const filename = `etasks-export-${today()}.json`;
+  const filename = `etasks-export-${workspaceSlug()}-${today()}.json`;
 
   if (isTauriAvailable()) {
     try {
@@ -73,11 +92,11 @@ export async function exportToFile(): Promise<void> {
 }
 
 export async function saveToICloud(): Promise<boolean> {
-  if (!isTauriAvailable()) return false;
+  if (!isTauriAvailable() || !isMac()) return false;
 
   const snapshot = await buildSnapshot();
   const json = JSON.stringify(snapshot, null, 2);
-  const filename = `snapshot-${today()}.json`;
+  const filename = `snapshot-${workspaceSlug()}-${today()}.json`;
 
   try {
     await command("save_to_icloud", { json, filename });
@@ -90,70 +109,54 @@ export async function saveToICloud(): Promise<boolean> {
 }
 
 export async function scheduleDailySnapshot(): Promise<void> {
+  if (!isTauriAvailable() || !isMac()) return;
   const meta = storageGet<{ lastSnapshotDate: string }>(KEYS.exportMeta);
   if (meta?.lastSnapshotDate === today()) return;
   await saveToICloud();
 }
 
+const IMPORT_LISTS = [
+  ["tasks", KEYS.tasks],
+  ["blocks", KEYS.blocks],
+  ["goals", KEYS.goals],
+  ["notes", KEYS.notes],
+  ["clients", KEYS.clients],
+  ["projects", KEYS.projects],
+  ["services", KEYS.services],
+  ["timeEntries", KEYS.timeEntries],
+  ["templates", KEYS.templates],
+  ["billingItems", KEYS.billingItems],
+  ["billingItemTasks", KEYS.billingItemTasks],
+  ["dayPlans", KEYS.dayPlans],
+  ["invoices", KEYS.invoices],
+  ["termine", KEYS.termine],
+  ["weekPlans", KEYS.weekPlans],
+] as const;
+
+/**
+ * Imports the data lists of a backup into the active workspace. Lists missing
+ * from the file stay untouched. Profile, invoice/offer counters and workspace
+ * meta are never imported, so counters cannot be rolled back.
+ * SQLite is written first; the UI storage is only refreshed after it succeeded.
+ */
 export async function importFromJSON(json: string): Promise<boolean> {
   try {
     const snapshot = JSON.parse(json);
-    if (!snapshot.data) return false;
-    const {
-      tasks,
-      blocks,
-      goals,
-      notes,
-      clients,
-      projects,
-      services,
-      timeEntries,
-      templates,
-      billingItems,
-      billingItemTasks,
-      dayPlans,
-      invoices,
-    } = snapshot.data;
-    const profile = snapshot.profile;
-    const tenantMeta = Array.isArray(snapshot.tenantMeta)
-      ? snapshot.tenantMeta
-      : [];
-    if (tasks) storageSet(KEYS.tasks, tasks);
-    if (blocks) storageSet(KEYS.blocks, blocks);
-    if (goals) storageSet(KEYS.goals, goals);
-    if (notes) storageSet(KEYS.notes, notes);
-    if (clients) storageSet(KEYS.clients, clients);
-    if (projects) storageSet(KEYS.projects, projects);
-    if (services) storageSet(KEYS.services, services);
-    if (timeEntries) storageSet(KEYS.timeEntries, timeEntries);
-    if (templates) storageSet(KEYS.templates, templates);
-    if (billingItems) storageSet(KEYS.billingItems, billingItems);
-    if (billingItemTasks) storageSet(KEYS.billingItemTasks, billingItemTasks);
-    if (dayPlans) storageSet(KEYS.dayPlans, dayPlans);
-    if (invoices) storageSet(KEYS.invoices, invoices);
-    if (isTauriAvailable()) {
-      await command("import_snapshot", {
-        payload: {
-          tasks: tasks ?? [],
-          blocks: blocks ?? [],
-          goals: goals ?? [],
-          notes: notes ?? [],
-          clients: clients ?? [],
-          projects: projects ?? [],
-          services: services ?? [],
-          timeEntries: timeEntries ?? [],
-          templates: templates ?? [],
-          billingItems: billingItems ?? [],
-          billingItemTasks: billingItemTasks ?? [],
-          dayPlans: dayPlans ?? [],
-          invoices: invoices ?? [],
-          tenantMeta,
-        },
-      });
+    if (!snapshot.data || typeof snapshot.data !== "object") return false;
+    const lists: Record<string, unknown[]> = {};
+    for (const [name] of IMPORT_LISTS) {
+      const value = snapshot.data[name];
+      if (value === undefined || value === null) continue;
+      if (!Array.isArray(value)) return false;
+      lists[name] = value;
     }
-    const config = $appConfig.get();
-    if (profile && config) {
-      await saveAppConfig({ ...config, profile });
+    if (isTauriAvailable()) {
+      await command("import_snapshot", { payload: lists });
+      await syncFromDatabase();
+    } else {
+      for (const [name, key] of IMPORT_LISTS) {
+        if (lists[name]) storageSet(key, lists[name]);
+      }
     }
     return true;
   } catch {

@@ -2,12 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const storage = new Map<string, string>();
 
+let tauri = true;
+const command = vi.fn();
+const syncFromDatabase = vi.fn();
+
 vi.mock("./platform", () => ({
-  isTauriAvailable: () => true,
+  isTauriAvailable: () => tauri,
+  isMac: () => true,
 }));
 
 vi.mock("@casoon/origin-client", () => ({
-  command: vi.fn(),
+  command,
 }));
 
 vi.mock("./storage", () => ({
@@ -26,7 +31,10 @@ vi.mock("./storage", () => ({
     dayPlans: "etasks:dayPlans",
     services: "etasks:services",
     invoices: "etasks:invoices",
+    weekPlans: "etasks:weekPlans",
+    termine: "etasks:termine",
   },
+  syncFromDatabase,
   storageGet: (key: string) => {
     const raw = storage.get(key);
     return raw ? JSON.parse(raw) : null;
@@ -50,6 +58,8 @@ vi.mock("./db", () => ({
     { billingItemId: "billing-1", taskId: "task-1" },
   ],
   loadDayPlans: () => [{ id: "plan-1", date: "2026-03-28" }],
+  loadTermine: () => [{ id: "termin-1" }],
+  loadWeekPlans: () => [{ weekStart: "2026-03-23", focusProjectIds: [] }],
 }));
 
 vi.mock("../stores/coreBridge", () => ({
@@ -59,9 +69,12 @@ vi.mock("../stores/coreBridge", () => ({
 
 vi.mock("../stores/configStore", () => ({
   $appConfig: {
-    get: () => ({ profile: { company: "Test Co" } }),
+    get: () => ({
+      profile: { company: "Test Co" },
+      active_tenant: "/ws/a.db",
+      tenants: [{ path: "/ws/a.db", name: "a", displayName: "Büro Müller & Söhne" }],
+    }),
   },
-  saveAppConfig: vi.fn(),
 }));
 
 vi.mock("./metaStore", () => ({
@@ -73,6 +86,9 @@ vi.mock("./metaStore", () => ({
 describe("exportService", () => {
   beforeEach(() => {
     storage.clear();
+    tauri = true;
+    command.mockReset();
+    syncFromDatabase.mockReset();
   });
 
   it("builds a full snapshot for all persisted entities", async () => {
@@ -93,6 +109,8 @@ describe("exportService", () => {
       billingItemTasks: [{ billingItemId: "billing-1", taskId: "task-1" }],
       dayPlans: [{ id: "plan-1", date: "2026-03-28" }],
       invoices: [{ id: "invoice-1" }],
+      termine: [{ id: "termin-1" }],
+      weekPlans: [{ weekStart: "2026-03-23", focusProjectIds: [] }],
     });
     expect(snapshot.profile).toEqual({ company: "Test Co" });
     expect(snapshot.tenantMeta).toEqual([
@@ -101,6 +119,7 @@ describe("exportService", () => {
   });
 
   it("imports all persisted entities from JSON", async () => {
+    tauri = false;
     const { importFromJSON } = await import("./exportService");
 
     const ok = await importFromJSON(
@@ -123,6 +142,8 @@ describe("exportService", () => {
           billingItemTasks: [{ billingItemId: "billing-2", taskId: "task-2" }],
           dayPlans: [{ id: "plan-2", date: "2026-03-29" }],
           invoices: [{ id: "invoice-2" }],
+          termine: [{ id: "termin-2" }],
+          weekPlans: [{ weekStart: "2026-03-30", focusProjectIds: ["project-2"] }],
         },
       }),
     );
@@ -146,5 +167,82 @@ describe("exportService", () => {
     expect(JSON.parse(storage.get("etasks:invoices") ?? "null")).toEqual([
       { id: "invoice-2" },
     ]);
+    expect(JSON.parse(storage.get("etasks:termine") ?? "null")).toEqual([
+      { id: "termin-2" },
+    ]);
+    expect(JSON.parse(storage.get("etasks:weekPlans") ?? "null")).toEqual([
+      { weekStart: "2026-03-30", focusProjectIds: ["project-2"] },
+    ]);
+  });
+
+  it("still imports backups without termine and weekPlans", async () => {
+    tauri = false;
+    const { importFromJSON } = await import("./exportService");
+    const ok = await importFromJSON(
+      JSON.stringify({ data: { tasks: [{ id: "task-3" }] } }),
+    );
+    expect(ok).toBe(true);
+    expect(storage.has("etasks:termine")).toBe(false);
+  });
+
+  it("writes SQLite first and leaves local storage to the DB refresh", async () => {
+    storage.set("etasks:invoices", JSON.stringify([{ id: "old" }]));
+    const { importFromJSON } = await import("./exportService");
+
+    const ok = await importFromJSON(
+      JSON.stringify({
+        profile: { company: "Other" },
+        tenantMeta: [{ key: "tenant.name", value: "Other", valueType: "string" }],
+        data: { tasks: [{ id: "task-4" }], termine: [{ id: "termin-4" }] },
+      }),
+    );
+
+    expect(ok).toBe(true);
+    expect(command).toHaveBeenCalledWith("import_snapshot", {
+      payload: { tasks: [{ id: "task-4" }], termine: [{ id: "termin-4" }] },
+    });
+    expect(syncFromDatabase).toHaveBeenCalledTimes(1);
+    expect(storage.get("etasks:invoices")).toBe(JSON.stringify([{ id: "old" }]));
+    expect(storage.has("etasks:tasks")).toBe(false);
+  });
+
+  it("does not touch local storage when the DB import fails", async () => {
+    command.mockRejectedValueOnce(new Error("task: missing id"));
+    const { importFromJSON } = await import("./exportService");
+
+    const ok = await importFromJSON(
+      JSON.stringify({ data: { tasks: [{ title: "broken" }] } }),
+    );
+
+    expect(ok).toBe(false);
+    expect(syncFromDatabase).not.toHaveBeenCalled();
+    expect(storage.size).toBe(0);
+  });
+
+  it("rejects non-array lists before writing anything", async () => {
+    const { importFromJSON } = await import("./exportService");
+
+    expect(await importFromJSON(JSON.stringify({ data: { tasks: {} } }))).toBe(
+      false,
+    );
+    expect(command).not.toHaveBeenCalled();
+  });
+
+  it("puts the workspace into snapshot and export file names", async () => {
+    command.mockResolvedValue(undefined);
+    const { saveToICloud, exportToFile } = await import("./exportService");
+
+    expect(await saveToICloud()).toBe(true);
+    await exportToFile();
+
+    expect(command).toHaveBeenCalledWith("save_to_icloud", {
+      json: expect.any(String),
+      filename: expect.stringMatching(/^snapshot-buro-muller-sohne-\d{4}-\d{2}-\d{2}\.json$/),
+    });
+    expect(command).toHaveBeenCalledWith("export_to_file", {
+      json: expect.any(String),
+      filename: expect.stringMatching(/^etasks-export-buro-muller-sohne-\d{4}-\d{2}-\d{2}\.json$/),
+      directory: null,
+    });
   });
 });

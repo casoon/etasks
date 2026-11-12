@@ -100,7 +100,8 @@ const navItems = [
     import { $navItem, $showShutdown } from "../../stores/uiStore";
     import { $appConfig } from "../../stores/configStore";
     import { exportToFile } from "../../lib/exportService";
-    import { activateTenant } from "../../lib/appBootstrap";
+    import { activateTenant, tenantDbExists } from "../../lib/appBootstrap";
+    import { toast } from "../../stores/toastStore";
 
     function updateTenantSwitcher(config: any) {
         const nameEl = document.getElementById("tenant-name-text");
@@ -129,7 +130,20 @@ const navItems = [
             if (t.path !== config.active_tenant) {
                 btn.addEventListener("click", async () => {
                     closeDropdown();
-                    await activateTenant(t.path);
+                    try {
+                        if (!(await tenantDbExists(t.path))) {
+                            toast(
+                                "Die Datenbank dieses Arbeitsbereichs wurde nicht gefunden. Wurde der Ordner verschoben oder gelöscht?",
+                                "error",
+                                6000,
+                            );
+                            return;
+                        }
+                        await activateTenant(t.path);
+                    } catch (e) {
+                        toast(`Wechsel des Arbeitsbereichs fehlgeschlagen: ${e}`, "error", 6000);
+                        return;
+                    }
                     $navItem.set("today");
                     window.dispatchEvent(new CustomEvent('etasks:nav', { detail: "today" }));
                     document
