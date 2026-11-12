@@ -471,12 +471,12 @@
     }
 
     const projectTaskCount = (pid: string) =>
-        allTasks.filter((t) => t.projectId === pid).length;
+        allTasks.filter((t) => t.projectId === pid && !t.recurrence).length;
     const projectDoneCount = (pid: string) =>
-        allTasks.filter((t) => t.projectId === pid && t.status === "done")
+        allTasks.filter((t) => t.projectId === pid && !t.recurrence && t.status === "done")
             .length;
     const projectOpenCount = (pid: string) =>
-        allTasks.filter((t) => t.projectId === pid && t.status === "todo")
+        allTasks.filter((t) => t.projectId === pid && !t.recurrence && t.status === "todo")
             .length;
     const projectTrackedMinutes = (pid: string) => {
         const taskIds = new Set(allTasks.filter(t => t.projectId === pid).map(t => t.id));
@@ -1081,7 +1081,7 @@
                         .filter((l) => l.billingItemId === item.id)
                         .map((l) => l.taskId)}
                     {@const projectTasks = allTasks.filter(
-                        (t) => t.projectId === selectedId,
+                        (t) => t.projectId === selectedId && !t.recurrence,
                     )}
                     <div
                         class="rounded-lg border {isUnlocked
@@ -1290,7 +1290,7 @@
                     on:click={() => {
                         if (
                             confirm(
-                                `Projekt „${selectedProject?.name}" wirklich löschen?\n\nGelöscht werden auch ${allTasks.filter((t) => t.projectId === selectedProject?.id).length} Aufgabe(n), Rechnungspositionen, Zeiteinträge und Termine des Projekts. Rechnungen bleiben erhalten.`,
+                                `Projekt „${selectedProject?.name}" wirklich löschen?\n\nGelöscht werden auch ${allTasks.filter((t) => t.projectId === selectedProject?.id && !t.recurrence).length} Aufgabe(n), Rechnungspositionen, Zeiteinträge und Termine des Projekts. Rechnungen bleiben erhalten.`,
                             )
                         )
                             deleteProjectCascade(selectedProject.id);

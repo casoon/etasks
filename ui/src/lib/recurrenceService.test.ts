@@ -189,3 +189,15 @@ describe('generateDueInstances', () => {
     expect(generateDueInstances([template], '2026-03-29')).toHaveLength(0);
   });
 });
+
+describe('generated day memory', () => {
+  it('does not generate again for a day remembered on the template', () => {
+    const template = makeRecurringTemplate({ generatedDates: ['2026-03-27'] });
+    expect(generateDueInstances([template], '2026-03-27')).toHaveLength(0);
+  });
+
+  it('still generates for a day that was not generated yet', () => {
+    const template = makeRecurringTemplate({ generatedDates: ['2026-03-26'] });
+    expect(generateDueInstances([template], '2026-03-27')).toHaveLength(1);
+  });
+});

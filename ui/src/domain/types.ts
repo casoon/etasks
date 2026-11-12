@@ -33,6 +33,7 @@ export interface Task {
   notes?: string;
   recurrence?: RecurrenceRule;
   sourceTaskId?: string; // ID des Ursprungs-Tasks bei generierten Instanzen
+  generatedDates?: string[]; // Vorlage: Tage, für die schon eine Instanz erzeugt wurde (YYYY-MM-DD)
   trackedSeconds?: number; // akkumulierte Zeit aus TimeEntries
   completedAt?: string | null;
 }

@@ -18,6 +18,7 @@ export function generateDueInstances(allTasks: Task[], targetDate: string): Task
 
   for (const template of recurringTemplates) {
     if (existingSourceIds.has(template.id)) continue;
+    if (template.generatedDates?.includes(targetDate)) continue;
     if (!isDue(template.recurrence!, template.plannedDate ?? '', targetDate)) continue;
 
     const instance = createTask({
@@ -34,12 +35,22 @@ export function generateDueInstances(allTasks: Task[], targetDate: string): Task
   return newTasks;
 }
 
-export function initRecurringTasks(): void {
+const GENERATED_DATES_KEPT = 60;
+
+// Creates today's instances and remembers the day on the template, so an instance that is
+// removed from "Heute" or deleted is not generated again. Returns whether anything was created.
+export function initRecurringTasks(): boolean {
   const allTasks = loadTasks();
   const todayStr = today();
   const newInstances = generateDueInstances(allTasks, todayStr);
 
   for (const task of newInstances) {
     upsertTask(task);
+    const template = allTasks.find((t) => t.id === task.sourceTaskId)!;
+    upsertTask({
+      ...template,
+      generatedDates: [...(template.generatedDates ?? []), todayStr].slice(-GENERATED_DATES_KEPT),
+    });
   }
+  return newInstances.length > 0;
 }

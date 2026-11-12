@@ -83,7 +83,7 @@ export function buildProjectReportInput(
   tasks: Task[],
   timeEntries: TimeEntry[],
 ): ProjectReportInput {
-  const projectTasks = tasks.filter((t) => t.projectId === project.id);
+  const projectTasks = tasks.filter((t) => t.projectId === project.id && !t.recurrence);
   const doneTasks = projectTasks.filter((t) => t.status === 'done');
 
   // Entries of deleted tasks count via the entry's own projectId.

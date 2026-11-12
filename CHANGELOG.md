@@ -27,6 +27,7 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Fixed
 
+- **Recurring tasks:** a generated instance that is removed from "Heute" or deleted does not come back at the next start; the template remembers which days were generated. New instances are also created at midnight while the app is open, and templates no longer count as open tasks in project progress, delete confirmations, the billing item task picker and the project report.
 - **Time tracking:** entries are stored to the second; short sessions no longer round to 0 min and sums, reports, invoices import and CSV add up exact seconds. The running timer shows a live clock, appears as "läuft" in the day list and counts in the totals.
 - **Time tracking:** switching the timer to another task refreshes the task times; marking a task done stops its running timer.
 - **Daily close:** "Zeit heute" uses the local day and includes the running timer.

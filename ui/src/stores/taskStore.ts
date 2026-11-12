@@ -4,6 +4,7 @@ import type { Task, KanbanStatus } from '../domain/types';
 import { today, toDateKeyFromIso } from '../domain/dateUtils';
 import { createTask } from '../domain/taskService';
 import { loadTasks, upsertTask, deleteTask as dbDeleteTask } from '../lib/db';
+import { initRecurringTasks } from '../lib/recurrenceService';
 
 export const $tasks = atom<Task[]>([]);
 export const $activeDate = atom<string>(today());
@@ -27,6 +28,7 @@ function rollOverActiveDate(): void {
   if (now === dayKey) return;
   if ($activeDate.get() === dayKey) $activeDate.set(now);
   dayKey = now;
+  if (initRecurringTasks()) $tasks.set(loadTasks());
 }
 
 export function initTasks(): void {
@@ -91,8 +93,10 @@ export function cloneRecurringTask(templateId: string, plannedDate: string): Tas
   const template = $tasks.get().find((t) => t.id === templateId);
   if (!template) throw new Error('Recurring template not found');
   const now = new Date().toISOString();
+  upsertTask({ ...template, generatedDates: [...(template.generatedDates ?? []), plannedDate] });
   const clone: Task = {
     ...template,
+    generatedDates: undefined,
     id: crypto.randomUUID(),
     sourceTaskId: templateId,
     plannedDate,
