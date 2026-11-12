@@ -28,6 +28,7 @@ All notable changes to eTasks are listed here. eTasks follows
 ### Removed
 
 - **Settings:** the unused workspace fields "Typ" and "Währung" (documents are always in EUR).
+- **Security:** the unused file-system and dialog permissions of the webview and the `tauri-plugin-fs` and `@tauri-apps/plugin-dialog` dependencies; file dialogs and file access stay in the Rust core.
 - **Cleanup:** the unused energy check log, the unmounted weekly objectives widget, the unused `open_ics_file` command and the dead card drag in Fokus.
 - **Releases:** the macOS Intel (`x64`) build; macOS installers are Apple Silicon only.
 
@@ -94,6 +95,7 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Security
 
+- **App:** the webview runs under a restrictive Content Security Policy (own files only, no frames or plugins; IPC and data/blob images allowed) instead of none.
 - **Dependencies:** `rusqlite` 0.41 bundles SQLite 3.54, which closes RUSTSEC-2026-0459 (a crafted
   database with a mismatched `-wal` file could read uninitialised memory). Building needs Rust 1.89.
 - **Configuration:** `config.json` is written atomically and the last good file is kept as `config.json.bak`. A damaged file is no longer replaced by defaults: the backup is restored automatically, otherwise an error screen offers a fresh setup. If the database of the last workspace is missing at start, "Arbeitsbereich nicht gefunden" offers the other workspaces instead of resetting the setup.
