@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tauri::Manager;
 
 const WORKSPACE_DB_FILENAME: &str = "etasks.sqlite3";
@@ -205,27 +205,145 @@ fn tenant_assets_dir(path: &str) -> PathBuf {
     tenant_workspace_dir(path).join("assets")
 }
 
-#[tauri::command]
-pub fn load_config(app: tauri::AppHandle) -> AppConfig {
-    let path = config_path(&app);
-    if path.exists() {
-        std::fs::read_to_string(&path)
-            .ok()
-            .and_then(|s| serde_json::from_str(&s).ok())
-            .unwrap_or_default()
-    } else {
-        AppConfig::default()
+#[derive(Serialize, Clone, Copy, PartialEq, Eq, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum ConfigStatus {
+    Ok,
+    /// Keine config.json vorhanden (erster Start).
+    Missing,
+    /// config.json war beschädigt; die Sicherung wurde wiederhergestellt.
+    RecoveredFromBackup,
+    /// config.json ist beschädigt und es gibt keine brauchbare Sicherung.
+    Corrupt,
+}
+
+#[derive(Serialize)]
+pub struct LoadedConfig {
+    pub config: AppConfig,
+    pub status: ConfigStatus,
+    pub message: Option<String>,
+}
+
+fn sibling_path(path: &Path, suffix: &str) -> PathBuf {
+    let mut name = path.file_name().unwrap_or_default().to_os_string();
+    name.push(suffix);
+    path.with_file_name(name)
+}
+
+fn timestamp() -> String {
+    chrono::Local::now().format("%Y%m%d-%H%M%S").to_string()
+}
+
+fn parse_config(path: &Path) -> Result<AppConfig, String> {
+    let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
+/// Schreibt in eine Temp-Datei im selben Ordner und benennt sie danach um, damit ein Absturz
+/// mitten im Schreiben nie eine halbe Datei hinterlässt.
+fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    use std::io::Write;
+    let tmp = sibling_path(path, ".tmp");
+    let mut file = std::fs::File::create(&tmp).map_err(|e| e.to_string())?;
+    file.write_all(bytes).map_err(|e| e.to_string())?;
+    file.sync_all().map_err(|e| e.to_string())?;
+    drop(file);
+    std::fs::rename(&tmp, path).map_err(|e| {
+        let _ = std::fs::remove_file(&tmp);
+        e.to_string()
+    })
+}
+
+/// Liest die Konfiguration. Eine beschädigte Datei wird nie stillschweigend durch Standardwerte
+/// ersetzt: erst wird `config.json.bak` versucht, sonst wird der Fehler gemeldet.
+fn read_config_file(path: &Path) -> LoadedConfig {
+    if !path.exists() {
+        return LoadedConfig {
+            config: AppConfig::default(),
+            status: ConfigStatus::Missing,
+            message: None,
+        };
     }
+    let parse_error = match parse_config(path) {
+        Ok(config) => {
+            return LoadedConfig {
+                config,
+                status: ConfigStatus::Ok,
+                message: None,
+            }
+        }
+        Err(e) => e,
+    };
+    let bak = sibling_path(path, ".bak");
+    if let Ok(config) = parse_config(&bak) {
+        let corrupt = sibling_path(path, &format!(".corrupt-{}", timestamp()));
+        let restored = std::fs::copy(path, &corrupt)
+            .map_err(|e| e.to_string())
+            .and_then(|_| std::fs::read(&bak).map_err(|e| e.to_string()))
+            .and_then(|bytes| write_atomic(path, &bytes));
+        if restored.is_ok() {
+            return LoadedConfig {
+                config,
+                status: ConfigStatus::RecoveredFromBackup,
+                message: Some(format!(
+                    "Die Konfiguration war beschädigt und wurde aus der Sicherung wiederhergestellt. Die beschädigte Datei liegt unter {}.",
+                    corrupt.display()
+                )),
+            };
+        }
+    }
+    LoadedConfig {
+        config: AppConfig::default(),
+        status: ConfigStatus::Corrupt,
+        message: Some(format!(
+            "Die Konfiguration {} ist beschädigt und es gibt keine brauchbare Sicherung ({parse_error}).",
+            path.display()
+        )),
+    }
+}
+
+/// Schreibt die Konfiguration atomar. Die letzte gültige Datei bleibt als `.bak` erhalten; eine
+/// beschädigte Datei wird nie ohne Kopie (`.corrupt-<Zeit>`) überschrieben.
+fn write_config_file(path: &Path, config: &AppConfig) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let json = serde_json::to_string_pretty(config).map_err(|e| e.to_string())?;
+    if path.exists() {
+        let keep = if parse_config(path).is_ok() {
+            sibling_path(path, ".bak")
+        } else {
+            sibling_path(path, &format!(".corrupt-{}", timestamp()))
+        };
+        std::fs::copy(path, &keep).map_err(|e| e.to_string())?;
+    }
+    write_atomic(path, json.as_bytes())
+}
+
+/// Konfiguration für interne Aufrufer; bei Fehlern gelten Standardwerte.
+fn read_config(app: &tauri::AppHandle) -> AppConfig {
+    read_config_file(&config_path(app)).config
+}
+
+#[tauri::command]
+pub fn load_config(app: tauri::AppHandle) -> LoadedConfig {
+    read_config_file(&config_path(&app))
 }
 
 #[tauri::command]
 pub fn save_config(app: tauri::AppHandle, config: AppConfig) -> Result<(), String> {
+    write_config_file(&config_path(&app), &config)
+}
+
+/// Legt eine beschädigte config.json zur Seite, damit der Nutzer neu einrichten kann.
+#[tauri::command]
+pub fn reset_config(app: tauri::AppHandle) -> Result<(), String> {
     let path = config_path(&app);
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    if path.exists() && parse_config(&path).is_err() {
+        let corrupt = sibling_path(&path, &format!(".corrupt-{}", timestamp()));
+        std::fs::rename(&path, corrupt).map_err(|e| e.to_string())?;
     }
-    let json = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
-    std::fs::write(&path, json).map_err(|e| e.to_string())
+    Ok(())
 }
 
 #[tauri::command]
@@ -371,7 +489,7 @@ pub fn import_logo_file(app: tauri::AppHandle) -> Result<Option<String>, String>
         .extension()
         .and_then(|ext| ext.to_str())
         .unwrap_or("png");
-    let config = load_config(app.clone());
+    let config = read_config(&app);
     let target_dir = config
         .active_tenant
         .as_deref()
@@ -471,7 +589,7 @@ pub fn list_workspace_files(app: tauri::AppHandle) -> Result<Vec<String>, String
     if let Ok(documents) = app.path().document_dir() {
         scan_workspace_root(&documents, true, &mut found);
     }
-    if let Some(dir) = load_config(app.clone()).default_workspace_dir {
+    if let Some(dir) = read_config(&app).default_workspace_dir {
         scan_workspace_root(std::path::Path::new(&dir), true, &mut found);
         push_direct_workspace(std::path::Path::new(&dir), &mut found);
     }
@@ -602,5 +720,111 @@ mod tests {
         push_direct_workspace(&root, &mut found);
         assert_eq!(found.len(), 1);
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    fn temp_dir(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("etasks-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn config_with_tenant(path: &str) -> AppConfig {
+        let mut cfg = AppConfig::default();
+        cfg.setup_done = true;
+        cfg.active_tenant = Some(path.into());
+        cfg
+    }
+
+    #[test]
+    fn config_write_is_atomic_and_keeps_the_last_good_file_as_bak() {
+        let dir = temp_dir("cfg-write");
+        let path = dir.join("config.json");
+        write_config_file(&path, &config_with_tenant("/a")).unwrap();
+        assert!(!sibling_path(&path, ".tmp").exists());
+        assert!(!sibling_path(&path, ".bak").exists());
+
+        write_config_file(&path, &config_with_tenant("/b")).unwrap();
+        assert!(!sibling_path(&path, ".tmp").exists());
+        assert_eq!(parse_config(&path).unwrap().active_tenant.as_deref(), Some("/b"));
+        assert_eq!(
+            parse_config(&sibling_path(&path, ".bak")).unwrap().active_tenant.as_deref(),
+            Some("/a")
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn missing_config_is_reported_as_missing() {
+        let dir = temp_dir("cfg-missing");
+        let loaded = read_config_file(&dir.join("config.json"));
+        assert_eq!(loaded.status, ConfigStatus::Missing);
+        assert!(!loaded.config.setup_done);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn corrupt_config_is_restored_from_bak_and_the_corrupt_file_is_kept() {
+        let dir = temp_dir("cfg-recover");
+        let path = dir.join("config.json");
+        write_config_file(&path, &config_with_tenant("/a")).unwrap();
+        write_config_file(&path, &config_with_tenant("/b")).unwrap();
+        std::fs::write(&path, "{ half a file").unwrap();
+
+        let loaded = read_config_file(&path);
+        assert_eq!(loaded.status, ConfigStatus::RecoveredFromBackup);
+        assert!(loaded.message.is_some());
+        assert_eq!(loaded.config.active_tenant.as_deref(), Some("/a"));
+        assert_eq!(parse_config(&path).unwrap().active_tenant.as_deref(), Some("/a"));
+        let kept = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .filter(|e| e.file_name().to_string_lossy().contains(".corrupt-"))
+            .count();
+        assert_eq!(kept, 1);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn corrupt_config_without_bak_is_an_error_state_and_stays_untouched() {
+        let dir = temp_dir("cfg-corrupt");
+        let path = dir.join("config.json");
+        std::fs::write(&path, "not json").unwrap();
+
+        let loaded = read_config_file(&path);
+        assert_eq!(loaded.status, ConfigStatus::Corrupt);
+        assert!(loaded.message.unwrap().contains("beschädigt"));
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "not json");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn saving_over_a_corrupt_config_keeps_a_corrupt_copy_and_not_a_bak() {
+        let dir = temp_dir("cfg-save-corrupt");
+        let path = dir.join("config.json");
+        std::fs::write(&path, "not json").unwrap();
+
+        write_config_file(&path, &config_with_tenant("/new")).unwrap();
+        assert!(!sibling_path(&path, ".bak").exists());
+        let copies: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .filter(|e| e.file_name().to_string_lossy().contains(".corrupt-"))
+            .collect();
+        assert_eq!(copies.len(), 1);
+        assert_eq!(std::fs::read_to_string(copies[0].path()).unwrap(), "not json");
+        assert_eq!(parse_config(&path).unwrap().active_tenant.as_deref(), Some("/new"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn config_missing_a_formerly_required_field_still_loads_from_disk() {
+        let dir = temp_dir("cfg-partial");
+        let path = dir.join("config.json");
+        std::fs::write(&path, r#"{"setup_done":true,"profile":{"first_name":"Ada"}}"#).unwrap();
+        let loaded = read_config_file(&path);
+        assert_eq!(loaded.status, ConfigStatus::Ok);
+        assert_eq!(loaded.config.profile.country, "Deutschland");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

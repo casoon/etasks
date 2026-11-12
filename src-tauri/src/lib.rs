@@ -15,6 +15,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::config::load_config,
             commands::config::save_config,
+            commands::config::reset_config,
             commands::config::pick_directory,
             commands::config::default_tenant_path,
             commands::config::default_workspace_paths,

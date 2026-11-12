@@ -176,6 +176,26 @@ function saveWebConfig(config: AppConfig): void {
 
 export const $appConfig = atom<AppConfig>(createDefaultAppConfig());
 
+export type ConfigStatus = "ok" | "missing" | "recovered_from_backup" | "corrupt";
+
+interface LoadedConfig {
+  config: AppConfig;
+  status: ConfigStatus;
+  message: string | null;
+}
+
+/** Zustand der zuletzt gelesenen config.json (nur in der Desktop-App ungleich "ok"). */
+export const $configStatus = atom<{ status: ConfigStatus; message: string | null }>(
+  { status: "ok", message: null },
+);
+
+/** Legt eine beschädigte config.json zur Seite, damit neu eingerichtet werden kann. */
+export async function resetCorruptConfig(): Promise<void> {
+  await command("reset_config");
+  $configStatus.set({ status: "missing", message: null });
+  $appConfig.set(createDefaultAppConfig());
+}
+
 export const $activeTenantName = computed($appConfig, (config) => {
   if (!config?.active_tenant) return "";
   const tenant = config.tenants.find((t) => t.path === config.active_tenant);
@@ -183,9 +203,14 @@ export const $activeTenantName = computed($appConfig, (config) => {
 });
 
 export async function loadAppConfig(): Promise<AppConfig> {
-  const config = isTauriAvailable()
-    ? normalizeConfig(await command<AppConfig>("load_config"))
-    : loadWebConfig();
+  let config: AppConfig;
+  if (isTauriAvailable()) {
+    const loaded = await command<LoadedConfig>("load_config");
+    $configStatus.set({ status: loaded.status, message: loaded.message });
+    config = normalizeConfig(loaded.config);
+  } else {
+    config = loadWebConfig();
+  }
   $appConfig.set(config);
   return config;
 }

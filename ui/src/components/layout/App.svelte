@@ -7,7 +7,13 @@
     } from "../../stores/uiStore";
     import { reinitStores } from "../../lib/storeInit";
     import { scheduleDailySnapshot } from "../../lib/exportService";
-    import { loadAppConfig } from "../../stores/configStore";
+    import {
+        loadAppConfig,
+        $configStatus as configStatusStore,
+        resetCorruptConfig,
+        type TenantInfo,
+    } from "../../stores/configStore";
+    import { toast } from "../../stores/toastStore";
     import { activateTenant } from "../../lib/appBootstrap";
     import { isTauriAvailable } from "../../lib/platform";
     import { command } from "@casoon/origin-client";
@@ -26,6 +32,7 @@
     import ClientsView from "../views/ClientsView.svelte";
     import QuickAddModal from "../modals/QuickAddModal.svelte";
     import SetupWizard from "./SetupWizard.svelte";
+    import StartupProblem from "./StartupProblem.svelte";
     import SettingsView from "../views/SettingsView.svelte";
     import DailyPlanningView from "../views/DailyPlanningView.svelte";
     import ReportView from "../views/ReportView.svelte";
@@ -38,6 +45,9 @@
     // Default: show setup overlay until we verify the app state
     let showSetup = true;
     let appReady = false;
+    let configCorrupt = "";
+    let missingWorkspace = "";
+    let otherTenants: TenantInfo[] = [];
 
     onDestroy(() => {
         stopNotificationScheduler();
@@ -66,6 +76,16 @@
             try {
                 const config = await loadAppConfig();
                 if (isTauriAvailable()) {
+                    const status = configStatusStore.get();
+                    if (status.status === "corrupt") {
+                        logger.error(`config.json beschädigt: ${status.message}`);
+                        configCorrupt = status.message ?? "Die Konfiguration ist beschädigt.";
+                        return;
+                    }
+                    if (status.status === "recovered_from_backup") {
+                        logger.warn(status.message ?? "config.json aus Sicherung wiederhergestellt");
+                        toast(status.message ?? "Konfiguration aus der Sicherung wiederhergestellt.", "info", 8000);
+                    }
                     const hasConfig = config.setup_done && !!config.active_tenant;
                     const dbExists = hasConfig
                         ? await command<boolean>("file_exists", { path: config.active_tenant })
@@ -73,9 +93,15 @@
 
                     if (!hasConfig || !dbExists) {
                         if (hasConfig && !dbExists) {
-                            logger.warn(`DB nicht gefunden: ${config.active_tenant} — Setup neu starten`);
-                            const { saveAppConfig } = await import("../../stores/configStore");
-                            await saveAppConfig({ ...config, setup_done: false, active_tenant: null });
+                            logger.warn(`DB nicht gefunden: ${config.active_tenant}`);
+                            missingWorkspace = config.active_tenant!;
+                            const others: TenantInfo[] = [];
+                            for (const t of config.tenants) {
+                                if (t.path !== config.active_tenant && (await command<boolean>("file_exists", { path: t.path }))) {
+                                    others.push(t);
+                                }
+                            }
+                            otherTenants = others;
                         } else {
                             logger.info("Erster Start — Setup-Wizard wird gezeigt");
                         }
@@ -117,6 +143,26 @@
     async function onSetupDone() {
         showSetup = false;
         initStores();
+    }
+
+    async function onResetConfig() {
+        try {
+            await resetCorruptConfig();
+            configCorrupt = "";
+            showSetup = true;
+        } catch (e) {
+            toast(`Zurücksetzen fehlgeschlagen: ${e}`, "error", 6000);
+        }
+    }
+
+    async function onChooseWorkspace(path: string) {
+        try {
+            await activateTenant(path);
+            missingWorkspace = "";
+            showSetup = false;
+        } catch (e) {
+            toast(`Wechsel des Arbeitsbereichs fehlgeschlagen: ${e}`, "error", 6000);
+        }
     }
 </script>
 
@@ -188,6 +234,16 @@
 <ToastContainer />
 <EnergyCheck />
 
-{#if showSetup}
+{#if configCorrupt}
+    <StartupProblem kind="config-corrupt" message={configCorrupt} onReset={onResetConfig} />
+{:else if showSetup && missingWorkspace}
+    <StartupProblem
+        kind="workspace-missing"
+        missingPath={missingWorkspace}
+        tenants={otherTenants}
+        onChoose={onChooseWorkspace}
+        onSetup={() => (missingWorkspace = "")}
+    />
+{:else if showSetup}
     <SetupWizard onDone={onSetupDone} />
 {/if}
