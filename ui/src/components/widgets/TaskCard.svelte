@@ -56,6 +56,11 @@
     editing = false;
   }
 
+  function onEditFocusOut(e: FocusEvent) {
+    if ((e.currentTarget as HTMLElement).contains(e.relatedTarget as Node | null)) return;
+    saveEdit();
+  }
+
   function handleEditKey(e: KeyboardEvent) {
     if (e.key === 'Enter') { saveEdit(); }
     if (e.key === 'Escape') { editing = false; }
@@ -105,12 +110,12 @@
     <span class="{isDone ? 'text-success' : ''}">{isDone ? '✓' : ''}</span>
   </button>
 
-  <div class="flex-1 min-w-0 flex flex-col gap-[3px]">
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
+  <div class="flex-1 min-w-0 flex flex-col gap-[3px]" on:focusout={editing ? onEditFocusOut : undefined}>
     {#if editing}
       <!-- svelte-ignore a11y-autofocus -->
       <input
         bind:value={editTitle}
-        on:blur={saveEdit}
         on:keydown={handleEditKey}
         autofocus
         style="font-size:13px; border:1px solid var(--color-accent); border-radius:4px; padding:1px 4px; width:100%; outline:none;"

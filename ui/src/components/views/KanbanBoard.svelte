@@ -72,7 +72,7 @@
     e.preventDefault();
     const title = addInput.trim();
     if (!title) return;
-    addTask(title, 30, [], projectId, col);
+    addTask(title, 30, [], projectId, col, null);
     addInput = '';
     addingCol = null;
   }
@@ -93,6 +93,11 @@
     const t = editTitle.trim();
     if (t) updateTask(editingId, { title: t, estimatedMinutes: editDuration });
     editingId = null;
+  }
+
+  function onEditFocusOut(e: FocusEvent) {
+    if ((e.currentTarget as HTMLElement).contains(e.relatedTarget as Node | null)) return;
+    saveEdit();
   }
 
   function handleEditKey(e: KeyboardEvent) {
@@ -168,11 +173,14 @@
 
     colTasks.splice(insertIdx, 0, task);
     colTasks.forEach((t, i) => {
-      updateTask(t.id, {
-        kanbanStatus: targetColId,
-        status: targetColId === 'done' ? 'done' : 'todo',
-        sortOrder: i,
-      });
+      const patch: Partial<Task> = {};
+      if (t.sortOrder !== i) patch.sortOrder = i;
+      if ((t.kanbanStatus ?? 'backlog') !== targetColId) {
+        patch.kanbanStatus = targetColId;
+        patch.status = targetColId === 'done' ? 'done' : 'todo';
+        patch.completedAt = targetColId === 'done' ? new Date().toISOString() : null;
+      }
+      if (Object.keys(patch).length > 0) updateTask(t.id, patch);
     });
 
     onDragEnd();
@@ -235,13 +243,13 @@
             on:dragover={(e) => onCardDragOver(e, task.id)}
             title={createdToday ? 'Heute erstellt' : updatedToday ? 'Heute aktualisiert' : ''}
           >
-            <div class="flex flex-col gap-1 min-w-0">
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
+            <div class="flex flex-col gap-1 min-w-0" on:focusout={editingId === task.id ? onEditFocusOut : undefined}>
               {#if editingId === task.id}
                 <!-- svelte-ignore a11y-autofocus -->
                 <input
                   class="w-full px-2 py-2 border border-accent rounded-lg text-[13px] outline-none bg-surface"
                   bind:value={editTitle}
-                  on:blur={saveEdit}
                   on:keydown={handleEditKey}
                   autofocus
                 />
