@@ -20,6 +20,7 @@
     import { today, toDateKey } from "../../domain/dateUtils";
     import { isTauriAvailable } from "../../lib/platform";
     import { generateInvoice, type InvoiceData } from "../../lib/invoiceService";
+    import { calcInvoiceTotals, fromCents, lineTotalCents } from "../../lib/invoiceMoney";
     import type { Invoice } from "../../domain/types";
     import ClientManager from "../modals/ClientManager.svelte";
     import ServiceCatalog from "../modals/ServiceCatalog.svelte";
@@ -218,8 +219,9 @@
                     : `Hallo ${client.name},`,
             },
             items: selectedInvoice.lineItems.map((item, index) => {
-                const total =
-                    Math.round(item.unitPrice * item.quantity * 100) / 100;
+                const total = fromCents(
+                    lineTotalCents(item.unitPrice, item.quantity),
+                );
                 return {
                     position: index + 1,
                     description: item.description?.trim()
@@ -270,32 +272,16 @@
     }
 
     function calculateInvoiceTotals(invoice: Invoice | null) {
-        if (!invoice) {
-            return { netto: 0, vatEntries: [], total: 0 };
-        }
-
-        const vatBase = invoice.lineItems.reduce(
-            (acc, item) => {
-                const lineNet = item.unitPrice * item.quantity;
-                acc.netto += lineNet;
-                acc.vat[item.vatRate] = (acc.vat[item.vatRate] ?? 0) + lineNet;
-                return acc;
-            },
-            { netto: 0, vat: {} as Record<number, number> },
-        );
-        const vatEntries = Object.entries(vatBase.vat).map(([rate, base]) => ({
-            rate: Number(rate),
-            base: Math.round(base * 100) / 100,
-            amount: Math.round(base * (Number(rate) / 100) * 100) / 100,
-        }));
-        const netto = Math.round(vatBase.netto * 100) / 100;
-        const total =
-            Math.round(
-                (netto +
-                    vatEntries.reduce((sum, entry) => sum + entry.amount, 0)) *
-                    100,
-            ) / 100;
-        return { netto, vatEntries, total };
+        const totals = calcInvoiceTotals(invoice?.lineItems ?? []);
+        return {
+            netto: fromCents(totals.nettoCents),
+            vatEntries: totals.vatEntries.map((entry) => ({
+                rate: entry.rate,
+                base: fromCents(entry.baseCents),
+                amount: fromCents(entry.amountCents),
+            })),
+            total: fromCents(totals.totalCents),
+        };
     }
 
     $: invoiceTotals = calculateInvoiceTotals(selectedInvoice);

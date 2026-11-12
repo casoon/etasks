@@ -9,6 +9,12 @@
         Task,
     } from "../../domain/types";
 
+    import {
+        calcInvoiceTotals,
+        formatCents,
+        lineTotalCents,
+    } from "../../lib/invoiceMoney";
+
     export let invoice: Invoice;
     export let clients: Client[] = [];
     export let services: ServiceItem[] = [];
@@ -49,27 +55,7 @@
                   s.name.toLowerCase().includes(newItemInput.toLowerCase()),
               )
             : [];
-    $: invoiceTotals = calcTotals(invoice.lineItems);
-
-    function calcTotals(lineItems: InvoiceLineItem[]) {
-        const vatMap: Record<number, number> = {};
-        let netto = 0;
-        for (const li of lineItems) {
-            const lineNetto = li.unitPrice * li.quantity;
-            netto += lineNetto;
-            if (!vatMap[li.vatRate]) vatMap[li.vatRate] = 0;
-            vatMap[li.vatRate] += lineNetto;
-        }
-        const vatEntries = Object.entries(vatMap).map(([rate, base]) => ({
-            rate: Number(rate),
-            amount: base * (Number(rate) / 100),
-        }));
-        return {
-            netto,
-            vatEntries,
-            total: netto + vatEntries.reduce((s, v) => s + v.amount, 0),
-        };
-    }
+    $: invoiceTotals = calcInvoiceTotals(invoice.lineItems);
 
     function patchLineItem(
         lineItemId: string,
@@ -190,7 +176,7 @@
     }
 
     function lineItemTotal(li: InvoiceLineItem) {
-        return (li.unitPrice * li.quantity).toFixed(2);
+        return formatCents(lineTotalCents(li.unitPrice, li.quantity));
     }
 
     function handleClientChange(e: Event) {
@@ -576,14 +562,14 @@
             <div class="flex gap-8 text-[13px] text-secondary">
                 <span>Netto</span>
                 <span class="tabular-nums w-[100px] text-right"
-                    >{invoiceTotals.netto.toFixed(2)} €</span
+                    >{formatCents(invoiceTotals.nettoCents)} €</span
                 >
             </div>
             {#each invoiceTotals.vatEntries as v (v.rate)}
                 <div class="flex gap-8 text-[13px] text-secondary">
                     <span>MwSt. {v.rate} %</span>
                     <span class="tabular-nums w-[100px] text-right"
-                        >{v.amount.toFixed(2)} €</span
+                        >{formatCents(v.amountCents)} €</span
                     >
                 </div>
             {/each}
@@ -592,7 +578,7 @@
             >
                 <span>Gesamt</span>
                 <span class="tabular-nums w-[100px] text-right"
-                    >{invoiceTotals.total.toFixed(2)} €</span
+                    >{formatCents(invoiceTotals.totalCents)} €</span
                 >
             </div>
         </div>
