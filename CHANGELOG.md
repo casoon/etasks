@@ -41,3 +41,4 @@ All notable changes to eTasks are listed here. eTasks follows
 - **Backup:** exports, snapshots and imports include appointments and week plans (focus projects, weekly goal note); older backup files without them still import.
 - **Backup:** an import writes to the database first and refreshes the UI from it, so a broken file changes nothing; lists missing from the file leave the workspace's data untouched, and the import no longer replaces the workspace meta, the profile or the invoice/offer counters.
 - **Backup:** export and snapshot file names contain the workspace, so workspaces no longer overwrite each other; the daily snapshot is also checked after switching the workspace and hourly or on refocus while the app stays open; the iCloud snapshot is only written on macOS and reports failure elsewhere.
+- **Persistence:** failed database writes are logged and shown as a "Speichern fehlgeschlagen" toast (once per burst) instead of being swallowed.

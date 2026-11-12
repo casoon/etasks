@@ -105,3 +105,25 @@ describe("syncFromDatabase", () => {
     expect(toast).toHaveBeenCalledWith(expect.any(String), "error", 6000);
   });
 });
+
+describe("DB write failures", () => {
+  it("logs every failure but shows a single toast per burst", async () => {
+    const toast = vi.fn();
+    const error = vi.fn();
+    vi.resetModules();
+    vi.doMock("./logger", () => ({ logger: { error } }));
+    vi.doMock("../stores/toastStore", () => ({ toast }));
+    command.mockReset();
+    command.mockRejectedValue(new Error("disk full"));
+    const { storageSet, storageRemove, KEYS } = await import("./storage");
+
+    storageSet(KEYS.exportMeta, { a: 1 });
+    storageSet(KEYS.weekPlans, []);
+    storageRemove(KEYS.termine);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(error).toHaveBeenCalledTimes(3);
+    expect(toast).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledWith(expect.stringContaining("Speichern fehlgeschlagen"), "error", 6000);
+  });
+});

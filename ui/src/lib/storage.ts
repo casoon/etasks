@@ -12,6 +12,22 @@ function isLocalStorageAvailable(): boolean {
   );
 }
 
+const WRITE_ERROR_TOAST_INTERVAL_MS = 10_000;
+let lastWriteErrorToast = 0;
+
+/** Logs every failed DB write; shows one toast per burst so a broken DB doesn't spam. */
+export function reportDbWriteError(cmd: string, error: unknown): void {
+  logger.error(`DB-Schreibfehler (${cmd}): ${error}`);
+  const now = Date.now();
+  if (now - lastWriteErrorToast < WRITE_ERROR_TOAST_INTERVAL_MS) return;
+  lastWriteErrorToast = now;
+  toast(
+    "Speichern fehlgeschlagen. Änderungen gehen beim Neustart verloren.",
+    "error",
+    6000,
+  );
+}
+
 function isEntityBackedKey(key: string): boolean {
   return ENTITY_BACKED_KEYS.has(key);
 }
@@ -123,7 +139,9 @@ export function storageSet<T>(key: string, value: T): void {
   }
   // Only legacy key/value state belongs in the KV table.
   if (isTauriAvailable() && !isEntityBackedKey(key)) {
-    command("db_set", { key, value: raw }).catch(console.error);
+    command("db_set", { key, value: raw }).catch((e) =>
+      reportDbWriteError("db_set", e),
+    );
   }
 }
 
@@ -134,7 +152,9 @@ export function storageRemove(key: string): void {
     memoryFallback.delete(key);
   }
   if (isTauriAvailable() && !isEntityBackedKey(key)) {
-    command("db_remove", { key }).catch(console.error);
+    command("db_remove", { key }).catch((e) =>
+      reportDbWriteError("db_remove", e),
+    );
   }
 }
 

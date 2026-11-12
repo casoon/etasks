@@ -16,12 +16,14 @@ import type {
   Invoice,
   Termin,
 } from "../domain/types";
-import { storageGet, storageSet, KEYS } from "./storage";
+import { storageGet, storageSet, reportDbWriteError, KEYS } from "./storage";
 import { isTauriAvailable } from "./platform";
 import { command } from "@casoon/origin-client";
 
 function dbInvoke(cmd: string, args?: Record<string, unknown>): void {
-  if (isTauriAvailable()) command(cmd, args).catch(console.error);
+  if (isTauriAvailable()) {
+    command(cmd, args).catch((e) => reportDbWriteError(cmd, e));
+  }
 }
 
 function withUpdate<T extends { id: string }>(arr: T[], item: T): T[] {
