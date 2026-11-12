@@ -59,6 +59,7 @@ All notable changes to eTasks are listed here. eTasks follows
 - **Export:** the client CSV uses a decimal comma for hours, starts with a UTF-8 BOM so Excel shows umlauts, and goes to the configured export folder; the project report creates the export folder if it is missing.
 - **Logo:** a configured logo now appears in invoice and offer PDFs (instead of failing with "file not found"), the settings preview shows it, and without a logo the PDF has no grey placeholder box. "Logo-Breite" is gone: the template draws the logo at a fixed width.
 - **Invoices:** the PDF footer with bank details, phone and email is always printed, the tax number appears under "USt-IdNr.", and the thank-you text from the profile is printed below the greeting; "Anmerkungen" is marked as internal.
+- **Profile:** a new profile starts empty instead of with sample data (Max Mustermann, sample IBAN); the examples are only input placeholders. Invoice and offer PDFs need a complete profile (name, email, company, address, tax number, IBAN) and say what is missing; old sample values still in a profile count as missing.
 
 ### Security
 

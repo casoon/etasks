@@ -18,6 +18,8 @@
     import { $projectsView as projectsViewStore } from "../../stores/uiStore";
     import {
         $appConfig as appConfigStore,
+        missingPdfProfileFields,
+        missingProfileMessage,
         saveAppConfig,
     } from "../../stores/configStore";
     import { toast } from "../../stores/toastStore";
@@ -185,6 +187,11 @@
         }
 
         const profile = appConfig.profile;
+        const missing = missingPdfProfileFields(profile);
+        if (missing.length) {
+            toast(missingProfileMessage(missing), "error", 7000);
+            return;
+        }
         const today = new Date();
         const year = today.getFullYear();
         const counter = profile.offer_number_counter ?? 1;

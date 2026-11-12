@@ -41,20 +41,20 @@ pub struct UserProfile {
 impl Default for UserProfile {
     fn default() -> Self {
         UserProfile {
-            first_name: "Max".into(),
-            last_name: "Mustermann".into(),
-            email: "max@musterfirma.de".into(),
+            first_name: String::new(),
+            last_name: String::new(),
+            email: String::new(),
             phone: None,
             website: None,
             logo: None,
             logo_width: Some("3cm".into()),
-            company: "Musterfirma GmbH".into(),
-            street: "Musterstraße 1".into(),
-            zip: "12345".into(),
-            city: "Musterstadt".into(),
+            company: String::new(),
+            street: String::new(),
+            zip: String::new(),
+            city: String::new(),
             country: "Deutschland".into(),
-            tax_id: "DE123456789".into(),
-            iban: "DE89 3704 0044 0532 0130 00".into(),
+            tax_id: String::new(),
+            iban: String::new(),
             hourly_rate: 90.0,
             invoice_number_prefix: Some("RE-".into()),
             invoice_number_counter: Some(1),
@@ -501,6 +501,13 @@ pub fn write_log(path: String, level: String, message: String) -> Result<(), Str
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn default_profile_has_no_sample_data() {
+        let p = UserProfile::default();
+        assert!(p.first_name.is_empty() && p.company.is_empty() && p.iban.is_empty());
+        assert!(p.street.is_empty() && p.tax_id.is_empty() && p.email.is_empty());
+    }
 
     #[test]
     fn tenant_display_name_round_trips_as_camel_case() {

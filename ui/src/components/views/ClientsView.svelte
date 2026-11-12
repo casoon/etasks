@@ -12,7 +12,11 @@
         updateInvoice,
         removeInvoice,
     } from "../../stores/invoiceStore";
-    import { $appConfig as appConfigStore } from "../../stores/configStore";
+    import {
+        $appConfig as appConfigStore,
+        missingPdfProfileFields,
+        missingProfileMessage,
+    } from "../../stores/configStore";
     import { toast } from "../../stores/toastStore";
     import { today, toDateKey } from "../../domain/dateUtils";
     import { isTauriAvailable } from "../../lib/platform";
@@ -194,19 +198,9 @@
         }
 
         const profile = appConfig.profile;
-        if (
-            !profile.company.trim() ||
-            !profile.first_name.trim() ||
-            !profile.last_name.trim() ||
-            !profile.street.trim() ||
-            !profile.zip.trim() ||
-            !profile.city.trim()
-        ) {
-            toast(
-                "Im Profil fehlen noch Firmen- oder Adressdaten für die PDF-Rechnung.",
-                "error",
-                5000,
-            );
+        const missing = missingPdfProfileFields(profile);
+        if (missing.length) {
+            toast(missingProfileMessage(missing), "error", 7000);
             return;
         }
         if (!selectedInvoice.lineItems.length) {

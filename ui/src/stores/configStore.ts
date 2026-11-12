@@ -61,20 +61,20 @@ const WEB_CONFIG_KEY = "etasks.app-config";
 
 export function createDefaultUserProfile(): UserProfile {
   return {
-    first_name: "Max",
-    last_name: "Mustermann",
-    email: "max@musterfirma.de",
+    first_name: "",
+    last_name: "",
+    email: "",
     phone: "",
     website: "",
     logo: "",
     logo_width: "3cm",
-    company: "Musterfirma GmbH",
-    street: "Musterstraße 1",
-    zip: "12345",
-    city: "Musterstadt",
+    company: "",
+    street: "",
+    zip: "",
+    city: "",
     country: "Deutschland",
-    tax_id: "DE123456789",
-    iban: "DE89 3704 0044 0532 0130 00",
+    tax_id: "",
+    iban: "",
     hourly_rate: 90,
     invoice_number_prefix: "RE-",
     invoice_number_counter: 1,
@@ -105,6 +105,41 @@ export function createDefaultAppConfig(): AppConfig {
     default_workspace_dir: null,
     default_export_dir: null,
   };
+}
+
+// Beispielwerte früherer Versionen: in bestehenden config.json noch vorhanden, zählen als nicht ausgefüllt.
+const LEGACY_SAMPLE_VALUES = new Set([
+  "Max",
+  "Mustermann",
+  "max@musterfirma.de",
+  "Musterfirma GmbH",
+  "Musterstraße 1",
+  "12345",
+  "Musterstadt",
+  "DE123456789",
+  "DE89 3704 0044 0532 0130 00",
+]);
+
+/** Pflichtangaben für Rechnungs- und Angebots-PDFs, die im Profil noch fehlen. */
+export function missingPdfProfileFields(profile: UserProfile): string[] {
+  const fields: [string, string][] = [
+    ["Vorname", profile.first_name],
+    ["Nachname", profile.last_name],
+    ["E-Mail", profile.email],
+    ["Unternehmen", profile.company],
+    ["Straße", profile.street],
+    ["PLZ", profile.zip],
+    ["Ort", profile.city],
+    ["Steuernummer / USt-IdNr.", profile.tax_id],
+    ["IBAN", profile.iban],
+  ];
+  return fields
+    .filter(([, value]) => !value?.trim() || LEGACY_SAMPLE_VALUES.has(value.trim()))
+    .map(([label]) => label);
+}
+
+export function missingProfileMessage(missing: string[]): string {
+  return `Im Profil fehlen noch Angaben für das PDF: ${missing.join(", ")}. Bitte unter Einstellungen → Profil ergänzen.`;
 }
 
 function normalizeConfig(

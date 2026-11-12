@@ -174,11 +174,11 @@
             <div class="grid grid-cols-2 gap-3">
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium">Vorname</span>
-                    <input class="input" bind:value={profile.first_name} />
+                    <input class="input" bind:value={profile.first_name} placeholder="Max" />
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium">Nachname</span>
-                    <input class="input" bind:value={profile.last_name} />
+                    <input class="input" bind:value={profile.last_name} placeholder="Mustermann" />
                 </label>
                 <label class="flex flex-col gap-1 col-span-2">
                     <span class="text-xs text-muted font-medium">E-Mail</span>
@@ -186,6 +186,7 @@
                         class="input"
                         type="email"
                         bind:value={profile.email}
+                        placeholder="max@beispiel.de"
                     />
                 </label>
                 <label class="flex flex-col gap-1">
@@ -204,7 +205,7 @@
                     <span class="text-xs text-muted font-medium"
                         >Unternehmen</span
                     >
-                    <input class="input" bind:value={profile.company} />
+                    <input class="input" bind:value={profile.company} placeholder="Musterfirma GmbH" />
                 </label>
                 <div
                     class="col-span-2 rounded-2xl border border-border bg-white/55 p-4"
@@ -265,15 +266,15 @@
                 </div>
                 <label class="flex flex-col gap-1 col-span-2">
                     <span class="text-xs text-muted font-medium">Straße</span>
-                    <input class="input" bind:value={profile.street} />
+                    <input class="input" bind:value={profile.street} placeholder="Musterstraße 1" />
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium">PLZ</span>
-                    <input class="input" bind:value={profile.zip} />
+                    <input class="input" bind:value={profile.zip} placeholder="12345" />
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium">Stadt</span>
-                    <input class="input" bind:value={profile.city} />
+                    <input class="input" bind:value={profile.city} placeholder="Musterstadt" />
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium">Land</span>
@@ -293,11 +294,11 @@
                     <span class="text-xs text-muted font-medium"
                         >Steuernummer / USt-IdNr. (Fußzeile: „USt-IdNr.“)</span
                     >
-                    <input class="input" bind:value={profile.tax_id} />
+                    <input class="input" bind:value={profile.tax_id} placeholder="DE123456789" />
                 </label>
                 <label class="flex flex-col gap-1 col-span-2">
                     <span class="text-xs text-muted font-medium">IBAN</span>
-                    <input class="input font-mono" bind:value={profile.iban} />
+                    <input class="input font-mono" bind:value={profile.iban} placeholder="DE89 3704 0044 0532 0130 00" />
                 </label>
             </div>
 
