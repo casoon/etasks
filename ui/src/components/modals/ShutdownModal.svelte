@@ -3,7 +3,7 @@
   import { $showShutdown as showStore } from '../../stores/uiStore';
   import { $todayTasks as todayTasksStore, updateTask } from '../../stores/taskStore';
   import { removeBlockForTask } from '../../stores/calendarStore';
-  import { today, toDateKey } from '../../domain/dateUtils';
+  import { entrySeconds, today, toDateKey, toDateKeyFromIso } from '../../domain/dateUtils';
   import { upsertNote, loadTimeEntries, loadProjects } from '../../lib/db';
 
   $: show = $showStore;
@@ -14,24 +14,25 @@
   let highlight = '';
   let showSummary = false;
 
-  interface ProjectTime { name: string; color: string; minutes: number }
+  interface ProjectTime { name: string; color: string; minutes: number; seconds: number }
 
   function buildSummary(taskList: typeof tasks): { totalMinutes: number; completionRate: number; byProject: ProjectTime[] } {
     const todayStr = today();
-    const entries = loadTimeEntries().filter(e => e.startAt.startsWith(todayStr));
+    // Local day of the entry, not the UTC prefix; the running entry counts with its elapsed time.
+    const entries = loadTimeEntries().filter(e => toDateKeyFromIso(e.startAt) === todayStr);
     const projects = loadProjects();
     const projectMap = Object.fromEntries(projects.map(p => [p.id, p]));
 
     const byProject: Record<string, ProjectTime> = {};
-    let totalMinutes = 0;
+    let totalSeconds = 0;
     for (const e of entries) {
-      const mins = e.durationMinutes ?? 0;
-      totalMinutes += mins;
+      const secs = e.endAt ? entrySeconds(e) : Math.max(0, Math.round((Date.now() - new Date(e.startAt).getTime()) / 1000));
+      totalSeconds += secs;
       if (!e.projectId) continue;
       const p = projectMap[e.projectId];
       if (!p) continue;
-      if (!byProject[p.id]) byProject[p.id] = { name: p.name, color: p.color ?? '#6366f1', minutes: 0 };
-      byProject[p.id].minutes += mins;
+      if (!byProject[p.id]) byProject[p.id] = { name: p.name, color: p.color ?? '#6366f1', minutes: 0, seconds: 0 };
+      byProject[p.id].seconds += secs;
     }
 
     const all = taskList.length;
@@ -39,9 +40,11 @@
     const completionRate = all === 0 ? 0 : Math.round((done / all) * 100);
 
     return {
-      totalMinutes,
+      totalMinutes: Math.round(totalSeconds / 60),
       completionRate,
-      byProject: Object.values(byProject).sort((a, b) => b.minutes - a.minutes),
+      byProject: Object.values(byProject)
+        .map(p => ({ ...p, minutes: Math.round(p.seconds / 60) }))
+        .sort((a, b) => b.seconds - a.seconds),
     };
   }
 
