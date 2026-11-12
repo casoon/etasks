@@ -41,17 +41,20 @@ import { deleteTaskCascade } from '../../lib/taskActions';
   let editing = false;
   let editTitle = '';
   let editDuration = 30;
+  let editTags = '';
 
   function startEdit() {
     editTitle = task.title;
     editDuration = task.estimatedMinutes ?? 30;
+    editTags = task.tags.join(', ');
     editing = true;
   }
 
   function saveEdit() {
     const t = editTitle.trim();
-    if (t && (t !== task.title || editDuration !== (task.estimatedMinutes ?? 30))) {
-      updateTask(task.id, { title: t, estimatedMinutes: editDuration });
+    const tags = editTags.split(',').map(x => x.trim()).filter(Boolean);
+    if (t && (t !== task.title || editDuration !== (task.estimatedMinutes ?? 30) || tags.join(',') !== task.tags.join(','))) {
+      updateTask(task.id, { title: t, estimatedMinutes: editDuration, tags });
     }
     editing = false;
   }
@@ -131,6 +134,12 @@ import { deleteTaskCascade } from '../../lib/taskActions';
         <option value={90}>1,5 h</option>
         <option value={120}>2 h</option>
       </select>
+      <input
+        bind:value={editTags}
+        on:keydown={handleEditKey}
+        placeholder="Tags, kommagetrennt"
+        style="margin-top:3px; font-size:11px; border:1px solid var(--color-border); border-radius:4px; padding:1px 4px; width:100%; outline:none;"
+      />
     {:else}
       <!-- svelte-ignore a11y-no-static-element-interactions -->
       <span

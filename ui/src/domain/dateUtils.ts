@@ -17,6 +17,14 @@ export function getWeekStart(date: Date): string {
   return toDateKey(d);
 }
 
+/** Kalenderwoche (Montag bis Sonntag) um `date` als Datumsschlüssel, beide Grenzen inklusive. */
+export function getWeekRange(date: Date): { start: string; end: string } {
+  const start = getWeekStart(date);
+  const d = new Date(`${start}T00:00:00`);
+  d.setDate(d.getDate() + 6);
+  return { start, end: toDateKey(d) };
+}
+
 export function formatDate(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00');
   return date.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });

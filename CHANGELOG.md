@@ -7,6 +7,7 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Added
 
+- **Tasks:** tags can be set when editing a task (double-click, comma-separated); Analytics groups the week's tracked time by the first tag.
 - **Appointments:** today's Termine appear in the Tagesplan of Heute and can be edited (title, date, time, duration, type, project, billable) in the Tagesplanung. Billable Termine are listed in Berichte (as "Termin: …") and can be added as one line to an invoice via "Erfasste Zeit übernehmen", priced with the client's hourly rate.
 - **Time tracking:** time entries can be edited (task, day, start, end) and deleted in the Zeiterfassung list, and added by hand with "Eintrag hinzufügen".
 - **Time tracking:** if a timer was left running (started on an earlier day or open for over 12 hours), the app asks at start whether to stop it now, stop it at a time you enter, or discard it.
@@ -28,6 +29,7 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Fixed
 
+- **Analytics:** the weekly figures (completion rate, planned time, tracked time) only count the calendar week Monday–Sunday instead of everything planned from Monday on, "Zeit pro Kategorie" shows tracked time instead of estimates, and "Diese Woche" in Zeiterfassung uses the same calendar week.
 - **Appointments:** the day grid widens for Termine before 06:00 or after 20:00 instead of drawing them outside the grid.
 - **Reports:** time on a deleted task keeps its project and client in the report table and the client report.
 - **Board:** dropping a card no longer changes the "updated" time of cards that only moved position, so old done cards stay out of today's report and the backlog age is kept. "Heute einplanen" (board) and pulling a task scheduled on another day into Heute also remove its calendar block; calendar blocks left over from deleted or unscheduled tasks are cleaned up at start.
