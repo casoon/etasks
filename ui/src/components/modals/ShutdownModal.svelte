@@ -15,7 +15,7 @@
 
   interface ProjectTime { name: string; color: string; minutes: number }
 
-  function buildSummary(): { totalMinutes: number; completionRate: number; byProject: ProjectTime[] } {
+  function buildSummary(taskList: typeof tasks): { totalMinutes: number; completionRate: number; byProject: ProjectTime[] } {
     const todayStr = today();
     const entries = loadTimeEntries().filter(e => e.startAt.startsWith(todayStr));
     const projects = loadProjects();
@@ -33,8 +33,8 @@
       byProject[p.id].minutes += mins;
     }
 
-    const all = tasks.length;
-    const done = doneTasks.length;
+    const all = taskList.length;
+    const done = taskList.filter(t => t.status === 'done').length;
     const completionRate = all === 0 ? 0 : Math.round((done / all) * 100);
 
     return {
@@ -66,6 +66,12 @@
     updateTask(id, { plannedDate: tomorrow.toISOString().slice(0, 10), scheduledStart: null });
   }
 
+  function handleCancel() {
+    showStore.set(false);
+    highlight = '';
+    showSummary = false;
+  }
+
   function handleClose() {
     if (highlight.trim()) {
       upsertNote({ date: today(), highlight: highlight.trim(), createdAt: new Date().toISOString() });
@@ -75,18 +81,25 @@
     showSummary = false;
   }
 
-  $: summary = show ? buildSummary() : null;
+  $: summary = show ? buildSummary(tasks) : null;
 </script>
+
+<svelte:window on:keydown={(e) => { if (show && e.key === 'Escape') handleCancel(); }} />
 
 {#if show}
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div
   class="fixed inset-0 bg-black/30 flex items-center justify-center z-[1000] backdrop-blur-sm"
-  on:click={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+  on:click={(e) => { if (e.target === e.currentTarget) handleCancel(); }}
 >
   <div class="bg-surface rounded-2xl shadow-overlay w-full max-w-[560px] p-8 flex flex-col gap-6 max-h-[80vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="shutdown-title">
-    <div>
+    <div class="flex items-center justify-between">
       <h2 id="shutdown-title" class="text-lg font-semibold text-primary">Tagesabschluss</h2>
+      <button
+        class="w-7 h-7 flex items-center justify-center rounded-lg text-muted hover:bg-bg hover:text-primary transition-colors"
+        aria-label="Schließen ohne Speichern"
+        on:click={handleCancel}
+      >✕</button>
     </div>
 
     {#if summary}

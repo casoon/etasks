@@ -151,7 +151,7 @@
         if (!selectedProject || !selectedClient || !appConfig) return;
         if (!isTauriAvailable()) {
             toast(
-                "Angebote koennen nur in der Desktop-App als PDF erzeugt werden.",
+                "Angebote können nur in der Desktop-App als PDF erzeugt werden.",
                 "info",
                 4000,
             );

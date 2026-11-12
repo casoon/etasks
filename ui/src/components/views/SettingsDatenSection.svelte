@@ -62,7 +62,7 @@
     <div
         class="rounded-2xl border border-border bg-white/60 px-4 py-3 text-sm text-secondary shadow-[0_1px_0_rgba(255,255,255,0.75)_inset]"
     >
-        Neue JSON-Backups, Rechnungen, Angebote und Projektberichte landen standardmaessig in
+        Neue JSON-Backups, Rechnungen, Angebote und Projektberichte landen standardmäßig in
         <span class="font-medium text-primary break-all">
             {config.default_export_dir ?? "dem Standardordner des Systems"}
         </span>.

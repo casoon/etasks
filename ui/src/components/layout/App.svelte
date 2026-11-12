@@ -88,7 +88,7 @@
         })();
 
         function onKey(e: KeyboardEvent) {
-            if (e.metaKey && e.key === "k") {
+            if ((e.metaKey || e.ctrlKey) && e.key === "k") {
                 e.preventDefault();
                 quickAddOpenStore.set(true);
             }

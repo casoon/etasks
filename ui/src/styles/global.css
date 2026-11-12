@@ -126,12 +126,14 @@ body::before {
 ::-webkit-scrollbar-thumb { background: var(--ws-color-border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--ws-color-text-faint); }
 
-button {
-  font-family: inherit;
-  font-size: inherit;
-  cursor: pointer;
-  border: none;
-  background: none;
+@layer base {
+  button {
+    font-family: inherit;
+    font-size: inherit;
+    cursor: pointer;
+    border: none;
+    background: none;
+  }
 }
 
 input, textarea, select {

@@ -96,10 +96,10 @@
         const value = prefix?.trim() ?? "";
         if (!value) return "";
         if (value.length < 2) {
-            return "Praefix sollte mindestens 2 Zeichen haben.";
+            return "Präfix sollte mindestens 2 Zeichen haben.";
         }
         if (!/^[A-Za-z0-9-_/]+$/.test(value)) {
-            return "Praefix enthaelt ungueltige Zeichen.";
+            return "Präfix enthält ungültige Zeichen.";
         }
         return "";
     }
@@ -211,7 +211,7 @@
                             on:click={importLogo}
                             disabled={!isTauriAvailable() || logoImporting}
                         >
-                            {logoImporting ? "Import…" : "Logo waehlen"}
+                            {logoImporting ? "Import…" : "Logo wählen"}
                         </button>
                     </div>
                     <div
@@ -262,7 +262,7 @@
                                 {#if profile.logo?.trim() && logoPreviewError}
                                     Logo konnte nicht geladen werden.
                                 {:else}
-                                    Noch keine Logo-Vorschau verfuegbar.
+                                    Noch keine Logo-Vorschau verfügbar.
                                 {/if}
                             </div>
                         {/if}
@@ -339,7 +339,7 @@
                         placeholder="RE-2026-"
                     />
                     <span class="text-[11px] text-muted">
-                        Naechste Nummer: {invoicePrefixPreview}
+                        Nächste Nummer: {invoicePrefixPreview}
                     </span>
                     {#if invoicePrefixError}
                         <span class="text-[11px] text-red-500">
@@ -440,7 +440,7 @@
                         placeholder="ANG-2026-"
                     />
                     <span class="text-[11px] text-muted">
-                        Naechste Nummer: {offerPrefixPreview}
+                        Nächste Nummer: {offerPrefixPreview}
                     </span>
                     {#if offerPrefixError}
                         <span class="text-[11px] text-red-500">
