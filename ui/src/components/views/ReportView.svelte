@@ -54,7 +54,7 @@
     };
 
     return buildReportRows(tasks, timeEntries, dateFrom, dateTo, inScope).map((r): ViewRow => {
-      const proj = r.task?.projectId ? projectMap.get(r.task.projectId) : null;
+      const proj = r.projectId ? projectMap.get(r.projectId) : null;
       const client = proj?.clientId ? clientMap.get(proj.clientId) : null;
       return {
         taskId: r.taskId,

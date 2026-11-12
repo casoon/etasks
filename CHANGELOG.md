@@ -27,6 +27,7 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Fixed
 
+- **Reports:** time on a deleted task keeps its project and client in the report table and the client report.
 - **Board:** dropping a card no longer changes the "updated" time of cards that only moved position, so old done cards stay out of today's report and the backlog age is kept. "Heute einplanen" (board) and pulling a task scheduled on another day into Heute also remove its calendar block; calendar blocks left over from deleted or unscheduled tasks are cleaned up at start.
 - **Recurring tasks:** a generated instance that is removed from "Heute" or deleted does not come back at the next start; the template remembers which days were generated. New instances are also created at midnight while the app is open, and templates no longer count as open tasks in project progress, delete confirmations, the billing item task picker and the project report.
 - **Time tracking:** entries are stored to the second; short sessions no longer round to 0 min and sums, reports, invoices import and CSV add up exact seconds. The running timer shows a live clock, appears as "läuft" in the day list and counts in the totals.

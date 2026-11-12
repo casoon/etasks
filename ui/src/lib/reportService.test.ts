@@ -46,6 +46,7 @@ describe('buildReportRows', () => {
     const rows = buildReportRows([], [entry({ taskId: 'gone', projectId: 'p' })], '2026-03-01', '2026-03-31', all);
     expect(rows).toHaveLength(1);
     expect(rows[0].task).toBeNull();
+    expect(rows[0].projectId).toBe('p');
     expect(rows[0].trackedMinutes).toBe(60);
   });
 });
@@ -67,5 +68,17 @@ describe('buildProjectReportInput', () => {
   it('never carries the internal project notes into the report', () => {
     const input = buildProjectReportInput({ ...project, notes: 'Zugang: geheim' } as Project, [], []);
     expect(JSON.stringify(input)).not.toContain('geheim');
+  });
+});
+
+describe('buildProjectReportInput templates', () => {
+  it('does not count recurring templates as tasks', () => {
+    const tmpl = task({ id: 'tmpl', projectId: 'p', recurrence: { weekdays: [1] } });
+    const input = buildProjectReportInput(
+      { id: 'p', name: 'P', status: 'active' } as Project,
+      [tmpl, task({ projectId: 'p' })],
+      [],
+    );
+    expect(input.total_tasks).toBe(1);
   });
 });

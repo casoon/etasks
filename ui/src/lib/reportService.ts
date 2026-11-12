@@ -18,6 +18,7 @@ export interface ProjectReportInput {
 export interface ReportRow {
   taskId: string;
   task: Task | null; // null = Aufgabe wurde gelöscht, die Zeit bleibt erhalten
+  projectId?: string; // bei gelöschter Aufgabe aus dem Zeiteintrag
   completedDate: string; // Tag der Erledigung, sonst Tag des letzten Zeiteintrags im Zeitraum
   done: boolean;
   trackedMinutes: number; // erfasste Zeit im Zeitraum, nach Tag des Zeiteintrags
@@ -57,6 +58,7 @@ export function buildReportRows(
     rows.push({
       taskId: task.id,
       task,
+      projectId: task.projectId,
       completedDate: doneInRange ? doneDay! : t!.lastDay,
       done: doneInRange,
       trackedMinutes: Math.round((t?.seconds ?? 0) / 60),
@@ -68,6 +70,7 @@ export function buildReportRows(
     rows.push({
       taskId,
       task: null,
+      projectId: t.projectId,
       completedDate: t.lastDay,
       done: false,
       trackedMinutes: Math.round(t.seconds / 60),
