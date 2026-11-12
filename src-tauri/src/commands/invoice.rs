@@ -43,7 +43,7 @@ pub fn generate_invoice(
     output_dir: Option<String>,
     replace_path: Option<String>,
 ) -> Result<GenerateInvoiceResult, String> {
-    let company = profile_to_company(&input.profile);
+    let company = profile_to_company(&input.profile)?;
 
     let pdf_bytes = render_invoice(&input.invoice, &company)?;
 
@@ -116,7 +116,7 @@ pub fn generate_offer(
     input: GenerateOfferInput,
     output_dir: Option<String>,
 ) -> Result<GenerateOfferResult, String> {
-    let company = profile_to_company(&input.profile);
+    let company = profile_to_company(&input.profile)?;
 
     let pdf_bytes = render_offer(&input.offer, &company)?;
 
@@ -140,19 +140,44 @@ pub fn generate_offer(
     })
 }
 
-fn profile_to_company(p: &UserProfile) -> CompanyData {
-    CompanyData {
+/// 1x1 transparent PNG. The template always draws a grey "Logo hinzufügen" box when the
+/// company has no logo, so an invisible image takes its place.
+const BLANK_LOGO_PNG: &[u8] = &[
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,
+    0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f,
+    0x15, 0xc4, 0x89, 0x00, 0x00, 0x00, 0x0b, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x60,
+    0x00, 0x02, 0x00, 0x00, 0x05, 0x00, 0x01, 0x7a, 0x5e, 0xab, 0x3f, 0x00, 0x00, 0x00, 0x00,
+    0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+];
+
+/// Absolute path for the template's `image("/" + logo)`: the configured logo file, or the
+/// invisible placeholder image.
+fn logo_for_template(logo: Option<&str>) -> Result<String, String> {
+    let path = match logo.map(str::trim).filter(|value| !value.is_empty()) {
+        Some(value) => {
+            if !std::path::Path::new(value).is_file() {
+                return Err(format!("Logo-Datei nicht gefunden: {value}"));
+            }
+            std::path::PathBuf::from(value)
+        }
+        None => {
+            let blank = std::env::temp_dir().join("etasks-blank-logo.png");
+            std::fs::write(&blank, BLANK_LOGO_PNG).map_err(|e| e.to_string())?;
+            blank
+        }
+    };
+    Ok(path.to_string_lossy().trim_start_matches('/').to_string())
+}
+
+fn profile_to_company(p: &UserProfile) -> Result<CompanyData, String> {
+    // The template draws the logo at a fixed 150 pt width; `logo_width` is not read.
+    let logo = logo_for_template(p.logo.as_deref())?;
+    let tax_id = Some(p.tax_id.trim().to_string()).filter(|value| !value.is_empty());
+    Ok(CompanyData {
         name: p.company.clone(),
         language: "de".to_string(),
-        logo: p
-            .logo
-            .clone()
-            .filter(|value| !value.trim().is_empty())
-            .map(|value| value.trim_start_matches('/').to_string()),
-        logo_width: p
-            .logo_width
-            .clone()
-            .filter(|value| !value.trim().is_empty()),
+        logo: Some(logo),
+        logo_width: None,
         branding: typst_business_templates::types::CompanyBranding::default(),
         address: CompanyAddress {
             street: p.street.clone(),
@@ -166,24 +191,48 @@ fn profile_to_company(p: &UserProfile) -> CompanyData {
             email: Some(p.email.clone()),
             website: p.website.clone().filter(|value| !value.trim().is_empty()),
         },
-        tax_id: Some(p.tax_id.clone()),
-        vat_id: None,
-        business_owner: Some(format!("{} {}", p.first_name, p.last_name)),
+        // The footer only prints `vat_id` (labelled "USt-IdNr."), so the profile's tax number
+        // goes there; `tax_id` is kept for completeness.
+        vat_id: tax_id.clone(),
+        tax_id,
+        business_owner: Some(format!("{} {}", p.first_name, p.last_name).trim().to_string()),
         bank_account: Some(BankAccount {
             // The footer template reads bank_name and bic unconditionally, so a missing key
             // aborts the PDF; empty strings render as blank lines instead.
             bank_name: Some(p.bank_name.clone().unwrap_or_default()),
-            account_holder: Some(format!("{} {}", p.first_name, p.last_name)),
+            account_holder: Some(format!("{} {}", p.first_name, p.last_name).trim().to_string()),
             iban: Some(p.iban.clone()),
             bic: Some(p.bic.clone().unwrap_or_default()),
         }),
-    }
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
+
+    fn test_profile() -> UserProfile {
+        UserProfile {
+            first_name: "Anna".into(),
+            last_name: "Testfrau".into(),
+            email: "anna@testfrau.example".into(),
+            phone: Some("+49 30 123456".into()),
+            company: "Testfrau Studio".into(),
+            street: "Teststraße 7".into(),
+            zip: "10115".into(),
+            city: "Berlin".into(),
+            tax_id: "DE999888777".into(),
+            iban: "DE02 1203 0000 0000 2020 51".into(),
+            bank_name: Some("Testbank".into()),
+            bic: Some("BYLADEM1001".into()),
+            ..UserProfile::default()
+        }
+    }
+
+    fn pdf_dir() -> Option<std::path::PathBuf> {
+        std::env::var("ETASKS_TEST_PDF_DIR").ok().map(std::path::PathBuf::from)
+    }
 
     fn sample_invoice() -> Value {
         json!({
@@ -239,11 +288,11 @@ mod tests {
 
     #[test]
     fn renders_invoice_pdf_with_vat_rate_objects() {
-        let company = profile_to_company(&UserProfile::default());
+        let company = profile_to_company(&test_profile()).unwrap();
         let pdf = render_invoice(&sample_invoice(), &company).expect("invoice PDF");
         assert!(pdf.starts_with(b"%PDF"));
-        if let Ok(dir) = std::env::var("ETASKS_TEST_PDF_DIR") {
-            std::fs::write(std::path::Path::new(&dir).join("invoice.pdf"), &pdf).unwrap();
+        if let Some(dir) = pdf_dir() {
+            std::fs::write(dir.join("invoice.pdf"), &pdf).unwrap();
         }
     }
 
@@ -252,7 +301,7 @@ mod tests {
         let mut invoice = sample_invoice();
         invoice["items"][1]["vat_rate"]["percentage"] = json!(7.5);
         invoice["totals"]["vat_breakdown"][1]["rate"]["percentage"] = json!(7.5);
-        let company = profile_to_company(&UserProfile::default());
+        let company = profile_to_company(&test_profile()).unwrap();
         assert!(render_invoice(&invoice, &company).is_ok());
     }
 
@@ -260,7 +309,7 @@ mod tests {
     fn numeric_vat_rate_in_breakdown_is_rejected_by_template() {
         let mut invoice = sample_invoice();
         invoice["totals"]["vat_breakdown"][0]["rate"] = json!(19);
-        let company = profile_to_company(&UserProfile::default());
+        let company = profile_to_company(&test_profile()).unwrap();
         assert!(render_invoice(&invoice, &company).is_err());
     }
 
@@ -305,12 +354,57 @@ mod tests {
             },
             "terms": { "validity": "Dieses Angebot ist gültig bis 12.12.2026" }
         });
-        let company = profile_to_company(&UserProfile::default());
+        let company = profile_to_company(&test_profile()).unwrap();
         let pdf = render_offer(&offer, &company).expect("offer PDF");
         assert!(pdf.starts_with(b"%PDF"));
-        if let Ok(dir) = std::env::var("ETASKS_TEST_PDF_DIR") {
-            std::fs::write(std::path::Path::new(&dir).join("offer.pdf"), &pdf).unwrap();
+        if let Some(dir) = pdf_dir() {
+            std::fs::write(dir.join("offer.pdf"), &pdf).unwrap();
         }
+    }
+
+    #[test]
+    fn invoice_footer_prints_bank_details_and_tax_number() {
+        let company = profile_to_company(&test_profile()).unwrap();
+        let mut invoice = sample_invoice();
+        invoice["metadata"]["show_footer"] = json!(true);
+        invoice["salutation"]["introduction"] = json!("Vielen Dank für Ihren Auftrag.");
+        let pdf = render_invoice(&invoice, &company).expect("invoice PDF");
+        if let Some(dir) = pdf_dir() {
+            std::fs::write(dir.join("invoice-footer.pdf"), &pdf).unwrap();
+        }
+        assert_eq!(company.vat_id.as_deref(), Some("DE999888777"));
+        assert_eq!(company.tax_id.as_deref(), Some("DE999888777"));
+    }
+
+    #[test]
+    fn invoice_with_logo_file_renders() {
+        let dir = std::env::temp_dir().join(format!("etasks-logo-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let logo = dir.join("company-logo.svg");
+        std::fs::write(
+            &logo,
+            r##"<svg xmlns="http://www.w3.org/2000/svg" width="60" height="20"><rect width="60" height="20" fill="#d02020"/></svg>"##,
+        )
+        .unwrap();
+        let mut profile = test_profile();
+        profile.logo = Some(logo.to_string_lossy().to_string());
+        let company = profile_to_company(&profile).unwrap();
+        let pdf = render_invoice(&sample_invoice(), &company).expect("invoice PDF with logo");
+        assert!(pdf.starts_with(b"%PDF"));
+        if let Some(out) = pdf_dir() {
+            std::fs::write(out.join("invoice-logo.pdf"), &pdf).unwrap();
+        }
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn missing_logo_file_is_an_error_and_no_logo_uses_the_blank_image() {
+        let mut profile = test_profile();
+        profile.logo = Some("/definitely/not/here.png".into());
+        assert!(profile_to_company(&profile).unwrap_err().contains("Logo-Datei nicht gefunden"));
+
+        let company = profile_to_company(&test_profile()).unwrap();
+        assert!(company.logo.unwrap().ends_with("etasks-blank-logo.png"));
     }
 
     #[test]

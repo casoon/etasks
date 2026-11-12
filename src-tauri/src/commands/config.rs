@@ -356,7 +356,7 @@ pub fn import_logo_file(app: tauri::AppHandle) -> Result<Option<String>, String>
     let result = app
         .dialog()
         .file()
-        .add_filter("Images", &["png", "jpg", "jpeg", "svg", "webp"])
+        .add_filter("Images", &["png", "jpg", "jpeg", "gif", "svg"])
         .blocking_pick_file();
 
     let source = match result {
@@ -386,6 +386,33 @@ pub fn import_logo_file(app: tauri::AppHandle) -> Result<Option<String>, String>
     std::fs::copy(&source, &target).map_err(|e| e.to_string())?;
 
     Ok(Some(target.to_string_lossy().to_string()))
+}
+
+/// Logo als Data-URL für die Vorschau in den Einstellungen (kein Asset-Protokoll nötig).
+#[tauri::command]
+pub fn logo_data_url(path: String) -> Result<String, String> {
+    use base64::Engine;
+    let path = std::path::Path::new(&path);
+    let mime = match path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(str::to_ascii_lowercase)
+        .as_deref()
+    {
+        Some("png") => "image/png",
+        Some("jpg" | "jpeg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        Some("svg") => "image/svg+xml",
+        _ => return Err("Dateityp wird nicht unterstützt".into()),
+    };
+    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+    if bytes.len() > 5 * 1024 * 1024 {
+        return Err("Datei ist größer als 5 MB".into());
+    }
+    Ok(format!(
+        "data:{mime};base64,{}",
+        base64::engine::general_purpose::STANDARD.encode(bytes)
+    ))
 }
 
 #[tauri::command]

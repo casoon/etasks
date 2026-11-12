@@ -243,7 +243,7 @@
                     selectedInvoice.projectReference?.trim() ||
                     clientProjects[0]?.name ||
                     undefined,
-                show_footer: Boolean(profile.invoice_footer_text?.trim()),
+                show_footer: true,
             },
             recipient: {
                 name: client.contactPerson?.trim() || client.name,
@@ -254,6 +254,8 @@
                 greeting: client.contactPerson?.trim()
                     ? `Hallo ${client.contactPerson.trim()},`
                     : `Hallo ${client.name},`,
+                // Das Template druckt den Dankestext unter der Anrede; am Ende hat es keinen Platz dafür.
+                introduction: profile.invoice_footer_text?.trim() || undefined,
             },
             items: selectedInvoice.lineItems.map((item, index) => {
                 const total = fromCents(
@@ -283,10 +285,6 @@
             payment: {
                 due_date: { date: selectedInvoice.dueDate },
                 bank_transfer_note: selectedInvoice.invoiceNumber,
-            },
-            closing: {
-                text: profile.invoice_footer_text?.trim() || undefined,
-                signature: `${profile.first_name} ${profile.last_name}`.trim(),
             },
         };
 

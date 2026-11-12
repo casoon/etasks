@@ -5,7 +5,7 @@
         $appConfig as appConfigStore,
         saveAppConfig,
     } from "../../stores/configStore";
-    import { assetUrl, isTauriAvailable } from "../../lib/platform";
+    import { isTauriAvailable } from "../../lib/platform";
     import type { UserProfile } from "../../stores/configStore";
     import SettingsDatenSection from "./SettingsDatenSection.svelte";
     import SettingsArbeitsbereichSection from "./SettingsArbeitsbereichSection.svelte";
@@ -20,10 +20,8 @@
     type SettingsSection = "profil" | "arbeitsbereich" | "daten";
     let activeSection: SettingsSection = "profil";
 
-    $: logoPreviewUrl =
-        isTauriAvailable() && profile.logo?.trim()
-            ? assetUrl(profile.logo)
-            : profile.logo?.trim() || "";
+    let logoPreviewUrl = "";
+    $: updateLogoPreview(profile.logo);
     // Der Rechnungszähler gehört zum Arbeitsbereich; hier nur das Format.
     $: invoicePrefixPreview = buildNumberPreview(
         profile.invoice_number_prefix,
@@ -65,6 +63,19 @@
             errorMsg = String(e);
         } finally {
             saving = false;
+        }
+    }
+
+    async function updateLogoPreview(path: string | undefined) {
+        const value = path?.trim() ?? "";
+        logoPreviewError = false;
+        logoPreviewUrl = "";
+        if (!value || !isTauriAvailable()) return;
+        try {
+            const url = await command<string>("logo_data_url", { path: value });
+            if (profile.logo?.trim() === value) logoPreviewUrl = url;
+        } catch {
+            if (profile.logo?.trim() === value) logoPreviewError = true;
         }
     }
 
@@ -215,33 +226,16 @@
                             {logoImporting ? "Import…" : "Logo wählen"}
                         </button>
                     </div>
-                    <div
-                        class="mt-3 grid grid-cols-1 md:grid-cols-[1fr_120px] gap-3"
-                    >
-                        <label class="flex flex-col gap-1">
-                            <span class="text-xs text-muted font-medium">
-                                Dateipfad
-                            </span>
-                            <input
-                                class="input font-mono"
-                                bind:value={profile.logo}
-                                placeholder="/Users/.../company-logo.png"
-                                on:input={() => {
-                                    logoPreviewError = false;
-                                }}
-                            />
-                        </label>
-                        <label class="flex flex-col gap-1">
-                            <span class="text-xs text-muted font-medium">
-                                Logo-Breite
-                            </span>
-                            <input
-                                class="input font-mono"
-                                bind:value={profile.logo_width}
-                                placeholder="3cm"
-                            />
-                        </label>
-                    </div>
+                    <label class="mt-3 flex flex-col gap-1">
+                        <span class="text-xs text-muted font-medium">
+                            Dateipfad
+                        </span>
+                        <input
+                            class="input font-mono"
+                            bind:value={profile.logo}
+                            placeholder="/Users/.../company-logo.png"
+                        />
+                    </label>
                     <div class="mt-3">
                         {#if logoPreviewUrl && !logoPreviewError}
                             <div
@@ -297,7 +291,7 @@
                 </label>
                 <label class="flex flex-col gap-1">
                     <span class="text-xs text-muted font-medium"
-                        >Steuernummer / USt-IdNr.</span
+                        >Steuernummer / USt-IdNr. (Fußzeile: „USt-IdNr.“)</span
                     >
                     <input class="input" bind:value={profile.tax_id} />
                 </label>
@@ -389,7 +383,7 @@
                 </label>
                 <label class="flex flex-col gap-1 col-span-2">
                     <span class="text-xs text-muted font-medium"
-                        >Fußzeile / Dankestext</span
+                        >Dankestext (unter der Anrede)</span
                     >
                     <input
                         class="input"

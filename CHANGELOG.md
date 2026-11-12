@@ -57,6 +57,8 @@ All notable changes to eTasks are listed here. eTasks follows
 - **Clients, project notes, invoices:** delayed saves no longer lose input or write into another record: the client form keeps one timer per client and field, project notes and invoice line item texts are bound to their record and saved on blur, when switching and when leaving the view.
 - **Project positions:** type labels are the same in the dropdown and the badge (Stundenbasiert, Festpreis, Einheit); positions can be edited after creating them, unit positions take a quantity, and prices show with a decimal comma.
 - **Export:** the client CSV uses a decimal comma for hours, starts with a UTF-8 BOM so Excel shows umlauts, and goes to the configured export folder; the project report creates the export folder if it is missing.
+- **Logo:** a configured logo now appears in invoice and offer PDFs (instead of failing with "file not found"), the settings preview shows it, and without a logo the PDF has no grey placeholder box. "Logo-Breite" is gone: the template draws the logo at a fixed width.
+- **Invoices:** the PDF footer with bank details, phone and email is always printed, the tax number appears under "USt-IdNr.", and the thank-you text from the profile is printed below the greeting; "Anmerkungen" is marked as internal.
 
 ### Security
 
