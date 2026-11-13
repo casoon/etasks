@@ -572,7 +572,7 @@
             </span>
 
             <!-- Quick scheduling, shown on hover or keyboard focus -->
-            <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+            <div class="flex items-center gap-0.5 max-w-0 overflow-hidden opacity-0 group-hover:max-w-[260px] group-hover:opacity-100 group-focus-within:max-w-[260px] group-focus-within:opacity-100 transition-[opacity,max-width]">
               {#if task.scheduledStart}
                 <button
                   class="h-9 px-2 rounded-lg text-[12px] font-medium hover:bg-[var(--et-surface-sunken)]"

@@ -8,7 +8,11 @@ All notable changes to eTasks are listed here. eTasks follows
 ### Added
 
 - **Navigation:** new sidebar with groups (Planen, Arbeiten, Abrechnen), "Neue Aufgabe" button, running-timer pill, open-invoice counter and a "Gesichert" backup status; new Übersicht page and a "Heute" area with the steps Planen, Arbeiten and Abschließen.
-- **Daily close:** the "Highlight des Tages" is pre-filled when the dialog is opened again and shown in Heute.
+- **Heute:** the day header has previous day, "Heute" and next day; the whole day (plan, work, close) follows the chosen date. The running timer with a stop button is shown in the header.
+- **Heute · Planen:** the pool is grouped by project with the filters Fokus-Projekte, Alle and Wiederkehrend; the Heute column shows a capacity bar, Top 3 stars and a time slot mark per task.
+- **Heute · Planen:** "Automatisch einplanen" first suggests slots (dashed in the list and the calendar) and books them on "Übernehmen".
+- **Daily close:** "Abschließen" is a page with the day's balance (ring, tracked, planned, time per project) and the open tasks with "Morgen", "In den Pool" and "Erledigt"; "In den Pool" clears the planned date, the calendar block and the Top 3 rank. The "Highlight des Tages" is pre-filled and shown in Heute.
+- **Notifications:** the step bar marks "Abschließen" from the shutdown time; clicking the shutdown notification opens it (browser notifications only).
 - **Tasks:** tags can be set when editing a task (double-click, comma-separated); Analytics groups the week's tracked time by the first tag.
 - **Appointments:** today's Termine appear in the Tagesplan of Heute and can be edited (title, date, time, duration, type, project, billable) in the Tagesplanung. Billable Termine are listed in Berichte (as "Termin: …") and can be added as one line to an invoice via "Erfasste Zeit übernehmen", priced with the client's hourly rate.
 - **Time tracking:** time entries can be edited (task, day, start, end) and deleted in the Zeiterfassung list, and added by hand with "Eintrag hinzufügen".
@@ -21,6 +25,8 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Changed
 
+- **Heute:** "Arbeiten" follows the new layout (intention, Top 3 cards, further tasks, Tagesplan with Geplant/Erfasst and a now line); the Tagesplanung no longer limits "Heute" to five tasks, the capacity bar shows overload instead.
+- **Heute:** the day close is a page instead of a dialog.
 - **Design:** new look "A · Tagesfluss" (flat cards, warm grey background, blue accent, system font instead of Inter until a font file is bundled); gradient, stripe pattern and glass styles are gone.
 - **Navigation:** Kunden and Leistungen are own menu items, Rechnungen is the former Abrechnung page; the Fokus (Pomodoro) view opens from "Heute · Arbeiten" via "Fokus".
 - **Backup:** the daily snapshot is a local backup, no longer called iCloud: it goes to `Sicherungen` inside the export folder on every platform, keeps the last 14 per workspace and leaves IBAN, tax number and bank data out (the JSON export keeps the full profile). Old files in the former iCloud folder are not touched.
