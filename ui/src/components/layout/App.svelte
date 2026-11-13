@@ -5,6 +5,7 @@
         $navItem as navItemStore,
         $quickAddOpen as quickAddOpenStore,
     } from "../../stores/uiStore";
+    import { $selectedProjectId as selectedProjectIdStore } from "../../stores/projectStore";
     import { reinitStores } from "../../lib/storeInit";
     import { scheduleDailySnapshot } from "../../lib/exportService";
     import {
@@ -20,10 +21,11 @@
     import { startNotificationScheduler, stopNotificationScheduler } from "../../lib/notificationScheduler";
     import { startPomodoroTicker, stopPomodoroTicker } from "../../lib/pomodoroTimer";
     import { logger } from "../../lib/logger";
-    import TodayView from "../views/TodayView.svelte";
+    import TodayShell from "../views/TodayShell.svelte";
+    import OverviewView from "../views/OverviewView.svelte";
+    import ClientManager from "../modals/ClientManager.svelte";
+    import ServiceCatalog from "../modals/ServiceCatalog.svelte";
     import WeeklyPlanningView from "../views/WeeklyPlanningView.svelte";
-    import PomodoroWidget from "../widgets/PomodoroWidget.svelte";
-    import TaskColumn from "../widgets/TaskColumn.svelte";
     import ShutdownModal from "../modals/ShutdownModal.svelte";
     import StaleTimerDialog from "../modals/StaleTimerDialog.svelte";
     import AnalyticsView from "../views/AnalyticsView.svelte";
@@ -34,7 +36,6 @@
     import SetupWizard from "./SetupWizard.svelte";
     import StartupProblem from "./StartupProblem.svelte";
     import SettingsView from "../views/SettingsView.svelte";
-    import DailyPlanningView from "../views/DailyPlanningView.svelte";
     import ReportView from "../views/ReportView.svelte";
     import ToastContainer from "../shared/ToastContainer.svelte";
     import EnergyCheck from "../modals/EnergyCheck.svelte";
@@ -168,26 +169,19 @@
 
 {#if appReady && !showSetup}
 <div class="flex-1 overflow-hidden flex flex-col">
+    {#if nav === "overview"}
+        <div class="flex-1 overflow-hidden flex flex-col animate-fade-in" use:pageReveal>
+            <OverviewView />
+        </div>
+    {/if}
+
     {#if nav === "today"}
-        <div class="flex-1 overflow-hidden flex flex-col animate-fade-in">
-            <div class="flex-1 overflow-hidden" use:pageReveal>
-                <TodayView />
-            </div>
+        <div class="flex-1 overflow-hidden flex flex-col animate-fade-in" use:pageReveal>
+            <TodayShell />
         </div>
     {/if}
 
-    {#if nav === "focus"}
-        <div
-            class="flex-1 grid overflow-hidden overflow-y-auto p-6 gap-6 items-start animate-fade-in"
-            style="grid-template-columns: 280px 1fr"
-            use:pageReveal={{ distance: 18 }}
-        >
-            <PomodoroWidget />
-            <TaskColumn />
-        </div>
-    {/if}
-
-    {#if nav === "planning-weekly"}
+    {#if nav === "week"}
         <div
             class="flex-1 grid overflow-hidden animate-fade-in"
             style="grid-template-columns: minmax(280px, 340px) 1fr"
@@ -200,25 +194,31 @@
         </div>
     {/if}
 
-    {#if nav === "planning-daily"}<div
-            class="flex-1 overflow-hidden animate-fade-in"
-            use:pageReveal
-        >
-            <DailyPlanningView />
-        </div>{/if}
     {#if nav === "projects"}<div class="flex-1 overflow-hidden animate-fade-in" use:pageReveal>
             <ProjectsView />
         </div>{/if}
-    {#if nav === "time-tracking"}<div
+    {#if nav === "time"}<div
             class="flex-1 overflow-hidden animate-fade-in"
             use:pageReveal
         >
             <TimeTrackingView />
         </div>{/if}
-    {#if nav === "clients"}<div class="flex-1 overflow-hidden animate-fade-in" use:pageReveal>
+    {#if nav === "clients"}<div class="flex-1 overflow-hidden flex flex-col animate-fade-in" use:pageReveal>
+            <ClientManager
+                onProjectOpen={(projectId) => {
+                    selectedProjectIdStore.set(projectId);
+                    navItemStore.set("projects");
+                }}
+                emptyProjectsMessage="Noch keine Projekte für diesen Kunden."
+            />
+        </div>{/if}
+    {#if nav === "invoices"}<div class="flex-1 overflow-hidden animate-fade-in" use:pageReveal>
             <ClientsView />
         </div>{/if}
-    {#if nav === "report"}<div class="flex-1 overflow-hidden animate-fade-in" use:pageReveal>
+    {#if nav === "services"}<div class="flex-1 overflow-hidden flex flex-col animate-fade-in" use:pageReveal>
+            <ServiceCatalog />
+        </div>{/if}
+    {#if nav === "reports"}<div class="flex-1 overflow-hidden animate-fade-in" use:pageReveal>
             <ReportView />
         </div>{/if}
     {#if nav === "settings"}<div class="flex-1 overflow-hidden flex flex-col animate-fade-in" use:pageReveal>

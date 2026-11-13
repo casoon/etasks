@@ -7,6 +7,7 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Added
 
+- **Navigation:** new sidebar with groups (Planen, Arbeiten, Abrechnen), "Neue Aufgabe" button, running-timer pill, open-invoice counter and a "Gesichert" backup status; new Übersicht page and a "Heute" area with the steps Planen, Arbeiten and Abschließen.
 - **Daily close:** the "Highlight des Tages" is pre-filled when the dialog is opened again and shown in Heute.
 - **Tasks:** tags can be set when editing a task (double-click, comma-separated); Analytics groups the week's tracked time by the first tag.
 - **Appointments:** today's Termine appear in the Tagesplan of Heute and can be edited (title, date, time, duration, type, project, billable) in the Tagesplanung. Billable Termine are listed in Berichte (as "Termin: …") and can be added as one line to an invoice via "Erfasste Zeit übernehmen", priced with the client's hourly rate.
@@ -20,6 +21,8 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Changed
 
+- **Design:** new look "A · Tagesfluss" (flat cards, warm grey background, blue accent, system font instead of Inter until a font file is bundled); gradient, stripe pattern and glass styles are gone.
+- **Navigation:** Kunden and Leistungen are own menu items, Rechnungen is the former Abrechnung page; the Fokus (Pomodoro) view opens from "Heute · Arbeiten" via "Fokus".
 - **Backup:** the daily snapshot is a local backup, no longer called iCloud: it goes to `Sicherungen` inside the export folder on every platform, keeps the last 14 per workspace and leaves IBAN, tax number and bank data out (the JSON export keeps the full profile). Old files in the former iCloud folder are not touched.
 - **Contributors:** all calls into the Rust core go through `@casoon/origin-client`;
   `ui/src/lib/platform.ts` is the only file that still touches a Tauri webview API.
@@ -27,6 +30,7 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Removed
 
+- **Navigation:** the top bar and the right data rail; export, import and backup stay in Einstellungen › Daten.
 - **Settings:** the unused workspace fields "Typ" and "Währung" (documents are always in EUR).
 - **Security:** the unused file-system and dialog permissions of the webview and the `tauri-plugin-fs` and `@tauri-apps/plugin-dialog` dependencies; file dialogs and file access stay in the Rust core.
 - **Cleanup:** the unused energy check log, the unmounted weekly objectives widget, the unused `open_ics_file` command and the dead card drag in Fokus.

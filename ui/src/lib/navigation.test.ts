@@ -43,9 +43,9 @@ describe('etasks:nav CustomEvent Mechanismus', () => {
     window.addEventListener('etasks:nav', handler);
     window.dispatchEvent(new CustomEvent('etasks:nav', { detail: 'today' }));
     window.removeEventListener('etasks:nav', handler);
-    window.dispatchEvent(new CustomEvent('etasks:nav', { detail: 'focus' }));
+    window.dispatchEvent(new CustomEvent('etasks:nav', { detail: 'week' }));
 
-    expect(received).toEqual(['today']); // 'focus' wurde nach removeEventListener geschickt
+    expect(received).toEqual(['today']); // 'week' wurde nach removeEventListener geschickt
   });
 
   it('mehrere Listener werden alle benachrichtigt', () => {
@@ -87,12 +87,12 @@ describe('$navItem nanostore', () => {
     $navItem.set('today' as any);
     const values: string[] = [];
     const unsub = $navItem.subscribe(v => values.push(v)); // feuert sofort mit 'today'
-    $navItem.set('focus' as any);
+    $navItem.set('invoices' as any);
     $navItem.set('settings' as any);
     unsub();
     $navItem.set('clients' as any); // nach unsub – darf nicht in values landen
     expect(values).toContain('today'); // sofortiger Aufruf beim subscribe
-    expect(values).toContain('focus');
+    expect(values).toContain('invoices');
     expect(values).toContain('settings');
     expect(values).not.toContain('clients'); // nach unsub
     $navItem.set('today' as any); // aufräumen
@@ -104,8 +104,8 @@ describe('$navItem nanostore', () => {
     const { $navItem: a } = await import('../stores/uiStore');
     const { $navItem: b } = await import('../stores/uiStore');
     expect(a).toBe(b); // identische Referenz
-    a.set('planning-weekly' as any);
-    expect(b.get()).toBe('planning-weekly');
+    a.set('week' as any);
+    expect(b.get()).toBe('week');
     a.set('today' as any);
   });
 });
@@ -153,5 +153,91 @@ describe('Regression: onMount SSR-Bug', () => {
 
     expect(received).toEqual(['rechtzeitig']);
     expect(received).not.toContain('zu-früh');
+  });
+});
+
+// --- 4. Heute-Phasen und Fokus ---
+
+describe('openToday / openFocus', () => {
+  it('openToday setzt Phase und Bereich', async () => {
+    const { $navItem, $todayPhase, openToday } = await import('../stores/uiStore');
+    $navItem.set('settings');
+    openToday('plan');
+    expect($navItem.get()).toBe('today');
+    expect($todayPhase.get()).toBe('plan');
+    openToday('work');
+  });
+
+  it('openFocus öffnet den Fokus in „Heute · Arbeiten“ und merkt die Aufgabe', async () => {
+    const { $navItem, $todayPhase, $focusOpen, $focusTaskId, openFocus } = await import('../stores/uiStore');
+    $navItem.set('projects');
+    $todayPhase.set('close');
+    openFocus('t1');
+    expect($navItem.get()).toBe('today');
+    expect($todayPhase.get()).toBe('work');
+    expect($focusOpen.get()).toBe(true);
+    expect($focusTaskId.get()).toBe('t1');
+    $focusOpen.set(false);
+    $focusTaskId.set(null);
+  });
+});
+
+// --- 5. Hilfsfunktionen der Seitenleiste ---
+
+describe('nameInitials', () => {
+  it('nimmt die Anfangsbuchstaben der ersten zwei Wörter', async () => {
+    const { nameInitials } = await import('./navigation');
+    expect(nameInitials('Studio Weber')).toBe('SW');
+    expect(nameInitials('Müller & Söhne GmbH')).toBe('MS');
+    expect(nameInitials('anna-lena kraft')).toBe('AL');
+  });
+
+  it('nimmt bei einem Wort die ersten zwei Buchstaben', async () => {
+    const { nameInitials } = await import('./navigation');
+    expect(nameInitials('Acme')).toBe('AC');
+    expect(nameInitials('X')).toBe('X');
+    expect(nameInitials('élan')).toBe('ÉL');
+  });
+
+  it('liefert ein Fragezeichen ohne Buchstaben', async () => {
+    const { nameInitials } = await import('./navigation');
+    expect(nameInitials('')).toBe('?');
+    expect(nameInitials('  - & ')).toBe('?');
+  });
+});
+
+describe('unpaidInvoiceCount', () => {
+  it('zählt nur gesendete Rechnungen', async () => {
+    const { unpaidInvoiceCount } = await import('./navigation');
+    const list = [{ status: 'draft' }, { status: 'sent' }, { status: 'sent' }, { status: 'paid' }] as const;
+    expect(unpaidInvoiceCount(list)).toBe(2);
+    expect(unpaidInvoiceCount([])).toBe(0);
+  });
+});
+
+describe('snapshotLabel', () => {
+  const now = new Date(2026, 10, 13, 12, 0, 0);
+
+  it('liefert null ohne Sicherung', async () => {
+    const { snapshotLabel } = await import('./navigation');
+    expect(snapshotLabel(null, now)).toBeNull();
+    expect(snapshotLabel({}, now)).toBeNull();
+  });
+
+  it('zeigt heute mit Uhrzeit', async () => {
+    const { snapshotLabel } = await import('./navigation');
+    const at = new Date(2026, 10, 13, 8, 2, 0).toISOString();
+    expect(snapshotLabel({ lastSnapshotDate: '2026-11-13', lastSnapshotAt: at }, now)).toBe('heute 08:02');
+  });
+
+  it('zeigt heute ohne Uhrzeit bei alten Metadaten', async () => {
+    const { snapshotLabel } = await import('./navigation');
+    expect(snapshotLabel({ lastSnapshotDate: '2026-11-13' }, now)).toBe('heute');
+  });
+
+  it('zeigt gestern und ältere Tage als Datum', async () => {
+    const { snapshotLabel } = await import('./navigation');
+    expect(snapshotLabel({ lastSnapshotDate: '2026-11-12' }, now)).toBe('gestern');
+    expect(snapshotLabel({ lastSnapshotDate: '2026-11-03' }, now)).toBe('03.11.');
   });
 });

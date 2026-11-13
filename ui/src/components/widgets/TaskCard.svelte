@@ -4,7 +4,7 @@
   import { daysSince, formatDuration, isToday, today } from '../../domain/dateUtils';
   import { toggleTask, updateTask } from '../../stores/taskStore';
 import { deleteTaskCascade } from '../../lib/taskActions';
-  import { $focusTaskId as focusTaskIdStore, $navItem as navItemStore } from '../../stores/uiStore';
+  import { openFocus } from '../../stores/uiStore';
   import { $projects as projectsStore } from '../../stores/projectStore';
   import { TAG_COLORS } from '../../domain/types';
   import TimerButton from './TimerButton.svelte';
@@ -80,8 +80,7 @@ import { deleteTaskCascade } from '../../lib/taskActions';
 
   function handleFocus(e: MouseEvent) {
     e.stopPropagation();
-    focusTaskIdStore.set(task.id);
-    navItemStore.set('focus');
+    openFocus(task.id);
   }
 
 </script>

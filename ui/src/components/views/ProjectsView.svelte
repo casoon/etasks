@@ -15,7 +15,7 @@
     import { $tasks as tasksStore } from "../../stores/taskStore";
     import { deleteProjectCascade } from "../../lib/taskActions";
     import { $timeEntries as timeEntriesStore } from "../../stores/timerStore";
-    import { $projectsView as projectsViewStore } from "../../stores/uiStore";
+    import { $navItem as navItemStore } from "../../stores/uiStore";
     import {
         $appConfig as appConfigStore,
         missingPdfProfileFields,
@@ -53,8 +53,6 @@
     import type { BillingItem, TerminType } from "../../domain/types";
     import { saveAsTemplate } from "../../stores/templateStore";
     import TemplatePickerModal from "../modals/TemplatePickerModal.svelte";
-    import ClientManager from "../modals/ClientManager.svelte";
-    import ServiceCatalog from "../modals/ServiceCatalog.svelte";
 
     $: clients = $clientsStore;
     $: projects = $projectsStore;
@@ -337,9 +335,6 @@
         }
     }
 
-    // Right panel view – driven by global store (TopBar switch)
-    $: rightView = $projectsViewStore;
-
     // Add client
     let addingClientSource: "left" | "right" | null = null;
     $: addingClient = addingClientSource !== null;
@@ -440,7 +435,6 @@
         if (!newProjectName.trim()) return;
         const project = addProject(newProjectClientId, newProjectName.trim());
         selectedProjectIdStore.set(project.id);
-        projectsViewStore.set("project");
         newProjectName = "";
         newProjectClientId = "";
         addingNewProject = false;
@@ -451,7 +445,6 @@
         if (!newProjectName.trim()) return;
         const project = addProject(clientId, newProjectName.trim());
         selectedProjectIdStore.set(project.id);
-        projectsViewStore.set("project");
         newProjectName = "";
         addingProjectForClient = null;
     }
@@ -615,22 +608,8 @@
 </script>
 
 <div class="flex-1 flex flex-col overflow-hidden">
-    <!-- ── Kunden view ── -->
-    {#if rightView === "clients"}
-        <ClientManager
-            onProjectOpen={(projectId) => {
-                projectsViewStore.set("project");
-                selectedProjectIdStore.set(projectId);
-            }}
-            emptyProjectsMessage="Noch keine Projekte für diesen Kunden."
-        />
-
-    <!-- ── Leistungen view ── -->
-    {:else if rightView === "services"}
-        <ServiceCatalog />
-
     <!-- ── Projekt-Liste ── -->
-    {:else if !selectedProject}
+    {#if !selectedProject}
         <div class="flex flex-col overflow-hidden flex-1">
             <!-- List header -->
             <div class="px-5 pt-4 pb-2 flex-shrink-0 border-b border-border">
@@ -700,7 +679,7 @@
                     {@const isDueSoon = !!project.deadline && !isOverdue && project.status !== 'done' && project.deadline <= (() => { const d = new Date(); d.setDate(d.getDate() + 7); return toDateKey(d); })()}
                     <button
                         class="flex flex-col gap-1.5 py-3 px-3 rounded-lg w-full text-left transition-colors hover:bg-surface border border-transparent hover:border-border"
-                        on:click={() => { selectedProjectIdStore.set(project.id); projectsViewStore.set('project'); }}
+                        on:click={() => { selectedProjectIdStore.set(project.id); }}
                     >
                         <!-- Row 1: Name + status badge -->
                         <div class="flex items-center gap-2 min-w-0">
@@ -760,7 +739,7 @@
             <div class="px-5 py-3 border-t border-border flex-shrink-0 flex items-center gap-4">
                 <button
                     class="text-[11px] text-muted hover:text-secondary transition-colors"
-                    on:click={() => projectsViewStore.set("clients")}
+                    on:click={() => navItemStore.set("clients")}
                 >Kunden verwalten →</button>
             </div>
         </div>

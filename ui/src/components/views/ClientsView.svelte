@@ -37,8 +37,7 @@
     } from "../../lib/invoiceStatus";
     import { calcInvoiceTotals, fromCents, lineTotalCents } from "../../lib/invoiceMoney";
     import type { Invoice } from "../../domain/types";
-    import ClientManager from "../modals/ClientManager.svelte";
-    import ServiceCatalog from "../modals/ServiceCatalog.svelte";
+    import { $navItem as navItemStore } from "../../stores/uiStore";
     import InvoiceList from "../modals/InvoiceList.svelte";
     import InvoiceEditor from "../modals/InvoiceEditor.svelte";
 
@@ -49,8 +48,6 @@
     $: invoices = [...$invoicesStore];
     $: appConfig = $appConfigStore;
 
-    type RightView = "invoice" | "clients" | "services";
-    let rightView: RightView = "invoice";
     let generatingPdf = false;
 
     let selectedInvoiceId: string | null = null;
@@ -97,7 +94,6 @@
             });
 
             selectedInvoiceId = inv.id;
-            rightView = "invoice";
         } catch (error) {
             toast(
                 `Rechnungsnummer konnte nicht vergeben werden: ${String(error)}`,
@@ -342,50 +338,11 @@
         onCreate={createNewInvoice}
         onSelect={(invoiceId) => {
             selectedInvoiceId = invoiceId;
-            rightView = "invoice";
         }}
     />
 
     <div class="flex flex-col overflow-hidden">
-        <div
-            class="flex items-center justify-between px-4 border-b border-border flex-shrink-0 h-[52px] bg-white/55 backdrop-blur-xl"
-        >
-            {#if rightView !== "invoice"}
-                <button
-                    class="flex items-center gap-1 text-[13px] text-secondary hover:text-primary transition-colors"
-                    on:click={() => (rightView = "invoice")}
-                    >← Rechnungen</button
-                >
-            {:else}
-                <div />
-            {/if}
-            <div
-                class="flex gap-1 rounded-xl border border-border bg-white/70 p-1 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset]"
-            >
-                <button
-                    class="px-3 py-1.5 text-[12px] font-medium rounded-lg transition-colors {rightView ===
-                    'clients'
-                        ? 'bg-white text-primary shadow-sm'
-                        : 'text-secondary hover:bg-white/80 hover:text-primary'}"
-                    on:click={() => (rightView = "clients")}>Kunden</button
-                >
-                <button
-                    class="px-3 py-1.5 text-[12px] font-medium rounded-lg transition-colors {rightView ===
-                    'services'
-                        ? 'bg-white text-primary shadow-sm'
-                        : 'text-secondary hover:bg-white/80 hover:text-primary'}"
-                    on:click={() => (rightView = "services")}>Leistungen</button
-                >
-            </div>
-        </div>
-
-        {#if rightView === "clients"}
-            <ClientManager
-                emptyProjectsMessage="Noch keine Projekte für diesen Kunden."
-            />
-        {:else if rightView === "services"}
-            <ServiceCatalog />
-        {:else if !selectedInvoice}
+        {#if !selectedInvoice}
             <div
                 class="flex-1 flex flex-col items-center justify-center gap-5 text-center px-8"
             >
@@ -402,13 +359,13 @@
                         {#if clients.length === 0}
                             <button
                                 class="px-4 py-1.5 rounded-lg border border-border text-[12px] text-secondary hover:bg-bg transition-colors"
-                                on:click={() => (rightView = "clients")}
+                                on:click={() => navItemStore.set("clients")}
                             >Kunden anlegen</button>
                         {/if}
                         {#if services.length === 0}
                             <button
                                 class="px-4 py-1.5 rounded-lg border border-border text-[12px] text-secondary hover:bg-bg transition-colors"
-                                on:click={() => (rightView = "services")}
+                                on:click={() => navItemStore.set("services")}
                             >Leistungen anlegen</button>
                         {/if}
                     </div>

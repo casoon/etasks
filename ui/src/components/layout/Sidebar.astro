@@ -1,33 +1,96 @@
 ---
-const navItems = [
-    { id: "today", label: "Heute", icon: "◉" },
-    { id: "planning-weekly", label: "Wochenplanung", icon: "◎" },
-    { id: "planning-daily", label: "Tagesplanung", icon: "☀" },
-    { id: "projects", label: "Projekte", icon: "▦" },
-    { id: "time-tracking", label: "Zeiterfassung", icon: "⏲" },
-    { id: "report", label: "Berichte", icon: "⊟" },
-    { id: "clients", label: "Abrechnung", icon: "€" },
-    { id: "focus", label: "Fokus", icon: "⏱" },
-    { id: "settings", label: "Einstellungen", icon: "⚙" },
+// Navigation after design/screens/Sidebar.dc.html; icons are inline SVG paths (24x24 grid).
+const overview = {
+    id: "overview",
+    label: "Übersicht",
+    icon: '<rect x="3" y="3" width="8" height="10" rx="1.5"></rect><rect x="13" y="3" width="8" height="6" rx="1.5"></rect><rect x="13" y="11" width="8" height="10" rx="1.5"></rect><rect x="3" y="15" width="8" height="6" rx="1.5"></rect>',
+};
+
+const groups = [
+    {
+        label: "Planen",
+        items: [
+            {
+                id: "today",
+                label: "Heute",
+                badge: "today",
+                icon: '<circle cx="12" cy="12" r="4"></circle><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"></path>',
+            },
+            {
+                id: "week",
+                label: "Woche",
+                icon: '<rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path>',
+            },
+        ],
+    },
+    {
+        label: "Arbeiten",
+        items: [
+            {
+                id: "projects",
+                label: "Projekte",
+                icon: '<rect x="3" y="4" width="5" height="16" rx="1.5"></rect><rect x="10" y="4" width="5" height="10" rx="1.5"></rect><rect x="17" y="4" width="4" height="13" rx="1.5"></rect>',
+            },
+            {
+                id: "time",
+                label: "Zeiten",
+                icon: '<circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path>',
+            },
+        ],
+    },
+    {
+        label: "Abrechnen",
+        items: [
+            {
+                id: "clients",
+                label: "Kunden",
+                icon: '<circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c.7-3.4 3.4-5.5 7-5.5s6.3 2.1 7 5.5"></path>',
+            },
+            {
+                id: "invoices",
+                label: "Rechnungen",
+                badge: "invoices",
+                icon: '<path d="M6 3h9l4 4v14H6z"></path><path d="M14 3v5h5M9 13h7M9 17h5"></path>',
+            },
+            {
+                id: "services",
+                label: "Leistungen",
+                icon: '<path d="M8 6h13M8 12h13M8 18h13"></path><circle cx="3.5" cy="6" r="1"></circle><circle cx="3.5" cy="12" r="1"></circle><circle cx="3.5" cy="18" r="1"></circle>',
+            },
+            {
+                id: "reports",
+                label: "Berichte",
+                icon: '<path d="M4 20V10M10 20V4M16 20v-7M21 20H3"></path>',
+            },
+        ],
+    },
 ];
+
+const settings = {
+    id: "settings",
+    label: "Einstellungen",
+    icon: '<circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"></path>',
+};
 ---
 
-<nav
-    class="w-[200px] glass-sidebar border-r border-border flex flex-col py-4 px-3 gap-4 flex-shrink-0"
->
-    <div class="flex items-baseline gap-0.5 px-2 py-2 select-none">
-        <span class="text-xl font-bold text-accent leading-none">e</span>
-        <span class="text-base font-semibold text-primary">tasks</span>
+<nav class="sidebar" aria-label="Hauptnavigation">
+    <div class="brand" aria-hidden="true">
+        <span class="brand-e">e</span><span class="brand-tasks">tasks</span>
     </div>
 
-    <div class="relative px-2" id="tenant-switcher-container">
-        <div class="text-[10px] font-medium text-muted uppercase tracking-wide px-2 mb-1.5">Arbeitsbereich</div>
+    <div class="tenant" id="tenant-switcher-container">
         <button
             id="tenant-name-btn"
-            class="flex items-center gap-1.5 w-full px-2.5 py-2 rounded-lg text-[12px] font-semibold border border-border bg-bg hover:bg-surface hover:border-accent/40 transition-colors text-left"
+            class="tenant-btn"
+            aria-haspopup="true"
+            aria-expanded="false"
         >
-            <span id="tenant-name-text" class="flex-1 truncate text-muted">Kein Arbeitsbereich</span>
-            <span class="text-[10px] text-muted flex-shrink-0">▾</span>
+            <span id="tenant-initials" class="tenant-initials" aria-hidden="true">?</span>
+            <span class="tenant-text">
+                <span class="tenant-label">Arbeitsbereich</span>
+                <span id="tenant-name-text" class="tenant-name">Kein Arbeitsbereich</span>
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10l4-4 4 4"></path><path d="M8 14l4 4 4-4"></path></svg>
         </button>
         <div
             id="tenant-dropdown"
@@ -45,79 +108,96 @@ const navItems = [
         </div>
     </div>
 
-    <ul class="list-none flex flex-col gap-0.5 flex-1" role="list">
-        {
-            navItems.map((item) => (
-                <li>
-                    <button
-                        class="nav-item flex items-center gap-3 w-full px-3 py-2 rounded-lg text-secondary text-[13px] font-medium transition-colors text-left whitespace-nowrap overflow-hidden hover:bg-bg hover:text-primary"
-                        data-nav={item.id}
-                        aria-label={item.label}
-                    >
-                        <span
-                            class="text-sm w-[18px] text-center flex-shrink-0"
-                            aria-hidden="true"
-                        >
-                            {item.icon}
-                        </span>
-                        <span class="flex-1 overflow-hidden text-ellipsis">
-                            {item.label}
-                        </span>
-                    </button>
-                </li>
-            ))
-        }
+    <button id="quick-add-btn" class="quick-add" title="Neue Aufgabe">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+        <span class="flex-1 text-left">Neue Aufgabe</span>
+        <span id="quick-add-hint" class="quick-add-hint"></span>
+    </button>
+
+    <div id="timer-pill" class="timer-pill" hidden>
+        <button id="timer-pill-open" class="timer-pill-open" data-nav="time" aria-label="Laufender Timer, zu den Zeiten">
+            <span class="timer-dot" aria-hidden="true"></span>
+            <span class="timer-text">
+                <span id="timer-pill-task" class="timer-task">läuft</span>
+                <span id="timer-pill-elapsed" class="timer-elapsed">0:00:00</span>
+            </span>
+        </button>
+        <button id="timer-pill-stop" class="timer-stop" aria-label="Timer stoppen" title="Timer stoppen">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+        </button>
+    </div>
+
+    <ul class="nav-list" role="list">
+        <li>
+            <button class="nav-item" data-nav={overview.id}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" set:html={overview.icon} />
+                <span class="nav-label">{overview.label}</span>
+            </button>
+        </li>
     </ul>
 
-    <div class="flex flex-col gap-0.5">
-        <button
-            class="nav-item flex items-center gap-3 w-full px-3 py-2 rounded-lg text-muted text-xs font-medium transition-colors text-left whitespace-nowrap overflow-hidden hover:bg-bg hover:text-primary"
-            data-action="export"
-            aria-label="Daten exportieren"
-        >
-            <span
-                class="text-sm w-[18px] text-center flex-shrink-0"
-                aria-hidden="true">↓</span
-            >
-            <span class="flex-1 overflow-hidden text-ellipsis">Exportieren</span
-            >
+    {
+        groups.map((group) => (
+            <div class="nav-group" role="group" aria-label={group.label}>
+                <span class="nav-group-label" aria-hidden="true">{group.label}</span>
+                <ul class="nav-list" role="list">
+                    {group.items.map((item) => (
+                        <li>
+                            <button class="nav-item" data-nav={item.id}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" set:html={item.icon} />
+                                <span class="nav-label">{item.label}</span>
+                                {item.badge === "today" && <span class="nav-count" data-badge="today" hidden />}
+                                {item.badge === "invoices" && <span class="nav-badge" data-badge="invoices" hidden />}
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        ))
+    }
+
+    <div class="sidebar-foot">
+        <button class="nav-item" data-nav={settings.id}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" set:html={settings.icon} />
+            <span class="nav-label">{settings.label}</span>
         </button>
-        <button
-            class="nav-item flex items-center gap-3 w-full px-3 py-2 rounded-lg text-muted text-xs font-medium transition-colors text-left whitespace-nowrap overflow-hidden hover:bg-bg hover:text-primary"
-            data-action="shutdown"
-            aria-label="Tagesabschluss"
-        >
-            <span
-                class="text-sm w-[18px] text-center flex-shrink-0"
-                aria-hidden="true">↙</span
-            >
-            <span class="flex-1 overflow-hidden text-ellipsis">Abschluss</span>
-        </button>
+        <div id="backup-status" class="backup-status" hidden>
+            <span class="backup-dot" aria-hidden="true"></span>
+            <span id="backup-status-text"></span>
+        </div>
     </div>
 </nav>
 
 <script>
-    import { $navItem, $showShutdown } from "../../stores/uiStore";
+    import { $navItem, $quickAddOpen } from "../../stores/uiStore";
     import { $appConfig, tenantNameFromPath } from "../../stores/configStore";
-    import { runExportWithFeedback } from "../../lib/backupActions";
+    import { $bridgeInvoices, $bridgeTimeEntries } from "../../stores/coreBridge";
+    import { $todayTasks } from "../../stores/taskStore";
+    import { $projects } from "../../stores/projectStore";
+    import { stopActiveTimer } from "../../stores/timerStore";
     import { activateTenant, tenantDbExists } from "../../lib/appBootstrap";
+    import { nameInitials, snapshotLabel, unpaidInvoiceCount, type SnapshotMeta } from "../../lib/navigation";
+    import { quickAddShortcutLabel } from "../../lib/platform";
+    import { formatElapsed } from "../../domain/dateUtils";
+    import { storageGet, KEYS } from "../../lib/storage";
     import { toast } from "../../stores/toastStore";
 
+    function go(nav: string) {
+        $navItem.set(nav as any);
+        window.dispatchEvent(new CustomEvent("etasks:nav", { detail: nav }));
+    }
+
+    // ── Arbeitsbereich ─────────────────────────────────────────────────────
     function updateTenantSwitcher(config: any) {
         const nameEl = document.getElementById("tenant-name-text");
         if (!nameEl || !config) return;
         const active = config.tenants?.find(
             (t: any) => t.path === config.active_tenant,
         );
-        if (active) {
-            nameEl.textContent = active.displayName ?? active.name;
-            nameEl.classList.remove("text-muted");
-            nameEl.classList.add("text-primary");
-        } else {
-            nameEl.textContent = "Kein Arbeitsbereich";
-            nameEl.classList.remove("text-primary");
-            nameEl.classList.add("text-muted");
-        }
+        const name = active ? (active.displayName ?? active.name) : "Kein Arbeitsbereich";
+        nameEl.textContent = name;
+        const initialsEl = document.getElementById("tenant-initials");
+        if (initialsEl) initialsEl.textContent = active ? nameInitials(name) : "?";
 
         const list = document.getElementById("tenant-list");
         if (!list) return;
@@ -144,14 +224,7 @@ const navItems = [
                         toast(`Wechsel des Arbeitsbereichs fehlgeschlagen: ${e}`, "error", 6000);
                         return;
                     }
-                    $navItem.set("today");
-                    window.dispatchEvent(new CustomEvent('etasks:nav', { detail: "today" }));
-                    document
-                        .querySelectorAll("[data-nav]")
-                        .forEach((b) => b.classList.remove("is-active"));
-                    document
-                        .querySelector('[data-nav="today"]')
-                        ?.classList.add("is-active");
+                    go("today");
                 });
             }
             list.appendChild(btn);
@@ -165,67 +238,280 @@ const navItems = [
 
     function closeDropdown() {
         dropdown?.classList.add("hidden");
+        tenantBtn?.setAttribute("aria-expanded", "false");
     }
 
     tenantBtn?.addEventListener("click", (e) => {
         e.stopPropagation();
-        dropdown?.classList.toggle("hidden");
+        const hidden = dropdown?.classList.toggle("hidden");
+        tenantBtn.setAttribute("aria-expanded", String(!hidden));
     });
 
     document.addEventListener("click", closeDropdown);
 
     document.getElementById("tenant-add-btn")?.addEventListener("click", () => {
         closeDropdown();
-        $navItem.set("settings" as any);
-        window.dispatchEvent(new CustomEvent('etasks:nav', { detail: "settings" }));
-        document
-            .querySelectorAll("[data-nav]")
-            .forEach((b) => b.classList.remove("is-active"));
-        document
-            .querySelector('[data-nav="settings"]')
-            ?.classList.add("is-active");
+        go("settings");
     });
 
+    // ── Navigation ─────────────────────────────────────────────────────────
     document.querySelectorAll("[data-nav]").forEach((btn) => {
-        btn.addEventListener("click", () => {
-            const nav = (btn as HTMLElement).dataset.nav as any;
-            $navItem.set(nav);
-            window.dispatchEvent(new CustomEvent('etasks:nav', { detail: nav }));
-            document
-                .querySelectorAll("[data-nav]")
-                .forEach((b) => b.classList.remove("is-active"));
-            btn.classList.add("is-active");
-        });
+        btn.addEventListener("click", () => go((btn as HTMLElement).dataset.nav!));
     });
-
-    document
-        .querySelector('[data-action="shutdown"]')
-        ?.addEventListener("click", () => {
-            $showShutdown.set(true);
-        });
-
-    document
-        .querySelector('[data-action="export"]')
-        ?.addEventListener("click", () => {
-            runExportWithFeedback();
-        });
 
     // Follow every navigation, also programmatic ones (e.g. "Fokus starten")
     $navItem.subscribe((current) => {
-        document
-            .querySelectorAll("[data-nav]")
-            .forEach((b) =>
-                b.classList.toggle(
-                    "is-active",
-                    (b as HTMLElement).dataset.nav === current,
-                ),
-            );
+        document.querySelectorAll(".nav-item[data-nav]").forEach((b) => {
+            const on = (b as HTMLElement).dataset.nav === current;
+            b.classList.toggle("is-active", on);
+            if (on) b.setAttribute("aria-current", "page");
+            else b.removeAttribute("aria-current");
+        });
     });
+
+    // ── Neue Aufgabe ───────────────────────────────────────────────────────
+    document.getElementById("quick-add-hint")!.textContent = quickAddShortcutLabel();
+    document.getElementById("quick-add-btn")!.addEventListener("click", () => $quickAddOpen.set(true));
+
+    // ── Zähler ─────────────────────────────────────────────────────────────
+    function setBadge(kind: string, count: number) {
+        const el = document.querySelector<HTMLElement>(`[data-badge="${kind}"]`);
+        if (!el) return;
+        el.hidden = count === 0;
+        el.textContent = String(count);
+        el.setAttribute("aria-label", kind === "invoices" ? `${count} offen` : `${count} Aufgaben`);
+    }
+    $bridgeInvoices.subscribe((invoices) => setBadge("invoices", unpaidInvoiceCount(invoices)));
+    $todayTasks.subscribe((tasks) => setBadge("today", tasks.filter((t) => t.status === "todo").length));
+
+    // ── Laufender Timer ────────────────────────────────────────────────────
+    const pill = document.getElementById("timer-pill")!;
+    const pillTask = document.getElementById("timer-pill-task")!;
+    const pillElapsed = document.getElementById("timer-pill-elapsed")!;
+    let timerInterval: ReturnType<typeof setInterval> | null = null;
+
+    function updateTimerPill() {
+        const active = $bridgeTimeEntries.get().find((e) => !e.endAt);
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+        pill.hidden = !active;
+        if (!active) return;
+        const project = active.projectId
+            ? $projects.get().find((p) => p.id === active.projectId)
+            : null;
+        pillTask.textContent = project ? `läuft · ${project.name}` : "läuft";
+        const tick = () => (pillElapsed.textContent = formatElapsed(active.startAt));
+        tick();
+        timerInterval = setInterval(tick, 1000);
+    }
+    $bridgeTimeEntries.subscribe(updateTimerPill);
+    document.getElementById("timer-pill-stop")!.addEventListener("click", () => stopActiveTimer());
+
+    // ── Sicherungsstatus ───────────────────────────────────────────────────
+    const backupEl = document.getElementById("backup-status")!;
+    const backupText = document.getElementById("backup-status-text")!;
+    function updateBackupStatus() {
+        const label = snapshotLabel(storageGet<SnapshotMeta>(KEYS.exportMeta));
+        backupEl.hidden = !label;
+        if (label) backupText.textContent = `Gesichert · ${label}`;
+    }
+    updateBackupStatus();
+    setInterval(updateBackupStatus, 15 * 1000);
+    document.addEventListener("visibilitychange", updateBackupStatus);
 </script>
 
 <style>
-    .nav-item.is-active {
-        background: var(--color-accent-subtle);
-        color: var(--color-accent);
+    .sidebar {
+        width: var(--et-sidebar-width);
+        flex-shrink: 0;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 20px 14px;
+        overflow-y: auto;
+        background: var(--et-surface-sunken);
+        border-right: 1px solid var(--et-border);
+        color: var(--et-text);
+        font-size: var(--et-text-base);
+        line-height: var(--et-leading);
     }
+    .brand {
+        display: flex;
+        align-items: baseline;
+        gap: 1px;
+        padding: 0 8px;
+        user-select: none;
+    }
+    .brand-e { font-size: 22px; font-weight: 700; color: var(--et-accent); }
+    .brand-tasks { font-size: var(--et-text-xl); font-weight: 600; }
+
+    .tenant { position: relative; }
+    .tenant-btn {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        min-height: var(--et-control-height);
+        padding: 6px 10px;
+        border: 1px solid var(--et-border);
+        border-radius: var(--et-radius-lg);
+        background: var(--et-surface);
+        color: var(--et-text);
+        text-align: left;
+    }
+    .tenant-btn:hover { background: var(--et-surface-sunken); }
+    .tenant-initials {
+        width: 26px;
+        height: 26px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 7px;
+        background: var(--et-inverse);
+        color: var(--et-text-inverse);
+        font-size: var(--et-text-sm);
+        font-weight: 600;
+    }
+    .tenant-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .tenant-label { font-size: var(--et-text-xs); color: var(--et-text-3); }
+    .tenant-name {
+        font-size: var(--et-text-md);
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .quick-add {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        min-height: var(--et-control-height);
+        padding: 0 12px;
+        border-radius: var(--et-radius-lg);
+        background: var(--et-accent);
+        color: var(--et-text-inverse);
+        font-weight: 600;
+    }
+    .quick-add:hover { background: var(--et-accent-strong); }
+    .quick-add-hint {
+        font-size: var(--et-text-sm);
+        font-weight: 500;
+        padding: 2px 6px;
+        border-radius: 5px;
+        background: var(--et-accent-strong);
+    }
+    .quick-add:hover .quick-add-hint { background: rgba(255, 255, 255, 0.16); }
+
+    .timer-pill {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        min-height: var(--et-control-height);
+        padding: 0 6px 0 4px;
+        border-radius: var(--et-radius-pill);
+        background: var(--et-accent-soft);
+        color: var(--et-accent-strong);
+    }
+    .timer-pill[hidden] { display: none; }
+    .timer-pill-open {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: var(--et-control-height);
+        padding: 0 6px;
+        text-align: left;
+        color: inherit;
+    }
+    .timer-dot {
+        width: 8px;
+        height: 8px;
+        flex-shrink: 0;
+        border-radius: 50%;
+        background: var(--et-accent);
+    }
+    .timer-text { min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+    .timer-task {
+        font-size: var(--et-text-sm);
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .timer-elapsed { font-size: var(--et-text-md); font-variant-numeric: tabular-nums; }
+    .timer-stop {
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: var(--et-accent);
+        color: var(--et-text-inverse);
+    }
+    .timer-stop:hover { background: var(--et-accent-strong); }
+
+    .nav-group { display: flex; flex-direction: column; gap: 2px; }
+    .nav-group-label {
+        padding: 0 10px 4px;
+        font-size: var(--et-text-xs);
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--et-text-3);
+    }
+    .nav-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+    .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        min-height: var(--et-control-height);
+        padding: 0 10px;
+        border-radius: var(--et-radius-md);
+        color: var(--et-text-2);
+        font-weight: 500;
+        text-align: left;
+        white-space: nowrap;
+    }
+    .nav-item:hover { background: var(--et-track); }
+    .nav-item.is-active {
+        background: var(--et-accent-soft);
+        color: var(--et-accent-strong);
+        font-weight: 600;
+    }
+    .nav-label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+    .nav-count { font-size: var(--et-text-sm); font-weight: 600; }
+    .nav-badge {
+        font-size: var(--et-text-sm);
+        font-weight: 600;
+        padding: 1px 7px;
+        border-radius: 10px;
+        background: var(--et-warning-soft);
+        color: var(--et-warning-text);
+    }
+    .nav-count[hidden], .nav-badge[hidden] { display: none; }
+
+    .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+    .backup-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 10px;
+        font-size: var(--et-text-sm);
+        color: var(--et-text-3);
+    }
+    .backup-status[hidden] { display: none; }
+    .backup-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--et-success); }
+
+    button:focus-visible { outline: none; box-shadow: var(--et-focus-ring); }
+    .quick-add:focus-visible, .timer-stop:focus-visible { box-shadow: 0 0 0 2px var(--et-surface-sunken), 0 0 0 4px var(--et-accent); }
 </style>

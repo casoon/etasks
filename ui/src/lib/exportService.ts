@@ -112,7 +112,7 @@ export async function saveDailySnapshot(): Promise<string> {
     filename: `snapshot-${workspaceSlug()}-${today()}.json`,
     directory: $appConfig.get()?.default_export_dir ?? null,
   });
-  storageSet(KEYS.exportMeta, { lastSnapshotDate: today() });
+  storageSet(KEYS.exportMeta, { lastSnapshotDate: today(), lastSnapshotAt: new Date().toISOString() });
   return path;
 }
 

@@ -213,15 +213,19 @@ export interface Invoice {
 }
 
 export type NavItem =
+  | "overview"
   | "today"
-  | "focus"
-  | "planning-daily"
-  | "planning-weekly"
+  | "week"
   | "projects"
-  | "time-tracking"
+  | "time"
   | "clients"
-  | "report"
+  | "invoices"
+  | "services"
+  | "reports"
   | "settings";
+
+/** Schritt innerhalb von „Heute“. */
+export type TodayPhase = "plan" | "work" | "close";
 
 export const TAG_COLORS: Record<string, string> = {
   work: "#bfdbfe",

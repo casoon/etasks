@@ -9,7 +9,7 @@
   import { $todayBlocks as todayBlocksStore, dropTaskOnCalendar, removeBlockForTask } from '../../stores/calendarStore';
   import { $projects as projectsStore } from '../../stores/projectStore';
   import { $termine as termineStore } from '../../stores/terminStore';
-  import { $navItem as navItemStore } from '../../stores/uiStore';
+  import { openToday } from '../../stores/uiStore';
   import { $dailyIntention as intentionStore, $mitTaskIds as mitStore, setIntention, toggleMit } from '../../stores/planningStore';
   import { $currentWeekPlan as currentWeekPlanStore } from '../../stores/weekPlanStore';
   import { daysSince, formatDate, isRecurringDueOn } from '../../domain/dateUtils';
@@ -406,7 +406,7 @@
   function onDragEnd() { draggingId = null; dragOverId = null; dragSource = null; todayDropActive = false; }
 
   function startDay() {
-    navItemStore.set('today');
+    openToday('work');
   }
 
 </script>
