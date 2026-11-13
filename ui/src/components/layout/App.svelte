@@ -26,7 +26,6 @@
     import ClientManager from "../modals/ClientManager.svelte";
     import ServiceCatalog from "../modals/ServiceCatalog.svelte";
     import WeeklyPlanningView from "../views/WeeklyPlanningView.svelte";
-    import ShutdownModal from "../modals/ShutdownModal.svelte";
     import StaleTimerDialog from "../modals/StaleTimerDialog.svelte";
     import AnalyticsView from "../views/AnalyticsView.svelte";
     import ProjectsView from "../views/ProjectsView.svelte";
@@ -226,7 +225,6 @@
         </div>{/if}
 
     <QuickAddModal />
-    <ShutdownModal />
     <StaleTimerDialog />
 </div>
 {/if}

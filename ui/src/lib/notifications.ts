@@ -9,7 +9,8 @@ export async function requestPermission(): Promise<void> {
   }
 }
 
-export function notify(title: string, body: string, icon?: string): void {
+/** `onClick` runs when the user clicks the notification (browser notifications only; the Tauri command has no click callback). */
+export function notify(title: string, body: string, icon?: string, onClick?: () => void): void {
   if (typeof window === 'undefined') return;
 
   if (isTauriAvailable()) {
@@ -19,11 +20,15 @@ export function notify(title: string, body: string, icon?: string): void {
 
   if (!('Notification' in window)) return;
 
+  const show = () => {
+    const n = new Notification(title, { body, icon });
+    if (onClick) n.onclick = () => { window.focus(); onClick(); n.close(); };
+  };
   if (Notification.permission === 'granted') {
-    new Notification(title, { body, icon });
+    show();
   } else if (Notification.permission === 'default') {
     Notification.requestPermission().then((perm) => {
-      if (perm === 'granted') new Notification(title, { body, icon });
+      if (perm === 'granted') show();
     });
   }
 }

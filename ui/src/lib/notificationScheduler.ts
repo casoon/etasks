@@ -7,7 +7,7 @@
 
 import { notify } from "./notifications";
 import { $appConfig } from "../stores/configStore";
-import { $energyCheckPending } from "../stores/uiStore";
+import { $energyCheckPending, openToday } from "../stores/uiStore";
 
 let shutdownInterval: ReturnType<typeof setInterval> | null = null;
 let breakInterval: ReturnType<typeof setInterval> | null = null;
@@ -31,8 +31,10 @@ function checkShutdown() {
   if (now === shutdownTime && lastShutdownFired !== firedKey) {
     lastShutdownFired = firedKey;
     notify(
-      "Tagesabschluss 🌙",
-      "Zeit, den Tag abzuschließen. Wie war heute?"
+      "Tagesabschluss",
+      "Zeit, den Tag abzuschließen. Wie war heute?",
+      undefined,
+      () => openToday("close"),
     );
   }
 }

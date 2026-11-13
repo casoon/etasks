@@ -14,7 +14,6 @@ export const $pomodoroEndAt = atom<number | null>(null);
 export const $pomodoroSessionMinutes = atom<number>(25);
 export const $pomodoroMode = atom<'work' | 'break'>('work');
 export const $pomodoroSessionCount = atom<number>(0);
-export const $showShutdown = atom<boolean>(false);
 export const $energyCheckPending = atom<boolean>(false);
 export const $quickAddOpen = atom<boolean>(false);
 export const $quickAddProjectId = atom<string | null>(null);
