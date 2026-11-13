@@ -76,6 +76,8 @@ pub fn run() {
             commands::entities::delete_invoice,
             commands::export::export_to_file,
             commands::export::save_daily_snapshot,
+            commands::export::list_snapshots,
+            commands::export::read_snapshot,
             commands::export::import_snapshot,
             commands::invoice::generate_invoice,
             commands::invoice::generate_offer,

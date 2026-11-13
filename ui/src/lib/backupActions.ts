@@ -5,6 +5,7 @@ import {
   writePreImportBackup,
   exportToFile,
   saveDailySnapshot,
+  readSnapshot,
 } from "./exportService";
 import { $appConfig } from "../stores/configStore";
 import { reinitStores } from "./storeInit";
@@ -94,6 +95,16 @@ export async function restoreFromBackupFile(file: File): Promise<boolean> {
     return true;
   } catch (error) {
     toast(`Import fehlgeschlagen: ${String(error)}`, "error", 4500);
+    return false;
+  }
+}
+
+/** „Wiederherstellen“ in der Liste der Sicherungen: liest die Datei und nimmt denselben Weg wie ein Import. */
+export async function restoreFromSnapshot(filename: string): Promise<boolean> {
+  try {
+    return await restoreFromBackupFile(new File([await readSnapshot(filename)], filename, { type: "application/json" }));
+  } catch (error) {
+    toast(`Sicherung konnte nicht gelesen werden: ${String(error)}`, "error", 4500);
     return false;
   }
 }

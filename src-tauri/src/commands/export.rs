@@ -1,5 +1,5 @@
 use rusqlite::params;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::Manager;
 
@@ -98,6 +98,14 @@ fn prune_snapshots(dir: &std::path::Path, slug: &str, keep: usize) -> Result<(),
     Ok(())
 }
 
+fn snapshot_dir(app: &tauri::AppHandle, directory: Option<String>) -> Result<std::path::PathBuf, String> {
+    let base_dir = match directory {
+        Some(dir) if !dir.trim().is_empty() => std::path::PathBuf::from(dir),
+        _ => app.path().download_dir().map_err(|e| e.to_string())?,
+    };
+    Ok(base_dir.join("Sicherungen"))
+}
+
 /// Schreibt die tägliche Sicherung in `<directory>/Sicherungen` (Standard: Downloads-Ordner)
 /// und behält die letzten 14 pro Arbeitsbereich.
 #[tauri::command]
@@ -107,11 +115,7 @@ pub async fn save_daily_snapshot(
     filename: String,
     directory: Option<String>,
 ) -> Result<String, String> {
-    let base_dir = match directory {
-        Some(dir) if !dir.trim().is_empty() => std::path::PathBuf::from(dir),
-        _ => app.path().download_dir().map_err(|e| e.to_string())?,
-    };
-    let dir = base_dir.join("Sicherungen");
+    let dir = snapshot_dir(&app, directory)?;
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let filename = plain_file_name(&filename)?;
     let (slug, _) = snapshot_parts(&filename).ok_or("Ungültiger Sicherungsname")?;
@@ -121,6 +125,62 @@ pub async fn save_daily_snapshot(
     std::fs::write(&path, &json).map_err(|e| e.to_string())?;
     prune_snapshots(&dir, &slug, KEEP_DAILY_SNAPSHOTS)?;
     Ok(path.to_string_lossy().to_string())
+}
+
+#[derive(Serialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SnapshotInfo {
+    pub filename: String,
+    /// `YYYY-MM-DD` aus dem Dateinamen.
+    pub date: String,
+    pub size_bytes: u64,
+}
+
+/// Eigene Sicherungen des Arbeitsbereichs `slug` im Ordner, neueste zuerst.
+fn list_snapshot_files(dir: &std::path::Path, slug: &str) -> Result<Vec<SnapshotInfo>, String> {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(e) => return Err(e.to_string()),
+    };
+    let mut list: Vec<SnapshotInfo> = entries
+        .filter_map(|entry| {
+            let entry = entry.ok()?;
+            let name = entry.file_name().to_string_lossy().to_string();
+            let (file_slug, date) = snapshot_parts(&name)?;
+            let meta = entry.metadata().ok()?;
+            let date = date.to_string();
+            (file_slug == slug && meta.is_file()).then(|| SnapshotInfo {
+                date,
+                size_bytes: meta.len(),
+                filename: name,
+            })
+        })
+        .collect();
+    list.sort_by(|a, b| b.date.cmp(&a.date));
+    Ok(list)
+}
+
+/// Listet die Sicherungen des Arbeitsbereichs im Ordner `Sicherungen`.
+#[tauri::command]
+pub async fn list_snapshots(
+    app: tauri::AppHandle,
+    slug: String,
+    directory: Option<String>,
+) -> Result<Vec<SnapshotInfo>, String> {
+    list_snapshot_files(&snapshot_dir(&app, directory)?, &slug)
+}
+
+/// Liest den Text einer Sicherung; nur Dateien mit eigenem Namensmuster im Ordner `Sicherungen`.
+#[tauri::command]
+pub async fn read_snapshot(
+    app: tauri::AppHandle,
+    filename: String,
+    directory: Option<String>,
+) -> Result<String, String> {
+    let filename = plain_file_name(&filename)?;
+    snapshot_parts(&filename).ok_or("Ungültiger Sicherungsname")?;
+    std::fs::read_to_string(snapshot_dir(&app, directory)?.join(&filename)).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -374,6 +434,26 @@ mod tests {
         assert_eq!(snapshot_parts("snapshot-x-2026-3-28.json"), None);
         assert_eq!(snapshot_parts("etasks-export-x-2026-03-28.json"), None);
         assert_eq!(snapshot_parts("snapshot-x-2026-03-28.json.bak"), None);
+    }
+
+    #[test]
+    fn lists_own_snapshots_newest_first() {
+        let dir = std::env::temp_dir().join(format!("etasks-list-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        touch(&dir, "snapshot-a-2026-03-01.json");
+        touch(&dir, "snapshot-a-2026-03-03.json");
+        touch(&dir, "snapshot-b-2026-03-04.json");
+        touch(&dir, "notes.json");
+
+        let list = list_snapshot_files(&dir, "a").unwrap();
+        assert_eq!(
+            list.iter().map(|i| i.filename.as_str()).collect::<Vec<_>>(),
+            vec!["snapshot-a-2026-03-03.json", "snapshot-a-2026-03-01.json"]
+        );
+        assert_eq!(list[0].date, "2026-03-03");
+        assert!(list_snapshot_files(&dir.join("fehlt"), "a").unwrap().is_empty());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

@@ -4,6 +4,7 @@ const parseBackup = vi.fn();
 const applyBackup = vi.fn();
 const writePreImportBackup = vi.fn();
 const exportToFile = vi.fn();
+const readSnapshot = vi.fn();
 const toast = vi.fn();
 const reinitStores = vi.fn();
 const confirmFn = vi.fn();
@@ -15,6 +16,7 @@ vi.mock("./exportService", () => ({
   writePreImportBackup,
   exportToFile,
   saveDailySnapshot: vi.fn(),
+  readSnapshot,
 }));
 vi.mock("./storeInit", () => ({ reinitStores }));
 vi.mock("../stores/toastStore", () => ({ toast }));
@@ -87,5 +89,32 @@ describe("runExportWithFeedback", () => {
     await runExportWithFeedback();
     expect(toast).toHaveBeenCalledTimes(1);
     expect(toast).toHaveBeenCalledWith(expect.stringContaining("Ordner nicht erreichbar"), "error", 4500);
+  });
+});
+
+describe("restoreFromSnapshot", () => {
+  beforeEach(() => {
+    for (const m of [readSnapshot, parseBackup, applyBackup, writePreImportBackup, toast, reinitStores, confirmFn]) m.mockReset();
+    vi.stubGlobal("confirm", confirmFn);
+    parseBackup.mockReturnValue({ lists: { tasks: [{ id: "x" }] } });
+    confirmFn.mockReturnValue(true);
+    writePreImportBackup.mockResolvedValue(null);
+  });
+
+  it("takes the listed file through the normal import path", async () => {
+    readSnapshot.mockResolvedValue('{"data":{}}');
+    const { restoreFromSnapshot } = await import("./backupActions");
+    expect(await restoreFromSnapshot("snapshot-buro-2026-11-13.json")).toBe(true);
+    expect(readSnapshot).toHaveBeenCalledWith("snapshot-buro-2026-11-13.json");
+    expect(parseBackup).toHaveBeenCalledWith('{"data":{}}');
+    expect(applyBackup).toHaveBeenCalled();
+  });
+
+  it("reports an unreadable file and imports nothing", async () => {
+    readSnapshot.mockRejectedValue(new Error("weg"));
+    const { restoreFromSnapshot } = await import("./backupActions");
+    expect(await restoreFromSnapshot("snapshot-buro-2026-11-13.json")).toBe(false);
+    expect(applyBackup).not.toHaveBeenCalled();
+    expect(toast).toHaveBeenCalledWith(expect.stringContaining("weg"), "error", 4500);
   });
 });

@@ -116,6 +116,29 @@ export async function saveDailySnapshot(): Promise<string> {
   return path;
 }
 
+export interface SnapshotInfo {
+  filename: string;
+  /** YYYY-MM-DD from the file name. */
+  date: string;
+  sizeBytes: number;
+}
+
+/** Backups of the active workspace in the `Sicherungen` folder, newest first; empty outside the desktop app. */
+export async function listSnapshots(): Promise<SnapshotInfo[]> {
+  if (!isTauriAvailable()) return [];
+  return command<SnapshotInfo[]>("list_snapshots", {
+    slug: workspaceSlug(),
+    directory: $appConfig.get()?.default_export_dir ?? null,
+  });
+}
+
+export async function readSnapshot(filename: string): Promise<string> {
+  return command<string>("read_snapshot", {
+    filename,
+    directory: $appConfig.get()?.default_export_dir ?? null,
+  });
+}
+
 export async function scheduleDailySnapshot(): Promise<void> {
   if (!isTauriAvailable()) return;
   const meta = storageGet<{ lastSnapshotDate: string }>(KEYS.exportMeta);

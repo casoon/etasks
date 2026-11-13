@@ -327,6 +327,21 @@ describe("exportService", () => {
     });
   });
 
+  it("lists the backups of the active workspace and reads one by file name", async () => {
+    command.mockResolvedValueOnce([{ filename: "snapshot-buro-muller-sohne-2026-11-13.json", date: "2026-11-13", sizeBytes: 10 }]);
+    const { listSnapshots, readSnapshot } = await import("./exportService");
+    expect(await listSnapshots()).toHaveLength(1);
+    expect(command).toHaveBeenCalledWith("list_snapshots", { slug: "buro-muller-sohne", directory: null });
+
+    command.mockResolvedValueOnce("{}");
+    expect(await readSnapshot("snapshot-x-2026-11-13.json")).toBe("{}");
+    expect(command).toHaveBeenCalledWith("read_snapshot", { filename: "snapshot-x-2026-11-13.json", directory: null });
+
+    tauri = false;
+    expect(await listSnapshots()).toEqual([]);
+    tauri = true;
+  });
+
   it("leaves bank and tax data out of the daily snapshot but not the manual export", async () => {
     command.mockResolvedValue("/exports/x.json");
     const { saveDailySnapshot, exportToFile } = await import("./exportService");
