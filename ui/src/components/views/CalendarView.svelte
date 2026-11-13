@@ -12,6 +12,8 @@
 
   export let planningMode = false;
   export let activeDate: string = today();
+  /** Auto-plan suggestions, drawn dashed until confirmed. */
+  export let proposals: { taskId: string; title: string; start: string; minutes: number }[] = [];
 
   const HOUR_HEIGHT = 64;
   // 06–20 Uhr, wird für Termine außerhalb davon erweitert (siehe termine unten)
@@ -37,7 +39,7 @@
   }
 
   function getTimeFromY(y: number): Date {
-    const date = new Date();
+    const date = new Date(`${activeDate}T00:00:00`);
     const totalMinutes = (y / HOUR_HEIGHT) * 60 + DAY_START * 60;
     date.setHours(Math.floor(totalMinutes / 60), Math.round(totalMinutes % 60), 0, 0);
     return snapToGrid(date);
@@ -187,7 +189,6 @@
   $: termine = $termineStore.filter(t => t.date === activeDate);
   $: projects = $projectsStore;
 
-  const TERMIN_TYPE_ICONS: Record<TerminType, string> = { video: '📹', phone: '📞', onsite: '🏢' };
   const TERMIN_TYPE_LABELS: Record<TerminType, string> = { video: 'Video', phone: 'Telefon', onsite: 'Vor Ort' };
 
   function getTerminTop(startTime: string, dayStart: number): number {
@@ -251,74 +252,86 @@
   }
 </script>
 
-<div class="flex flex-col overflow-hidden min-w-0">
-  <div class="flex items-center gap-2 px-4 pt-4 pb-3 flex-shrink-0">
-    <h2 class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted whitespace-nowrap overflow-hidden text-ellipsis flex-1">Kalender</h2>
+<div class="flex flex-col overflow-hidden min-w-0 h-full">
+  <div class="flex items-center gap-2.5 flex-shrink-0 mb-3">
+    <h2 class="text-[15px] font-semibold flex-1">Kalender</h2>
     {#if planningMode}
-      <span class="text-[10px] text-muted hidden lg:inline">Tasks aus „Heute“ hier hineinziehen oder Slots direkt setzen</span>
       <button
-        class="text-[11px] px-2 py-0.5 rounded-md border border-dashed border-border text-muted hover:border-accent hover:text-accent transition-colors flex-shrink-0"
+        class="h-9 px-3 rounded-lg border border-[var(--et-border-strong)] bg-surface text-[13px] font-medium hover:bg-[var(--et-surface-sunken)] transition-colors flex-shrink-0"
+        style="color:var(--et-text-2)"
+        aria-expanded={addingTermin}
         on:click={() => { if (addingTermin) resetTerminForm(); else { newTerminDate = activeDate; addingTermin = true; } }}
-        title="Termin hinzufügen"
       >+ Termin</button>
     {/if}
   </div>
 
   {#if addingTermin}
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
     <form
-      class="mx-3 mb-2 p-3 bg-surface border border-accent/30 rounded-lg flex flex-col gap-2 flex-shrink-0"
+      class="mb-3 p-3 border rounded-xl flex flex-col gap-2 flex-shrink-0"
+      style="border-color:var(--et-accent);background:var(--et-surface-sunken)"
       on:submit={handleAddTermin}
     >
-      <!-- svelte-ignore a11y-autofocus -->
-      <input
-        class="w-full px-2 py-1.5 border border-border rounded-lg text-[12px] outline-none bg-bg focus:border-accent"
-        bind:value={newTerminTitle}
-        placeholder="Titel des Termins…"
-        autofocus
-      />
-      <div class="flex gap-2 flex-wrap">
-        <select class="border border-border rounded-md px-1.5 py-1 text-[11px] bg-bg outline-none" bind:value={newTerminType}>
-          <option value="video">📹 Video</option>
-          <option value="phone">📞 Telefon</option>
-          <option value="onsite">🏢 Vor Ort</option>
-        </select>
-        <input type="date" class="border border-border rounded-md px-1.5 py-1 text-[11px] bg-bg outline-none" bind:value={newTerminDate} />
-        <input type="time" class="border border-border rounded-md px-1.5 py-1 text-[11px] bg-bg outline-none" bind:value={newTerminTime} />
-        <select class="border border-border rounded-md px-1.5 py-1 text-[11px] bg-bg outline-none" bind:value={newTerminDuration}>
-          {#if !TERMIN_DURATIONS.includes(newTerminDuration)}
-            <option value={newTerminDuration}>{newTerminDuration} min</option>
-          {/if}
-          <option value={15}>15 min</option>
-          <option value={30}>30 min</option>
-          <option value={45}>45 min</option>
-          <option value={60}>1 h</option>
-          <option value={90}>1,5 h</option>
-          <option value={120}>2 h</option>
-        </select>
+      <label class="flex flex-col gap-1 text-[12px] font-semibold" style="color:var(--et-text-2)">
+        Titel des Termins
+        <!-- svelte-ignore a11y-autofocus -->
+        <input
+          class="w-full h-11 px-3 border border-[var(--et-border-strong)] rounded-[9px] text-[14px] font-normal bg-surface"
+          bind:value={newTerminTitle}
+          autofocus
+        />
+      </label>
+      <div class="grid grid-cols-2 gap-2">
+        <label class="flex flex-col gap-1 text-[12px] font-semibold" style="color:var(--et-text-2)">Art
+          <select class="h-11 border border-[var(--et-border-strong)] rounded-[9px] px-2 text-[14px] font-normal bg-surface" bind:value={newTerminType}>
+            <option value="video">Video</option>
+            <option value="phone">Telefon</option>
+            <option value="onsite">Vor Ort</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-[12px] font-semibold" style="color:var(--et-text-2)">Dauer
+          <select class="h-11 border border-[var(--et-border-strong)] rounded-[9px] px-2 text-[14px] font-normal bg-surface" bind:value={newTerminDuration}>
+            {#if !TERMIN_DURATIONS.includes(newTerminDuration)}
+              <option value={newTerminDuration}>{newTerminDuration} min</option>
+            {/if}
+            <option value={15}>15 min</option>
+            <option value={30}>30 min</option>
+            <option value={45}>45 min</option>
+            <option value={60}>1 h</option>
+            <option value={90}>1,5 h</option>
+            <option value={120}>2 h</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-[12px] font-semibold" style="color:var(--et-text-2)">Datum
+          <input type="date" class="h-11 border border-[var(--et-border-strong)] rounded-[9px] px-2 text-[14px] font-normal bg-surface" bind:value={newTerminDate} />
+        </label>
+        <label class="flex flex-col gap-1 text-[12px] font-semibold" style="color:var(--et-text-2)">Beginn
+          <input type="time" class="h-11 border border-[var(--et-border-strong)] rounded-[9px] px-2 text-[14px] font-normal bg-surface" bind:value={newTerminTime} />
+        </label>
       </div>
       {#if projects.filter(p => p.status === 'active').length > 0}
-        <select class="border border-border rounded-md px-1.5 py-1 text-[11px] bg-bg outline-none" bind:value={newTerminProjectId}>
-          <option value="">Kein Projekt</option>
-          {#each projects.filter(p => p.status === 'active') as p (p.id)}
-            <option value={p.id}>{p.name}</option>
-          {/each}
-        </select>
+        <label class="flex flex-col gap-1 text-[12px] font-semibold" style="color:var(--et-text-2)">Projekt
+          <select class="h-11 border border-[var(--et-border-strong)] rounded-[9px] px-2 text-[14px] font-normal bg-surface" bind:value={newTerminProjectId}>
+            <option value="">Kein Projekt</option>
+            {#each projects.filter(p => p.status === 'active') as p (p.id)}
+              <option value={p.id}>{p.name}</option>
+            {/each}
+          </select>
+        </label>
       {/if}
-      <label class="flex items-center gap-1.5 text-[11px] text-muted cursor-pointer">
-        <input type="checkbox" bind:checked={newTerminBillable} class="accent-accent" />
+      <label class="flex items-center gap-2 min-h-[44px] text-[14px] cursor-pointer">
+        <input type="checkbox" bind:checked={newTerminBillable} class="w-4 h-4 accent-accent" />
         Abrechenbar
       </label>
       <div class="flex gap-2">
-        <button type="submit" class="flex-1 px-3 py-1.5 bg-accent text-white rounded-lg text-[12px] font-medium hover:opacity-90 transition-opacity">{editingTerminId ? 'Speichern' : 'Anlegen'}</button>
-        <button type="button" class="px-3 py-1.5 text-secondary rounded-lg text-[12px] hover:bg-bg transition-colors" on:click={resetTerminForm}>Abbrechen</button>
+        <button type="submit" class="flex-1 h-11 rounded-[10px] text-white text-[14px] font-semibold" style="background:var(--et-accent)">{editingTerminId ? 'Speichern' : 'Anlegen'}</button>
+        <button type="button" class="h-11 px-4 rounded-[10px] text-[14px] font-medium hover:bg-surface" style="color:var(--et-text-2)" on:click={resetTerminForm}>Abbrechen</button>
       </div>
     </form>
   {/if}
 
   <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div
-    class="flex-1 overflow-y-auto px-3 pb-6"
+    class="flex-1 overflow-y-auto"
     bind:this={scrollEl}
     on:dragover={onGridDragOver}
     on:drop={onGridDrop}
@@ -326,11 +339,6 @@
     on:mousemove={onGridMouseMove}
     on:mouseleave={onGridMouseLeave}
   >
-    {#if planningMode}
-      <div class="mb-3 rounded-xl border border-dashed border-accent/30 bg-accent-subtle/25 px-3 py-2 text-[11px] text-secondary">
-        Freie Tasks aus der Mitte hier auf eine Uhrzeit ziehen. Beim Loslassen wird sofort ein echter Zeitslot angelegt.
-      </div>
-    {/if}
     <div
       class="relative w-full min-h-full rounded-xl {ghostY !== null ? 'ring-2 ring-accent/30 bg-accent-subtle/10' : ''}"
       bind:this={gridEl}
@@ -338,7 +346,7 @@
     >
       {#each HOURS as hour (hour)}
         <div class="relative flex items-start border-t border-border-subtle" style="height:{HOUR_HEIGHT}px">
-          <span class="text-[11px] text-muted w-10 pt-1 flex-shrink-0 select-none">{String(hour).padStart(2, '0')}:00</span>
+          <span class="text-[12px] w-10 pt-1 flex-shrink-0 select-none" style="color:var(--et-text-3)">{String(hour).padStart(2, '0')}:00</span>
           <div class="flex-1 h-px bg-border-subtle mt-[10px]" />
           {#each [0, 15, 30, 45] as min (min)}
             {@const d = new Date()}
@@ -391,6 +399,14 @@
         </div>
       {/if}
 
+      {#each proposals as pr (pr.taskId)}
+        {@const pStart = new Date(pr.start)}
+        <div
+          class="absolute left-10 right-1 z-[3] rounded-[7px] px-2 py-0.5 overflow-hidden box-border text-[12px] font-semibold pointer-events-none"
+          style="top:{getBlockTop(pStart, DAY_START, HOUR_HEIGHT)}px; height:{Math.max(getBlockHeight(pStart, new Date(pStart.getTime() + pr.minutes * 60000), HOUR_HEIGHT), 22)}px; background:var(--et-surface); border:1.5px dashed var(--et-warning-text); color:var(--et-warning-text)"
+        >Vorschlag · {pr.title}</div>
+      {/each}
+
       {#each blocks as block (block.id)}
         {@const start = new Date(block.start)}
         {@const end = new Date(block.end)}
@@ -407,30 +423,31 @@
         {@const top = getTerminTop(termin.startTime, DAY_START)}
         {@const height = Math.max(getTerminHeight(termin.durationMinutes), 20)}
         {@const proj = termin.projectId ? projects.find(p => p.id === termin.projectId) : null}
-        <!-- svelte-ignore a11y-no-static-element-interactions -->
         <div
-          class="absolute left-10 right-1 z-[5] rounded-md px-2 py-1 overflow-hidden group"
-          style="top:{top}px; height:{height}px; background:{proj ? proj.color + '33' : '#6366f133'}; border-left: 3px solid {proj ? proj.color : '#6366f1'}"
+          class="absolute left-10 right-1 z-[5] rounded-[7px] px-2 py-1 overflow-hidden group box-border"
+          style="top:{top}px; height:{height}px; background:var(--et-appointment-soft); border:1px solid var(--et-appointment); color:var(--et-appointment-text)"
         >
           <div class="flex items-start justify-between gap-1 h-full">
             <div class="flex-1 min-w-0">
-              <p class="text-[11px] font-semibold leading-tight truncate" style="color:{proj ? proj.color : '#6366f1'}">{TERMIN_TYPE_ICONS[termin.type]} {termin.title}</p>
+              <p class="text-[12px] font-semibold leading-tight truncate">Termin · {termin.title}</p>
               {#if height > 28}
-                <p class="text-[10px] opacity-70 leading-tight">{TERMIN_TYPE_LABELS[termin.type]}{termin.billable ? ' · €' : ''}</p>
+                <p class="text-[11px] leading-tight">{termin.startTime} · {TERMIN_TYPE_LABELS[termin.type]}{termin.billable ? ' · abrechenbar' : ''}</p>
               {/if}
             </div>
-            {#if planningMode}
-              <button
-                class="opacity-0 group-hover:opacity-100 text-[11px] leading-none text-muted hover:text-accent transition-all flex-shrink-0"
-                on:click={() => startEditTermin(termin)}
-                title="Termin bearbeiten"
-              >✎</button>
-            {/if}
             <button
-              class="opacity-0 group-hover:opacity-100 text-[11px] leading-none text-muted hover:text-red-500 transition-all flex-shrink-0"
+              class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-6 h-6 -my-0.5 flex items-center justify-center rounded flex-shrink-0 hover:bg-white/60 transition-opacity"
+              on:click={() => startEditTermin(termin)}
+              aria-label="Termin {termin.title} bearbeiten"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>
+            </button>
+            <button
+              class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-6 h-6 -my-0.5 flex items-center justify-center rounded flex-shrink-0 hover:bg-white/60 transition-opacity"
               on:click={() => removeTermin(termin.id)}
-              title="Termin löschen"
-            >×</button>
+              aria-label="Termin {termin.title} löschen"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+            </button>
           </div>
         </div>
       {/each}

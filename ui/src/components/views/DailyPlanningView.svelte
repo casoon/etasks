@@ -9,33 +9,29 @@
   import { $todayBlocks as todayBlocksStore, dropTaskOnCalendar, removeBlockForTask } from '../../stores/calendarStore';
   import { $projects as projectsStore } from '../../stores/projectStore';
   import { $termine as termineStore } from '../../stores/terminStore';
-  import { openToday } from '../../stores/uiStore';
-  import { $dailyIntention as intentionStore, $mitTaskIds as mitStore, setIntention, toggleMit } from '../../stores/planningStore';
+  import { $mitTaskIds as mitStore, toggleMit } from '../../stores/planningStore';
   import { $currentWeekPlan as currentWeekPlanStore } from '../../stores/weekPlanStore';
-  import { daysSince, formatDate, isRecurringDueOn } from '../../domain/dateUtils';
+  import { daysSince, formatHm, isRecurringDueOn } from '../../domain/dateUtils';
   import { autoScheduleTasks } from '../../domain/taskService';
   import { toast } from '../../stores/toastStore';
   import CalendarView from './CalendarView.svelte';
   import RecurringTasksPanel from '../widgets/RecurringTasksPanel.svelte';
   import type { Task } from '../../domain/types';
   import { getTaskDragData, setTaskDragData } from '../../lib/taskDrag';
-  import TimerButton from '../widgets/TimerButton.svelte';
+  import { taskCapacityMinutes } from '../../lib/dayStats';
 
-  type PoolSortMode = 'manual' | 'date' | 'project';
+  type PoolFilter = 'focus' | 'all' | 'recurring';
 
-  const TODAY_WIP_LIMIT = 5;
   const POOL_PREFS_KEY = 'etasks:planning:pool-prefs';
 
   let tasks: Task[] = tasksStore.get();
   let activeDate: string = activeDateStore.get();
-  let intention: string = intentionStore.get();
   let mitIds: string[] = mitStore.get();
   let todayBlocks = todayBlocksStore.get();
   let termine = termineStore.get();
 
   onDestroy(tasksStore.subscribe(v => { tasks = [...v]; }));
   onDestroy(activeDateStore.subscribe(v => { activeDate = v; }));
-  onDestroy(intentionStore.subscribe(v => { intention = v; }));
   onDestroy(mitStore.subscribe(v => { mitIds = [...v]; }));
   onDestroy(todayBlocksStore.subscribe(v => { todayBlocks = [...v]; }));
   onDestroy(termineStore.subscribe(v => { termine = [...v]; }));
@@ -48,28 +44,30 @@
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
   $: focusProjectIds = $currentWeekPlanStore.focusProjectIds ?? [];
-  let showAllProjects = false;
-  let showRecurringManager = false;
-  let poolSort: PoolSortMode = 'date';
+  // „Fokus-Projekte“ only makes sense when the week plan names focus projects
+  const POOL_CHIPS: { id: PoolFilter; label: string }[] = [
+    { id: 'focus', label: 'Fokus-Projekte' },
+    { id: 'all', label: 'Alle' },
+    { id: 'recurring', label: 'Wiederkehrend' },
+  ];
+  let poolFilterChoice: PoolFilter | null = null;
+  $: poolFilter = poolFilterChoice ?? (focusProjectIds.length > 0 ? 'focus' : 'all');
   let collapsedPoolGroups: string[] = [];
-  let limitWarning = '';
   let poolPrefsReady = false;
 
   onMount(() => {
     if (typeof localStorage === 'undefined') return;
     try {
       const raw = JSON.parse(localStorage.getItem(POOL_PREFS_KEY) ?? '{}');
-      poolSort = raw.poolSort === 'manual' || raw.poolSort === 'project' ? raw.poolSort : 'date';
       collapsedPoolGroups = Array.isArray(raw.collapsedPoolGroups) ? raw.collapsedPoolGroups : [];
     } catch {
-      poolSort = 'date';
       collapsedPoolGroups = [];
     }
     poolPrefsReady = true;
   });
 
   $: if (poolPrefsReady && typeof localStorage !== 'undefined') {
-    localStorage.setItem(POOL_PREFS_KEY, JSON.stringify({ poolSort, collapsedPoolGroups }));
+    localStorage.setItem(POOL_PREFS_KEY, JSON.stringify({ collapsedPoolGroups }));
   }
 
   // Recurring tasks due today that don't already have a clone for today
@@ -84,17 +82,14 @@
     cloneRecurringTask(templateId, activeDate);
   }
 
+  // Pool is grouped by project (named projects alphabetically, „Ohne Projekt“ last)
   function comparePoolTasks(a: Task, b: Task): number {
-    if (poolSort === 'manual') return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
-    if (poolSort === 'project') {
-      const aProject = a.projectId ? (projects.find(p => p.id === a.projectId)?.name ?? 'Ohne Projekt') : 'Ohne Projekt';
-      const bProject = b.projectId ? (projects.find(p => p.id === b.projectId)?.name ?? 'Ohne Projekt') : 'Ohne Projekt';
-      const byProject = aProject.localeCompare(bProject, 'de');
-      if (byProject !== 0) return byProject;
-      return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
-    }
-    const byDate = (b.plannedDate ?? '').localeCompare(a.plannedDate ?? '');
-    if (byDate !== 0) return byDate;
+    const name = (t: Task) => (t.projectId ? (projects.find(p => p.id === t.projectId)?.name ?? '') : '');
+    const aName = name(a);
+    const bName = name(b);
+    if (!aName !== !bName) return aName ? -1 : 1;
+    const byProject = aName.localeCompare(bName, 'de');
+    if (byProject !== 0) return byProject;
     return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
   }
 
@@ -102,9 +97,9 @@
     .filter(t => t.status === 'todo' && !t.recurrence && t.plannedDate !== activeDate)
     .sort(comparePoolTasks);
 
-  $: poolTasks = (focusProjectIds.length === 0 || showAllProjects
-    ? poolTasksAll
-    : poolTasksAll.filter(t => !t.projectId || focusProjectIds.includes(t.projectId)));
+  $: poolTasks = poolFilter === 'focus' && focusProjectIds.length > 0
+    ? poolTasksAll.filter(t => !t.projectId || focusProjectIds.includes(t.projectId))
+    : poolTasksAll;
 
   $: poolGroups = (() => {
     const grouped = new Map<string, { id: string; label: string; color: string | null; tasks: Task[] }>();
@@ -127,69 +122,21 @@
   })();
 
   $: hasAnyTodoTasks = tasks.some(t => t.status === 'todo');
-  $: if (todayTasks.length < TODAY_WIP_LIMIT && limitWarning) {
-    limitWarning = '';
-  }
 
-  $: doneTodayCount = tasks.filter(t => t.plannedDate === activeDate && t.status === 'done').length;
   $: totalMinutes = todayTasks.reduce((s, t) => s + (t.estimatedMinutes ?? 0), 0);
-  $: totalLabel = totalMinutes >= 60
-    ? `${Math.floor(totalMinutes / 60)}h${totalMinutes % 60 > 0 ? ' ' + totalMinutes % 60 + 'min' : ''}`
-    : totalMinutes > 0 ? `${totalMinutes} min` : '';
-  $: scheduledTodayTasks = todayTasks
-    .filter(t => !!t.scheduledStart)
-    .sort((a, b) => (a.scheduledStart ?? '').localeCompare(b.scheduledStart ?? ''));
+  $: scheduledTodayTasks = todayTasks.filter(t => !!t.scheduledStart);
   $: unscheduledTodayTasks = todayTasks.filter(t => !t.scheduledStart);
-  $: scheduledCount = scheduledTodayTasks.length;
   $: unscheduledCount = unscheduledTodayTasks.length;
-  $: blockedMinutes = todayBlocks.reduce((sum, block) => {
-    const start = new Date(block.start).getTime();
-    const end = new Date(block.end).getTime();
-    return sum + Math.max(0, Math.round((end - start) / 60_000));
-  }, 0);
   $: terminMinutes = termine
     .filter((termin) => termin.date === activeDate)
     .reduce((sum, termin) => sum + termin.durationMinutes, 0);
-  $: planningWindowMinutes = 9 * 60;
-  $: availableTaskCapacityMinutes = Math.max(0, planningWindowMinutes - terminMinutes);
-  $: workloadDeltaMinutes = availableTaskCapacityMinutes - totalMinutes;
-  $: workloadLabel = Math.abs(workloadDeltaMinutes) >= 60
-    ? `${Math.floor(Math.abs(workloadDeltaMinutes) / 60)}h${Math.abs(workloadDeltaMinutes) % 60 > 0 ? ' ' + Math.abs(workloadDeltaMinutes) % 60 + 'min' : ''}`
-    : `${Math.abs(workloadDeltaMinutes)} min`;
-  $: reservedCapacityMinutes = planningWindowMinutes - (blockedMinutes + terminMinutes);
-  $: reservedCapacityLabel = Math.abs(reservedCapacityMinutes) >= 60
-    ? `${Math.floor(Math.abs(reservedCapacityMinutes) / 60)}h${Math.abs(reservedCapacityMinutes) % 60 > 0 ? ' ' + Math.abs(reservedCapacityMinutes) % 60 + 'min' : ''}`
-    : `${Math.abs(reservedCapacityMinutes)} min`;
-  $: blockedLabel = blockedMinutes >= 60
-    ? `${Math.floor(blockedMinutes / 60)}h${blockedMinutes % 60 > 0 ? ' ' + blockedMinutes % 60 + 'min' : ''}`
-    : blockedMinutes > 0 ? `${blockedMinutes} min` : '0 min';
-  $: terminLabel = terminMinutes >= 60
-    ? `${Math.floor(terminMinutes / 60)}h${terminMinutes % 60 > 0 ? ' ' + terminMinutes % 60 + 'min' : ''}`
-    : terminMinutes > 0 ? `${terminMinutes} min` : '0 min';
-  $: loadPercent = availableTaskCapacityMinutes > 0
-    ? Math.max(0, Math.min(100, Math.round((totalMinutes / availableTaskCapacityMinutes) * 100)))
-    : 0;
-  $: loadTrackClass = workloadDeltaMinutes < 0
-    ? 'bg-red-500'
-    : workloadDeltaMinutes <= 60
-      ? 'bg-amber-500'
-      : 'bg-green-500';
-  $: completionStatus = todayTasks.length === 0
-    ? 'leer'
-    : unscheduledCount > 0
-      ? 'slots-offen'
-      : workloadDeltaMinutes < 0
-        ? 'ueberplant'
-        : mitIds.length === 0
-          ? 'priorisieren'
-          : 'bereit';
-  $: planningState = todayTasks.length === 0
-    ? 'leer'
-    : unscheduledCount === 0
-      ? 'komplett'
-      : scheduledCount === 0
-        ? 'offen'
-        : 'teilweise';
+  $: capacityMinutes = taskCapacityMinutes(terminMinutes);
+  $: bufferMinutes = capacityMinutes - totalMinutes;
+  $: loadPercent = capacityMinutes > 0
+    ? Math.max(0, Math.min(100, Math.round((totalMinutes / capacityMinutes) * 100)))
+    : (totalMinutes > 0 ? 100 : 0);
+  $: loadColor = bufferMinutes < 0 ? 'var(--et-danger)' : bufferMinutes <= 60 ? 'var(--et-warning)' : 'var(--et-success)';
+  $: bufferColor = bufferMinutes < 0 ? 'var(--et-danger)' : bufferMinutes <= 60 ? 'var(--et-warning-text)' : 'var(--et-success-text)';
 
   function projectColor(task: Task): string | null {
     if (!task.projectId) return null;
@@ -206,33 +153,19 @@
       : [...collapsedPoolGroups, groupId];
   }
 
-  function canAssignMoreToToday(): boolean {
-    return todayTasks.length < TODAY_WIP_LIMIT;
-  }
-
-  function showTodayLimitWarning(): void {
-    limitWarning = `Heute ist bei ${todayTasks.length}/${TODAY_WIP_LIMIT}. Erst etwas abschließen oder umplanen.`;
-  }
-
   // ── Task creation ──────────────────────────────────────────────────────────
   let newTitle = '';
   let newDuration = 30;
   let newProjectId = '';
-  let addToToday = true;
+  let addToToday = false;
+  let showAddOptions = false;
   let inputEl: HTMLInputElement;
 
   function handleAdd(e: Event) {
     e.preventDefault();
     if (!newTitle.trim()) return;
     const task = addTask(newTitle.trim(), newDuration, [], newProjectId || undefined);
-    if (!addToToday) {
-      updateTask(task.id, { plannedDate: null });
-    } else if (!canAssignMoreToToday()) {
-      updateTask(task.id, { plannedDate: null });
-      showTodayLimitWarning();
-    } else {
-      limitWarning = '';
-    }
+    if (!addToToday) updateTask(task.id, { plannedDate: null });
     newTitle = '';
     newDuration = 30;
     inputEl?.focus();
@@ -240,10 +173,6 @@
 
   function assignToToday(task: Task) {
     if (task.plannedDate === activeDate) return true;
-    if (!canAssignMoreToToday()) {
-      showTodayLimitWarning();
-      return false;
-    }
     if (task.scheduledStart) {
       // a block on another day no longer applies
       removeBlockForTask(task.id);
@@ -251,14 +180,12 @@
     } else {
       updateTask(task.id, { plannedDate: activeDate });
     }
-    limitWarning = '';
     return true;
   }
 
   function removeFromToday(task: Task) {
     removeBlockForTask(task.id);
-    updateTask(task.id, { plannedDate: null, scheduledStart: null, scheduledEnd: null });
-    if (todayTasks.length - 1 < TODAY_WIP_LIMIT) limitWarning = '';
+    updateTask(task.id, { plannedDate: null, scheduledStart: null, scheduledEnd: null, priorityRank: null });
   }
 
   function createDateTime(time: string): Date {
@@ -318,24 +245,26 @@
     ];
   }
 
-  function autoPlanRemainingTasks(): void {
+  // Auto-plan first only proposes slots (dashed in list and calendar); „Übernehmen“ books them.
+  let proposals: { taskId: string; title: string; start: string; minutes: number }[] = [];
+  $: proposals = proposals.filter(p => unscheduledTodayTasks.some(t => t.id === p.taskId));
+  let proposalDate = activeDate;
+  $: if (activeDate !== proposalDate) { proposalDate = activeDate; proposals = []; }
+  $: proposalFor = new Map(proposals.map(p => [p.taskId, p]));
+
+  function proposeAutoPlan(): void {
     if (unscheduledTodayTasks.length === 0) return;
-    const busySlots = getBusySlots();
     const planned = autoScheduleTasks(
       unscheduledTodayTasks.map((task) => ({ ...task, scheduledStart: null })),
-      busySlots,
+      getBusySlots(),
       9,
       18,
       { date: activeDate },
     );
-    let notFitting = 0;
-    for (const task of planned) {
-      if (task.scheduledStart) {
-        scheduleTask(task, new Date(task.scheduledStart));
-      } else {
-        notFitting++;
-      }
-    }
+    proposals = planned
+      .filter((task) => task.scheduledStart)
+      .map((task) => ({ taskId: task.id, title: task.title, start: task.scheduledStart!, minutes: task.estimatedMinutes ?? 30 }));
+    const notFitting = planned.length - proposals.length;
     if (notFitting > 0) {
       toast(
         notFitting === 1
@@ -344,6 +273,19 @@
         'info',
       );
     }
+    if (proposals.length === 0) toast('Kein freier Slot mehr bis 18:00 Uhr.', 'info');
+  }
+
+  function acceptProposals(): void {
+    for (const p of proposals) {
+      const task = todayTasks.find(t => t.id === p.taskId);
+      if (task && !task.scheduledStart) scheduleTask(task, new Date(p.start));
+    }
+    proposals = [];
+  }
+
+  function discardProposals(): void {
+    proposals = [];
   }
 
   // ── Duration inline edit ──────────────────────────────────────────────────
@@ -405,504 +347,317 @@
   }
   function onDragEnd() { draggingId = null; dragOverId = null; dragSource = null; todayDropActive = false; }
 
-  function startDay() {
-    openToday('work');
-  }
-
 </script>
 
-<!--
-  Tagesplanung = "Werkzeug", nicht "Seite"
-  Dichte Panels, sichtbare Controls, bg-bg Untergrund
--->
-<div class="flex flex-col h-full overflow-hidden bg-bg">
-
-  <!-- Tool-Header: kompakt, funktional -->
-  <div class="flex items-center gap-3 px-4 py-0 border-b border-border bg-surface flex-shrink-0" style="min-height:44px">
-    <div class="w-1 h-5 rounded-full bg-accent flex-shrink-0"></div>
-    <span class="text-[13px] font-bold text-primary whitespace-nowrap">Plane deinen Tag</span>
-    <span class="text-[11px] text-muted hidden sm:inline whitespace-nowrap">· {formatDate(activeDate)}</span>
-    <div class="w-px h-4 bg-border flex-shrink-0 mx-1"></div>
-    <input
-      class="flex-1 text-[12px] text-secondary bg-transparent outline-none placeholder:text-muted/40 min-w-0"
-      placeholder="Intention für heute…"
-      value={intention}
-      on:input={e => setIntention(e.currentTarget.value)}
-    />
-    <div class="flex items-center gap-2 flex-shrink-0">
-      {#if doneTodayCount > 0}
-        <span class="text-[11px] text-muted">{doneTodayCount} erledigt</span>
-      {/if}
-      <button
-        on:click={startDay}
-        class="px-3 py-1 bg-accent text-white rounded-md text-[12px] font-semibold hover:bg-accent/90 transition-colors"
-      >Tag starten →</button>
-    </div>
-  </div>
-
-  <div class="px-4 py-2 border-b border-border bg-surface/80 flex items-center gap-2 flex-wrap text-[11px]">
-    <span class="px-2 py-1 rounded-full border border-border bg-bg text-secondary">
-      Heute: {todayTasks.length} Tasks
-    </span>
-    <span class="px-2 py-1 rounded-full border border-border bg-bg text-secondary">
-      Terminiert: {scheduledCount}
-    </span>
-    <span class="px-2 py-1 rounded-full border border-border bg-bg text-secondary">
-      Offen: {unscheduledCount}
-    </span>
-    <span class="px-2 py-1 rounded-full border border-border bg-bg text-secondary">
-      Slots: {blockedLabel}
-    </span>
-    <span class="px-2 py-1 rounded-full border border-border bg-bg text-secondary">
-      Termine: {terminLabel}
-    </span>
-    <span class="px-2 py-1 rounded-full border {workloadDeltaMinutes < 0 ? 'border-red-200 bg-red-50 text-red-700' : workloadDeltaMinutes <= 60 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-border bg-bg text-secondary'}">
-      {workloadDeltaMinutes < 0 ? `Tasklast zu hoch: ${workloadLabel}` : `Task-Puffer: ${workloadLabel}`}
-    </span>
-    <span class="px-2 py-1 rounded-full border {reservedCapacityMinutes < 0 ? 'border-red-200 bg-red-50 text-red-700' : reservedCapacityMinutes <= 60 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-border bg-bg text-secondary'}">
-      {reservedCapacityMinutes < 0 ? `Kalender überzogen: ${reservedCapacityLabel}` : `Kalender frei: ${reservedCapacityLabel}`}
-    </span>
-    <span class="px-2 py-1 rounded-full border {completionStatus === 'bereit' ? 'border-green-200 bg-green-50 text-green-700' : completionStatus === 'ueberplant' ? 'border-red-200 bg-red-50 text-red-700' : completionStatus === 'priorisieren' || planningState === 'teilweise' ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-border bg-bg text-muted'}">
-      {completionStatus === 'leer'
-        ? 'Noch nichts geplant'
-        : completionStatus === 'slots-offen'
-          ? 'Slots fehlen noch'
-          : completionStatus === 'ueberplant'
-            ? 'Plan überzieht'
-            : completionStatus === 'priorisieren'
-              ? 'Top 3 noch offen'
-              : 'Tagesplan bereit'}
-    </span>
-    {#if unscheduledCount > 0}
-      <button
-        class="ml-auto px-2.5 py-1 rounded-md bg-accent text-white font-semibold hover:bg-accent/90 transition-colors"
-        on:click={autoPlanRemainingTasks}
-      >Rest automatisch einplanen</button>
-    {/if}
-  </div>
-
-  <!-- 3 columns on bg-bg -->
-  <div class="flex-1 grid overflow-hidden min-w-0 gap-px bg-border" style="grid-template-columns: 260px 1fr 280px">
+<div class="flex-1 overflow-y-auto px-8 pb-7">
+  <div class="flex flex-wrap gap-4 items-start">
 
     <!-- ── Pool ── -->
-    <div class="flex flex-col overflow-hidden bg-surface">
-      <!-- Pool header + Task Creation -->
-      <div class="border-b border-border flex-shrink-0">
-        <!-- Header -->
-        <div class="flex items-center justify-between px-3 pt-2.5 pb-1">
-          <span class="text-[10px] font-bold uppercase tracking-[0.09em] text-muted">
-            {showRecurringManager ? 'Wiederholt' : 'Aufgaben-Pool'}
-            {#if !showRecurringManager && poolTasks.length > 0}
-              <span class="font-normal normal-case tracking-normal text-secondary ml-1">{poolTasks.length}</span>
+    <section aria-label="Aufgaben-Pool" class="flex-1 basis-[300px] max-w-[340px] min-w-0 flex flex-col rounded-[14px] border border-border bg-surface">
+      <div class="flex items-center gap-2.5 px-4 pt-3.5 pb-2.5">
+        <h2 class="flex-1 text-[15px] font-semibold">Pool</h2>
+        <span class="text-[12px]" style="color:var(--et-text-3)">{poolFilter === 'recurring' ? `${recurringTemplates.length} Vorlagen` : `${poolTasks.length} offen`}</span>
+      </div>
+      <div class="flex gap-1.5 px-4 pb-3 flex-wrap" role="group" aria-label="Pool filtern">
+        {#each POOL_CHIPS as chip (chip.id)}
+          {@const on = poolFilter === chip.id}
+          <button
+            class="h-9 px-3 rounded-full text-[13px] font-medium transition-colors inline-flex items-center gap-1.5 {on ? 'text-white' : 'border border-[var(--et-border-strong)] bg-surface hover:bg-[var(--et-surface-sunken)]'}"
+            style={on ? 'background:var(--et-inverse)' : 'color:var(--et-text-2)'}
+            aria-pressed={on}
+            on:click={() => poolFilterChoice = chip.id}
+          >
+            {chip.label}
+            {#if chip.id === 'recurring' && recurringDueToday.length > 0}
+              <span class="min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-semibold flex items-center justify-center" style="background:{on ? '#fff' : 'var(--et-accent-soft)'};color:var(--et-accent-strong)">{recurringDueToday.length}</span>
             {/if}
-          </span>
-          <div class="flex items-center gap-2">
-            {#if !showRecurringManager}
-              <select
-                bind:value={poolSort}
-                class="text-[10px] text-muted border border-border rounded-md px-1.5 py-0.5 bg-surface outline-none max-w-[110px]"
-                title="Pool sortieren"
-              >
-                <option value="date">Nach Datum</option>
-                <option value="project">Nach Projekt</option>
-                <option value="manual">Manuell</option>
-              </select>
-            {/if}
-            {#if !showRecurringManager && focusProjectIds.length > 0}
-              <button
-                class="text-[10px] transition-colors {showAllProjects ? 'text-accent font-semibold' : 'text-muted hover:text-secondary'}"
-                on:click={() => showAllProjects = !showAllProjects}
-                title={showAllProjects ? 'Nur Fokus-Projekte anzeigen' : 'Alle Projekte anzeigen'}
-              >{showAllProjects ? 'Alle ✓' : 'Alle'}</button>
-            {/if}
-            <button
-              class="text-[11px] transition-colors px-1.5 py-0.5 rounded {showRecurringManager ? 'text-accent bg-accent-subtle' : 'text-muted hover:text-secondary'}"
-              on:click={() => showRecurringManager = !showRecurringManager}
-              title="Wiederkehrende Aufgaben verwalten"
-            >↺{#if recurringDueToday.length > 0 && !showRecurringManager}<span class="ml-0.5 font-semibold text-accent">{recurringDueToday.length}</span>{/if}</button>
-          </div>
-        </div>
-
-        <!-- Task Creation: prominenter Flow -->
-        <form on:submit={handleAdd} class="px-3 pb-3 flex flex-col gap-2">
-          <!-- svelte-ignore a11y-autofocus -->
-          <input
-            bind:this={inputEl}
-            bind:value={newTitle}
-            class="w-full px-3 py-2 border-2 border-border rounded-lg text-[13px] bg-surface outline-none focus:border-accent placeholder:text-muted/50 transition-colors"
-            placeholder="Neue Aufgabe erstellen…"
-          />
-          <div class="flex items-center gap-1.5">
-            <select bind:value={newDuration} class="border border-border rounded-md px-2 py-1.5 text-[12px] bg-surface outline-none">
-              <option value={15}>15 min</option>
-              <option value={30}>30 min</option>
-              <option value={45}>45 min</option>
-              <option value={60}>1 h</option>
-              <option value={90}>1,5 h</option>
-              <option value={120}>2 h</option>
-            </select>
-            {#if activeProjects.length > 0}
-              <select bind:value={newProjectId} class="border border-border rounded-md px-2 py-1.5 text-[12px] bg-surface outline-none flex-1 min-w-0">
-                <option value="">Kein Projekt</option>
-                {#each activeProjects as p (p.id)}
-                  <option value={p.id}>{p.name}</option>
-                {/each}
-              </select>
-            {/if}
-            <label class="flex items-center gap-1 text-[11px] text-muted cursor-pointer whitespace-nowrap ml-auto">
-              <input type="checkbox" bind:checked={addToToday} class="w-3 h-3" />
-              Heute
-            </label>
-            <button
-              type="submit"
-              class="px-3 py-1.5 bg-accent text-white rounded-md text-[12px] font-semibold hover:bg-accent/90 transition-colors whitespace-nowrap"
-            >Hinzufügen</button>
-          </div>
-        </form>
+          </button>
+        {/each}
       </div>
 
-      <!-- Pool list / Recurring manager -->
-      <div class="flex-1 overflow-y-auto">
-
-        {#if showRecurringManager}
-          <div class="px-3 py-2">
-            <RecurringTasksPanel />
-          </div>
-        {:else}
-
-        <!-- Recurring tasks due today -->
+      <div class="max-h-[560px] overflow-y-auto">
         {#if recurringDueToday.length > 0}
-          <div class="border-b border-border/60">
-            <div class="px-3 pt-2 pb-0.5 text-[10px] font-bold uppercase tracking-[0.07em] text-accent/70">↺ Heute fällig</div>
+          <div>
+            <div class="px-4 py-2 border-t border-[var(--et-border-subtle)] text-[12px] font-semibold" style="background:var(--et-surface-sunken);color:var(--et-accent-strong)">Heute fällig (wiederkehrend)</div>
             {#each recurringDueToday as task (task.id)}
               {@const col = projectColor(task)}
-              <div class="flex items-center gap-2 px-3 py-2 border-b border-border/40 hover:bg-bg/80 group select-none">
-                <span class="text-accent/60 text-[11px] flex-shrink-0">↺</span>
-                {#if col}
-                  <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:{col}" />
-                {/if}
-                <span class="text-[12px] text-secondary flex-1 min-w-0 truncate">{task.title}</span>
-                <span class="text-[10px] text-muted flex-shrink-0">{(task.estimatedMinutes ?? 0) < 60 ? (task.estimatedMinutes ?? 0) + 'min' : ((task.estimatedMinutes ?? 0) / 60) + 'h'}</span>
+              <div class="flex items-center gap-2.5 min-h-[44px] pl-4 pr-2 border-t border-[var(--et-border-subtle)]">
+                {#if col}<span class="w-2 h-2 rounded-full flex-shrink-0" style="background:{col}" aria-hidden="true"></span>{/if}
+                <span class="flex-1 min-w-0 truncate">{task.title}</span>
+                <span class="text-[12px] whitespace-nowrap" style="color:var(--et-text-3)">{formatHm(task.estimatedMinutes ?? 0)}</span>
                 <button
+                  class="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg transition-colors hover:bg-[var(--et-accent-soft)]"
+                  style="background:var(--et-accent-soft);color:var(--et-accent-strong)"
+                  aria-label="{task.title} heute einplanen"
                   on:click={() => assignRecurringToToday(task.id)}
-                  class="text-[11px] text-accent flex-shrink-0 whitespace-nowrap hover:underline font-medium opacity-0 group-hover:opacity-100 transition-opacity"
-                >→</button>
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+                </button>
               </div>
             {/each}
           </div>
         {/if}
 
-        {#each poolGroups as group (group.id)}
-          <section class="border-b border-border/50">
+        {#if poolFilter === 'recurring'}
+          <div class="px-4 py-3 border-t border-[var(--et-border-subtle)]">
+            <RecurringTasksPanel />
+          </div>
+        {:else}
+          {#each poolGroups as group (group.id)}
             <button
-              class="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-bg/50 transition-colors"
+              class="w-full flex items-center gap-2 min-h-[36px] px-4 py-2 border-t border-[var(--et-border-subtle)] text-left text-[12px] font-semibold hover:bg-[var(--et-surface-sunken)] transition-colors"
+              style="background:var(--et-surface-sunken);color:var(--et-text-2)"
+              aria-expanded={!isPoolGroupCollapsed(group.id)}
               on:click={() => togglePoolGroup(group.id)}
-              title={isPoolGroupCollapsed(group.id) ? 'Gruppe ausklappen' : 'Gruppe einklappen'}
             >
-              <span class="text-[10px] text-muted flex-shrink-0">{isPoolGroupCollapsed(group.id) ? '▸' : '▾'}</span>
-              {#if group.color}
-                <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:{group.color}" />
-              {/if}
-              <span class="text-[10px] font-bold uppercase tracking-[0.07em] text-muted flex-1 truncate">{group.label}</span>
-              <span class="text-[10px] text-muted bg-bg px-1.5 py-0.5 rounded-md">{group.tasks.length}</span>
+              <svg class="flex-shrink-0 transition-transform {isPoolGroupCollapsed(group.id) ? '-rotate-90' : ''}" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+              <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:{group.color ?? 'var(--et-project-neutral)'}" aria-hidden="true"></span>
+              <span class="flex-1 truncate">{group.label}</span>
+              <span class="font-medium" style="color:var(--et-text-3)">{group.tasks.length}</span>
             </button>
 
             {#if !isPoolGroupCollapsed(group.id)}
               {#each group.tasks as task (task.id)}
-                {@const col = projectColor(task)}
                 {@const age = daysSince(task.updatedAt)}
                 <!-- svelte-ignore a11y-no-static-element-interactions -->
                 <div
-                  class="flex items-center gap-2 px-3 py-2 border-t border-border/40 hover:bg-bg/80 group cursor-grab select-none
-                    {draggingId === task.id ? 'opacity-30' : ''}"
+                  class="flex items-center gap-2.5 min-h-[44px] pl-4 pr-2 border-t border-[var(--et-border-subtle)] cursor-grab select-none {draggingId === task.id ? 'opacity-30' : ''}"
                   draggable="true"
                   on:dragstart={e => onDragStartPool(e, task.id)}
                   on:dragend={onDragEnd}
                 >
-                  <span class="text-muted/50 text-[11px] flex-shrink-0">⠿</span>
-                  {#if col}
-                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:{col}" />
+                  <span class="flex-1 min-w-0 truncate">{task.title}</span>
+                  {#if age != null && age >= 7}
+                    <span class="text-[12px] font-semibold whitespace-nowrap" style="color:var(--et-warning-text)" title="Seit {age} Tagen unbearbeitet">seit {age} Tagen</span>
                   {/if}
-                  <span class="text-[12px] text-secondary flex-1 min-w-0 truncate">{task.title}</span>
-                  <div class="flex items-center gap-2 text-[10px] text-muted flex-shrink-0 whitespace-nowrap">
-                    <span>⏱ {(task.estimatedMinutes ?? 0) < 60 ? (task.estimatedMinutes ?? 0) + 'min' : ((task.estimatedMinutes ?? 0) / 60) + 'h'}</span>
-                    {#if age != null && age >= 7}
-                      <span title={`Seit ${age} Tagen unbearbeitet`}>⌛ {age}d</span>
-                    {/if}
-                  </div>
+                  <span class="text-[12px] whitespace-nowrap" style="color:var(--et-text-3)">{formatHm(task.estimatedMinutes ?? 0)}</span>
                   <button
+                    class="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-lg transition-colors hover:brightness-95"
+                    style="background:var(--et-accent-soft);color:var(--et-accent-strong)"
+                    aria-label="{task.title} heute einplanen"
                     on:click={() => assignToToday(task)}
-                    class="text-[11px] text-accent flex-shrink-0 whitespace-nowrap hover:underline font-medium opacity-0 group-hover:opacity-100 transition-opacity"
-                  >→</button>
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+                  </button>
                 </div>
               {/each}
             {/if}
-          </section>
-        {:else}
-          {#if hasAnyTodoTasks}
-            <p class="text-[11px] text-muted px-3 py-3">Alle Aufgaben sind bereits für heute eingeplant.</p>
           {:else}
-            <div class="px-3 py-4 flex flex-col gap-2">
-              <p class="text-[12px] text-muted">Noch keine Aufgaben vorhanden.</p>
-              <p class="text-[11px] text-muted/70">Erstelle deine erste Aufgabe oben.</p>
-            </div>
-          {/if}
-        {/each}
-
-        {/if}<!-- end showRecurringManager -->
+            <p class="px-4 py-4 border-t border-[var(--et-border-subtle)] text-[13px]" style="color:var(--et-text-3)">
+              {#if hasAnyTodoTasks}
+                {poolFilter === 'focus' ? 'Keine offenen Aufgaben in den Fokus-Projekten. Unter „Alle“ siehst du den ganzen Pool.' : 'Alle Aufgaben sind bereits für heute eingeplant.'}
+              {:else}
+                Noch keine Aufgaben vorhanden. Lege unten die erste an.
+              {/if}
+            </p>
+          {/each}
+        {/if}
       </div>
-    </div>
+
+      <form on:submit={handleAdd} class="border-t border-border">
+        <label class="flex items-center gap-2.5 min-h-[48px] px-4">
+          <svg class="flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--et-text-3)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+          <input
+            bind:this={inputEl}
+            bind:value={newTitle}
+            type="text"
+            aria-label="Neue Aufgabe in den Pool"
+            placeholder="Neue Aufgabe in den Pool …"
+            class="flex-1 min-w-0 min-h-[44px] bg-transparent rounded"
+          />
+          <button
+            type="button"
+            class="h-9 px-2.5 rounded-lg text-[13px] font-medium hover:bg-[var(--et-surface-sunken)]"
+            style="color:var(--et-text-2)"
+            aria-expanded={showAddOptions}
+            on:click={() => showAddOptions = !showAddOptions}
+          >Optionen</button>
+        </label>
+        {#if showAddOptions}
+          <div class="flex flex-wrap items-end gap-2 px-4 pb-3">
+            <label class="flex flex-col gap-1 text-[12px] font-semibold" style="color:var(--et-text-2)">Dauer
+              <select bind:value={newDuration} class="h-11 border border-[var(--et-border-strong)] rounded-[9px] px-2 text-[14px] font-normal bg-surface">
+                <option value={15}>15 min</option>
+                <option value={30}>30 min</option>
+                <option value={45}>45 min</option>
+                <option value={60}>1 h</option>
+                <option value={90}>1,5 h</option>
+                <option value={120}>2 h</option>
+              </select>
+            </label>
+            {#if activeProjects.length > 0}
+              <label class="flex flex-col gap-1 text-[12px] font-semibold flex-1 min-w-[120px]" style="color:var(--et-text-2)">Projekt
+                <select bind:value={newProjectId} class="h-11 border border-[var(--et-border-strong)] rounded-[9px] px-2 text-[14px] font-normal bg-surface w-full">
+                  <option value="">Kein Projekt</option>
+                  {#each activeProjects as p (p.id)}
+                    <option value={p.id}>{p.name}</option>
+                  {/each}
+                </select>
+              </label>
+            {/if}
+            <label class="flex items-center gap-2 min-h-[44px] text-[14px] cursor-pointer">
+              <input type="checkbox" bind:checked={addToToday} class="w-4 h-4 accent-accent" />
+              Gleich für heute
+            </label>
+          </div>
+        {/if}
+      </form>
+    </section>
 
     <!-- ── Heute ── -->
-    <div class="flex flex-col overflow-hidden bg-surface">
-      <!-- Heute header / toolbar -->
-      <div class="px-3 pt-3 pb-2 border-b border-border flex-shrink-0 bg-bg/60">
-        <div class="flex items-center gap-3">
-          <span class="text-[10px] font-bold uppercase tracking-[0.09em] {todayTasks.length > TODAY_WIP_LIMIT ? 'text-red-600' : 'text-muted'}">
-            Heute
-            <span class="font-normal normal-case tracking-normal ml-1 {todayTasks.length >= TODAY_WIP_LIMIT ? 'text-red-600' : 'text-accent'}">{todayTasks.length}/{TODAY_WIP_LIMIT}</span>
-          </span>
-          {#if totalLabel}
-            <span class="text-[11px] text-muted">· {totalLabel}</span>
-          {/if}
-          {#if todayTasks.length > 0}
-            <span class="text-[11px] text-muted">· {scheduledCount} terminiert</span>
-          {/if}
-          <span class="text-[11px] text-muted ml-auto">★ {mitIds.length}/3</span>
-        </div>
-        <p class="text-[11px] text-muted mt-0.5">
-          {#if todayTasks.length === 0}
-            Ziehe Aufgaben aus dem Pool hierher oder erstelle neue.
-          {:else if todayTasks.length >= TODAY_WIP_LIMIT}
-            WIP-Limit erreicht. Erst abschließen oder umplanen, bevor neue Tasks dazukommen.
-          {:else if mitIds.length === 0}
-            Markiere bis zu 3 Aufgaben mit ★ als Top-Priorität.
-          {:else}
-            Von hier aus priorisieren, dann per Drag oder Schnellaktion in den Kalender terminieren.
-          {/if}
-        </p>
-        {#if todayTasks.length > 0}
-          <div class="mt-2 rounded-lg border border-border/70 bg-surface px-2.5 py-2">
-            <div class="flex items-center justify-between gap-2 text-[11px] text-muted">
-              <span>Kapazität für Aufgaben</span>
-              <span>{totalLabel || '0 min'} / {availableTaskCapacityMinutes >= 60 ? `${Math.floor(availableTaskCapacityMinutes / 60)}h${availableTaskCapacityMinutes % 60 > 0 ? ' ' + availableTaskCapacityMinutes % 60 + 'min' : ''}` : `${availableTaskCapacityMinutes} min`}</span>
-            </div>
-            <div class="mt-2 h-2 overflow-hidden rounded-full bg-bg">
-              <div class="h-full rounded-full transition-[width] duration-300 {loadTrackClass}" style="width:{loadPercent}%" />
-            </div>
-            <div class="mt-2 text-[11px] {workloadDeltaMinutes < 0 ? 'text-red-700' : workloadDeltaMinutes <= 60 ? 'text-amber-800' : 'text-muted'}">
-              {#if workloadDeltaMinutes < 0}
-                Die heutige Aufgabenlast liegt {workloadLabel} über der verfügbaren Zeit nach Terminen.
-              {:else if workloadDeltaMinutes <= 60}
-                Der Plan ist knapp. Es bleiben nur noch {workloadLabel} Puffer für Aufgaben.
-              {:else}
-                Es bleiben noch {workloadLabel} Puffer für Aufgaben zusätzlich zu den gesetzten Slots.
-              {/if}
-            </div>
-          </div>
-        {/if}
-        {#if unscheduledCount > 0}
-          <div class="mt-2 flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-900">
-            <span>{unscheduledCount} Task{unscheduledCount === 1 ? '' : 's'} sind für heute entschieden, aber noch ohne Zeitslot.</span>
-            <button
-              class="font-semibold text-amber-800 hover:text-amber-950 whitespace-nowrap"
-              on:click={autoPlanRemainingTasks}
-            >Auto-Plan</button>
-          </div>
-        {/if}
-        {#if limitWarning}
-          <div class="mt-2 px-2.5 py-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-900">
-            {limitWarning}
-          </div>
-        {/if}
-        {#if planningState === 'komplett'}
-          <div class="mt-2 flex items-center justify-between gap-2 rounded-lg border border-green-200 bg-green-50 px-2.5 py-2 text-[11px] text-green-900">
-            <span>
-              {#if completionStatus === 'ueberplant'}
-                Alle Tasks haben Slots, aber der Plan ist zeitlich zu voll. Verschiebe oder kürze etwas.
-              {:else if completionStatus === 'priorisieren'}
-                Alle Tasks haben Slots. Für einen wirklich sauberen Tagesabschluss fehlen nur noch die Top 3.
-              {:else}
-                Der Tag ist sauber vorbereitet: alle Tasks terminiert, Kapazität plausibel, Fokus gesetzt.
-              {/if}
-            </span>
-            <button
-              class="font-semibold text-green-800 hover:text-green-950 whitespace-nowrap"
-              on:click={startDay}
-            >Zum Tagesfokus</button>
-          </div>
+    <section aria-label="Heute" class="flex-[999] basis-[360px] min-w-0 flex flex-col rounded-[14px] border border-border bg-surface">
+      <div class="flex items-center gap-2.5 px-4 pt-3.5 pb-1.5">
+        <h2 class="flex-1 text-[15px] font-semibold">Heute</h2>
+        <span class="text-[12px]" style="color:var(--et-text-3)">Top 3: {mitIds.length} von 3</span>
+      </div>
+      <div class="flex flex-col gap-1.5 px-4 pb-3.5">
+        <span
+          class="h-2 rounded-[4px] flex overflow-hidden"
+          style="background:var(--et-track)"
+          role="img"
+          aria-label="Kapazität zu {loadPercent} Prozent verplant"
+        ><span class="rounded-[4px] transition-[width] duration-300" style="width:{loadPercent}%;background:{loadColor}"></span></span>
+        <span class="text-[12px]" style="color:var(--et-text-3)">
+          <strong class="font-semibold text-primary">{formatHm(totalMinutes)}</strong> von {formatHm(capacityMinutes)} verplant
+          {#if terminMinutes > 0} · {formatHm(terminMinutes)} Termine{/if}
+          · <strong class="font-semibold" style="color:{bufferColor}">{formatHm(Math.abs(bufferMinutes))} {bufferMinutes < 0 ? 'zu viel' : 'Puffer'}</strong>
+        </span>
+        {#if todayTasks.length > 0 && mitIds.length === 0}
+          <span class="text-[12px]" style="color:var(--et-text-3)">Markiere bis zu 3 Aufgaben mit dem Stern als Top 3.</span>
         {/if}
       </div>
 
       <!-- Task rows + drop zone -->
       <!-- svelte-ignore a11y-no-static-element-interactions -->
       <div
-        class="flex-1 overflow-y-auto transition-colors {todayDropActive && dragSource === 'pool' ? (todayTasks.length >= TODAY_WIP_LIMIT ? 'bg-red-50' : 'bg-accent-subtle/30') : ''}"
+        class="transition-colors {todayDropActive && dragSource === 'pool' ? 'bg-[var(--et-accent-soft)]' : ''}"
         on:dragover={onDragOverTodayZone}
         on:drop={onDrop}
         on:dragleave={() => { todayDropActive = false; }}
       >
-        {#if unscheduledTodayTasks.length > 0}
-          <div class="px-3 py-2 border-b border-border/60 bg-bg/50">
-            <div class="flex items-center gap-2">
-              <span class="text-[10px] font-bold uppercase tracking-[0.07em] text-muted">Noch einplanen</span>
-              <span class="text-[10px] text-muted bg-surface px-1.5 py-0.5 rounded-md">{unscheduledCount}</span>
-            </div>
-            <p class="text-[11px] text-muted mt-1">Diese Tasks sind für heute entschieden, haben aber noch keinen Zeitslot.</p>
-          </div>
-        {/if}
-
-        {#each unscheduledTodayTasks as task, _i (task.id)}
+        {#each todayTasks as task (task.id)}
           {@const isMit = mitIds.includes(task.id)}
           {@const col = projectColor(task)}
+          {@const proj = projects.find(p => p.id === task.projectId)}
+          {@const proposal = proposalFor.get(task.id)}
           <!-- svelte-ignore a11y-no-static-element-interactions -->
           <div
-            class="group flex flex-wrap items-center gap-x-2 gap-y-1 px-3 py-[9px] border-b border-border/60 cursor-grab select-none
-              {isMit ? 'bg-accent-subtle border-l-[3px] border-l-accent' : 'hover:bg-bg/60'}
+            class="group flex items-center gap-2 min-h-[52px] pl-2 pr-3 py-1 border-t border-[var(--et-border-subtle)] cursor-grab select-none
+              {!task.scheduledStart ? 'bg-[#FDF6EC]' : ''}
               {draggingId === task.id && dragSource === 'today' ? 'opacity-30' : ''}
-              {dragOverId === task.id && dragSource === 'today' ? 'border-t-2 border-t-accent' : ''}"
+              {dragOverId === task.id && dragSource === 'today' ? 'border-t-2 !border-t-accent' : ''}"
             draggable="true"
             on:dragstart={e => onDragStartToday(e, task.id)}
             on:dragover={e => onDragOverToday(e, task.id)}
             on:drop={onDrop}
             on:dragend={onDragEnd}
           >
-            <!-- Drag handle -->
-            <span class="text-muted/60 text-[11px] flex-shrink-0 cursor-grab hover:text-muted transition-colors">⠿</span>
-
-            <!-- MIT star -->
             <button
               on:click={() => toggleMit(task.id)}
-              class="text-[13px] flex-shrink-0 transition-colors leading-none
-                {isMit ? 'text-amber-400' : 'text-border-strong hover:text-amber-400'}"
+              class="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-lg transition-colors hover:bg-[var(--et-surface-sunken)] disabled:cursor-not-allowed"
+              style="color:{isMit ? 'var(--et-warning)' : 'var(--et-border-control)'}"
+              aria-label={isMit ? 'Aus Top 3 entfernen' : mitIds.length < 3 ? 'Als Top 3 markieren' : 'Top 3 ist voll'}
+              aria-pressed={isMit}
               disabled={!isMit && mitIds.length >= 3}
-              title={isMit ? 'Aus Top 3 entfernen' : mitIds.length < 3 ? 'Als Top 3 markieren' : '3 bereits gewählt'}
-            >★</button>
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill={isMit ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 16.9l-5.4 2.9 1.1-6.1L3.2 9.4l6.1-.8z"></path></svg>
+            </button>
 
-            {#if col}
-              <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:{col}" />
-            {/if}
-
-            <span class="text-[13px] flex-1 min-w-[8rem] truncate {isMit ? 'font-semibold text-primary' : 'text-primary'}">
-              {task.title}
+            <span class="flex-1 min-w-0 flex flex-col">
+              <span class="font-semibold truncate">{task.title}</span>
+              <span class="flex items-center gap-1.5 text-[12px] truncate" style="color:var(--et-text-3)">
+                {#if col}<span class="w-[7px] h-[7px] rounded-full flex-shrink-0" style="background:{col}" aria-hidden="true"></span>{/if}
+                {proj?.name ?? 'Ohne Projekt'}
+              </span>
             </span>
 
-            <!-- Duration: click to edit -->
+            <!-- Quick scheduling, shown on hover or keyboard focus -->
+            <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+              {#if task.scheduledStart}
+                <button
+                  class="h-9 px-2 rounded-lg text-[12px] font-medium hover:bg-[var(--et-surface-sunken)]"
+                  style="color:var(--et-text-2)"
+                  on:click={() => unscheduleTask(task)}
+                >Zeit lösen</button>
+              {:else}
+                <button class="h-9 px-2 rounded-lg text-[12px] font-medium hover:bg-[var(--et-surface-sunken)]" style="color:var(--et-accent-strong)" on:click={() => autoPlanTask(task)} title="Nächsten freien Slot finden">Auto</button>
+                <button class="h-9 px-2 rounded-lg text-[12px] font-medium hover:bg-[var(--et-surface-sunken)]" style="color:var(--et-text-2)" on:click={() => quickSchedule(task, '09:00')} title="Um 09:00 einplanen">09:00</button>
+                <button class="h-9 px-2 rounded-lg text-[12px] font-medium hover:bg-[var(--et-surface-sunken)]" style="color:var(--et-text-2)" on:click={() => quickSchedule(task, '13:00')} title="Um 13:00 einplanen">13:00</button>
+              {/if}
+              <button
+                on:click={() => removeFromToday(task)}
+                class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-[var(--et-surface-sunken)]"
+                style="color:var(--et-text-3)"
+                aria-label="{task.title} aus Heute entfernen"
+                title="Aus Heute entfernen"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+              </button>
+            </div>
+
+            {#if task.scheduledStart}
+              <span class="text-[12px] font-semibold px-2 py-[3px] rounded-md tabular-nums" style="background:var(--et-accent-soft);color:var(--et-accent-strong)">{formatScheduledTime(task.scheduledStart)}</span>
+            {:else if proposal}
+              <span class="text-[12px] font-semibold px-2 py-[3px] rounded-md tabular-nums whitespace-nowrap" style="border:1.5px dashed var(--et-warning-text);color:var(--et-warning-text);background:var(--et-surface)">Vorschlag {formatScheduledTime(proposal.start)}</span>
+            {:else}
+              <span class="text-[12px] font-semibold px-2 py-[3px] rounded-md whitespace-nowrap" style="background:var(--et-warning-soft);color:var(--et-warning-text)">ohne Zeitslot</span>
+            {/if}
+
             {#if editDurationId === task.id}
               <!-- svelte-ignore a11y-autofocus -->
               <input
                 type="number"
-                class="w-12 px-1 py-0.5 border border-accent rounded text-[11px] text-center outline-none bg-surface"
+                class="w-16 h-9 px-1 border rounded-lg text-[13px] text-center bg-surface"
+                style="border-color:var(--et-accent)"
+                aria-label="Dauer in Minuten"
                 value={task.estimatedMinutes ?? 30}
                 min="5" step="5" autofocus
                 on:blur={e => commitDuration(task, e.currentTarget.value)}
                 on:keydown={e => { if (e.key === 'Enter') commitDuration(task, e.currentTarget.value); if (e.key === 'Escape') editDurationId = null; }}
               />
-              <span class="text-[10px] text-muted">min</span>
             {:else}
               <button
-                class="text-[11px] text-muted hover:text-accent flex-shrink-0 tabular-nums min-w-[32px] text-right"
+                class="min-w-[52px] h-9 rounded-lg text-[13px] text-right tabular-nums px-1 hover:bg-[var(--et-surface-sunken)]"
+                style="color:var(--et-text-3)"
                 on:click={() => editDurationId = task.id}
                 title="Dauer ändern"
-              >{(task.estimatedMinutes ?? 0) < 60 ? (task.estimatedMinutes ?? 0) + 'm' : ((task.estimatedMinutes ?? 0) / 60) + 'h'}</button>
+                aria-label="Dauer ändern, aktuell {formatHm(task.estimatedMinutes ?? 0)}"
+              >{formatHm(task.estimatedMinutes ?? 0)}</button>
             {/if}
-
-            <div class="flex items-center gap-1 flex-shrink-0">
-              <button
-                class="px-1.5 py-0.5 rounded text-[10px] text-accent hover:bg-accent-subtle"
-                on:click={() => autoPlanTask(task)}
-                title="Nächsten freien Slot finden"
-              >Auto</button>
-              <button
-                class="px-1.5 py-0.5 rounded text-[10px] text-muted hover:bg-bg hover:text-accent"
-                on:click={() => quickSchedule(task, '09:00')}
-                title="Um 09:00 einplanen"
-              >09</button>
-              <button
-                class="px-1.5 py-0.5 rounded text-[10px] text-muted hover:bg-bg hover:text-accent"
-                on:click={() => quickSchedule(task, '13:00')}
-                title="Um 13:00 einplanen"
-              >13</button>
-            </div>
-
-            <TimerButton taskId={task.id} />
-
-            <!-- Remove -->
-            <button
-              on:click={() => removeFromToday(task)}
-              class="w-5 h-5 flex items-center justify-center rounded text-muted/50 hover:text-secondary hover:bg-bg transition-colors flex-shrink-0 text-[11px]"
-              title="Aus Heute entfernen"
-            >✕</button>
-          </div>
-        {/each}
-
-        {#if scheduledTodayTasks.length > 0}
-          <div class="px-3 py-2 border-b border-border/60 bg-accent-subtle/30">
-            <div class="flex items-center gap-2">
-              <span class="text-[10px] font-bold uppercase tracking-[0.07em] text-accent">Terminiert</span>
-              <span class="text-[10px] text-accent bg-surface px-1.5 py-0.5 rounded-md">{scheduledCount}</span>
-            </div>
-            <p class="text-[11px] text-muted mt-1">Diese Tasks haben bereits einen Slot im Kalender und können dort per Drag verschoben werden.</p>
-          </div>
-        {/if}
-
-        {#each scheduledTodayTasks as task, _i (task.id)}
-          {@const isMit = mitIds.includes(task.id)}
-          {@const col = projectColor(task)}
-          <div
-            class="group flex items-center gap-2 px-3 py-[9px] border-b border-border/60 cursor-grab select-none bg-accent-subtle/10
-              {draggingId === task.id && dragSource === 'today' ? 'opacity-30' : ''}"
-            draggable="true"
-            on:dragstart={e => onDragStartToday(e, task.id)}
-            on:dragend={onDragEnd}
-          >
-            <span class="text-muted/60 text-[11px] flex-shrink-0 cursor-grab">⠿</span>
-            <button
-              on:click={() => toggleMit(task.id)}
-              class="text-[13px] flex-shrink-0 transition-colors leading-none
-                {isMit ? 'text-amber-400' : 'text-border-strong hover:text-amber-400'}"
-              disabled={!isMit && mitIds.length >= 3}
-              title={isMit ? 'Aus Top 3 entfernen' : mitIds.length < 3 ? 'Als Top 3 markieren' : '3 bereits gewählt'}
-            >★</button>
-            {#if col}
-              <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:{col}" />
-            {/if}
-            <span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-surface text-accent flex-shrink-0">
-              {formatScheduledTime(task.scheduledStart)}
-            </span>
-            <span class="text-[13px] flex-1 min-w-0 truncate {isMit ? 'font-semibold text-primary' : 'text-primary'}">
-              {task.title}
-            </span>
-            <span class="text-[11px] text-muted flex-shrink-0 tabular-nums min-w-[32px] text-right">
-              {(task.estimatedMinutes ?? 0) < 60 ? (task.estimatedMinutes ?? 0) + 'm' : ((task.estimatedMinutes ?? 0) / 60) + 'h'}
-            </span>
-            <button
-              on:click={() => unscheduleTask(task)}
-              class="px-1.5 py-0.5 rounded text-[10px] text-muted hover:bg-bg hover:text-accent flex-shrink-0"
-              title="Zeitslot lösen"
-            >Zeit lösen</button>
-            <TimerButton taskId={task.id} />
-            <button
-              on:click={() => removeFromToday(task)}
-              class="w-5 h-5 flex items-center justify-center rounded text-muted/50 hover:text-secondary hover:bg-bg transition-colors flex-shrink-0 text-[11px]"
-              title="Aus Heute entfernen"
-            >✕</button>
           </div>
         {/each}
 
         {#if todayTasks.length === 0}
-          <div class="px-4 py-8 text-center">
-            <p class="text-[13px] font-medium text-secondary mb-1">Noch leer</p>
-            <p class="text-[11px] text-muted leading-relaxed">
-              Klicke „→" neben einer Aufgabe im Pool<br/>oder erstelle direkt eine neue.
+          <div class="px-4 py-8 text-center border-t border-[var(--et-border-subtle)]">
+            <p class="text-[14px] font-semibold mb-1" style="color:var(--et-text-2)">Noch leer</p>
+            <p class="text-[13px] leading-relaxed" style="color:var(--et-text-3)">
+              Wähle mit dem Pfeil Aufgaben aus dem Pool,<br />ziehe sie hierher oder lege eine neue an.
             </p>
           </div>
         {/if}
       </div>
-    </div>
+
+      {#if unscheduledCount > 0}
+        <div class="flex flex-wrap items-center gap-3 px-4 py-3 border-t border-border">
+          {#if proposals.length > 0}
+            <span class="flex-1 basis-[200px] text-[13px]" style="color:var(--et-text-2)">Vorschlag für {proposals.length} {proposals.length === 1 ? 'Aufgabe' : 'Aufgaben'} – im Kalender gestrichelt.</span>
+            <button class="h-10 px-3.5 rounded-[10px] text-[14px] font-medium hover:bg-[var(--et-surface-sunken)]" style="color:var(--et-text-2)" on:click={discardProposals}>Verwerfen</button>
+            <button class="h-10 px-3.5 rounded-[10px] text-white text-[14px] font-semibold hover:bg-[var(--et-accent-strong)]" style="background:var(--et-accent)" on:click={acceptProposals}>Übernehmen</button>
+          {:else}
+            <span class="flex-1 basis-[200px] text-[13px]" style="color:var(--et-text-2)">{unscheduledCount} {unscheduledCount === 1 ? 'Aufgabe hat' : 'Aufgaben haben'} noch keinen Zeitslot.</span>
+            <button
+              class="h-10 px-3.5 rounded-[10px] border text-[14px] font-semibold bg-surface hover:bg-[var(--et-accent-soft)]"
+              style="border-color:var(--et-accent);color:var(--et-accent-strong)"
+              on:click={proposeAutoPlan}
+            >Automatisch einplanen</button>
+          {/if}
+        </div>
+      {/if}
+    </section>
 
     <!-- ── Kalender ── -->
-    <CalendarView planningMode={true} {activeDate} />
-
+    <aside aria-label="Kalender" class="flex-1 basis-[300px] max-w-[340px] min-w-0 box-border flex flex-col px-4 pt-3.5 pb-4 rounded-[14px] border border-border bg-surface h-[640px]">
+      <CalendarView planningMode={true} {activeDate} proposals={proposals} />
+    </aside>
   </div>
 </div>
