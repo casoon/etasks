@@ -39,22 +39,24 @@
 </script>
 
 {#if open && entry}
-  <div class="fixed inset-0 bg-black/40 flex items-start justify-center pt-[20vh] z-[100] backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Vergessener Timer">
-    <div class="bg-surface border border-border rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-[460px] max-w-[calc(100vw-32px)] p-5 flex flex-col gap-4">
-      <p class="text-[14px] font-semibold text-primary">Ein Timer läuft noch</p>
-      <p class="text-[13px] text-secondary leading-relaxed">
+  <div class="fixed inset-0 flex items-start justify-center pt-[20vh] z-[100]" style="background:rgba(28,27,25,0.45)" role="dialog" aria-modal="true" aria-labelledby="stale-title">
+    <div class="w-[460px] max-w-[calc(100vw-32px)] p-5 flex flex-col gap-4 rounded-[14px]" style="background:var(--et-surface);border:1px solid var(--et-border);box-shadow:var(--et-shadow-overlay)">
+      <h2 id="stale-title" class="et-h2">Ein Timer läuft noch</h2>
+      <p class="text-[13px] leading-relaxed" style="color:var(--et-text-2)">
         „{task?.title ?? 'Gelöschte Aufgabe'}“ läuft seit {new Date(entry.startAt).toLocaleString('de-DE', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
         ({formatTrackedTime(Math.round((Date.now() - new Date(entry.startAt).getTime()) / 1000))}). Was soll mit dem Eintrag passieren?
       </p>
-      <div class="flex items-center gap-2 flex-wrap">
-        <label class="text-[12px] text-secondary" for="stale-stop-time">Beenden um</label>
-        <input id="stale-stop-time" type="time" class="border border-border rounded-md px-2 py-1 text-[13px] bg-bg" bind:value={stopTime} on:input={() => (error = '')} />
-        <button class="px-3 py-1.5 rounded-lg border border-border text-[13px] text-secondary hover:bg-bg hover:text-primary transition-colors" on:click={stopAtTime}>Zu dieser Zeit beenden</button>
+      <div class="flex items-end gap-2 flex-wrap">
+        <div class="flex flex-col gap-1">
+          <label class="et-label" for="stale-stop-time">Beenden um</label>
+          <input id="stale-stop-time" type="time" class="et-field w-auto" bind:value={stopTime} on:input={() => (error = '')} />
+        </div>
+        <button class="et-btn" on:click={stopAtTime}>Zu dieser Zeit beenden</button>
       </div>
-      {#if error}<p class="text-[12px] text-red-500">{error}</p>{/if}
+      {#if error}<p class="text-[13px]" style="color:var(--et-danger)" role="alert">{error}</p>{/if}
       <div class="flex items-center gap-2 justify-end">
-        <button class="px-3 py-1.5 rounded-lg text-[13px] text-secondary hover:bg-bg transition-colors" on:click={discard}>Verwerfen</button>
-        <button class="px-3 py-1.5 rounded-lg bg-accent text-white text-[13px] font-medium hover:bg-blue-600 transition-colors" on:click={stopNow}>Jetzt stoppen</button>
+        <button class="et-btn et-btn-danger" on:click={discard}>Verwerfen</button>
+        <button class="et-btn et-btn-primary" on:click={stopNow}>Jetzt stoppen</button>
       </div>
     </div>
   </div>

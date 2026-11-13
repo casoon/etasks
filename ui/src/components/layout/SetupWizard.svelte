@@ -216,13 +216,13 @@
     }
 </script>
 
-<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-    <div class="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col overflow-hidden">
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(28,27,25,0.55)]">
+    <div class="bg-[var(--et-surface)] border border-[var(--et-border)] rounded-[14px] shadow-[var(--et-shadow-overlay)] w-full max-w-2xl mx-4 flex flex-col overflow-hidden">
 
         <!-- Progress bar -->
-        <div class="h-1 bg-border">
+        <div class="h-1 bg-[var(--et-track)]">
             <div
-                class="h-full bg-accent transition-all duration-300"
+                class="h-full bg-[var(--et-accent)] transition-all duration-300"
                 style="width: {(step / 3) * 100}%"
             ></div>
         </div>
@@ -232,42 +232,42 @@
             <!-- Step 1: Welcome -->
             {#if step === 1}
                 <div class="flex flex-col gap-2">
-                    <h2 class="text-xl font-semibold text-primary">Willkommen bei eTasks</h2>
-                    <p class="text-sm text-secondary leading-relaxed">
+                    <h2 class="text-xl font-semibold text-[var(--et-text)]">Willkommen bei eTasks</h2>
+                    <p class="text-sm text-[var(--et-text-2)] leading-relaxed">
                         Dein persönlicher Arbeitsorganisator für Projekte, Aufgaben, Zeiterfassung und Rechnungen – alles lokal auf deinem Gerät.
                     </p>
                 </div>
 
-                <div class="rounded-xl border border-border bg-bg/60 p-4 flex flex-col gap-3">
-                    <div class="flex items-center gap-3 text-sm text-secondary">
-                        <span class="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0"></span>
+                <div class="rounded-[12px] border border-[var(--et-border)] bg-[var(--et-surface-sunken)] p-4 flex flex-col gap-3">
+                    <div class="flex items-center gap-3 text-sm text-[var(--et-text-2)]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[var(--et-accent)] flex-shrink-0"></span>
                         <span>Projekte &amp; Aufgaben verwalten</span>
                     </div>
-                    <div class="flex items-center gap-3 text-sm text-secondary">
-                        <span class="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0"></span>
+                    <div class="flex items-center gap-3 text-sm text-[var(--et-text-2)]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[var(--et-accent)] flex-shrink-0"></span>
                         <span>Zeiten erfassen &amp; auswerten</span>
                     </div>
-                    <div class="flex items-center gap-3 text-sm text-secondary">
-                        <span class="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0"></span>
+                    <div class="flex items-center gap-3 text-sm text-[var(--et-text-2)]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[var(--et-accent)] flex-shrink-0"></span>
                         <span>Rechnungen &amp; Angebote erstellen</span>
                     </div>
-                    <div class="flex items-center gap-3 text-sm text-secondary">
-                        <span class="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0"></span>
+                    <div class="flex items-center gap-3 text-sm text-[var(--et-text-2)]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[var(--et-accent)] flex-shrink-0"></span>
                         <span>Alle Daten bleiben lokal auf deinem Gerät</span>
                     </div>
                 </div>
 
-                <p class="text-xs text-muted">
+                <p class="text-xs text-[var(--et-text-3)]">
                     In zwei kurzen Schritten richten wir deinen Arbeitsbereich ein.
                 </p>
 
                 {#if existingWorkspaces.length > 0}
-                    <div class="rounded-xl border border-border bg-bg/60 p-4 flex flex-col gap-2">
-                        <div class="text-xs font-medium text-secondary">Vorhandene Arbeitsbereiche</div>
+                    <div class="rounded-[12px] border border-[var(--et-border)] bg-[var(--et-surface-sunken)] p-4 flex flex-col gap-2">
+                        <div class="et-label">Vorhandene Arbeitsbereiche</div>
                         {#each existingWorkspaces as wp}
                             {@const name = tenantNameFromPath(wp)}
                             <button
-                                class="text-left text-sm text-accent hover:underline truncate"
+                                class="text-left text-sm font-semibold text-[var(--et-accent-strong)] hover:underline truncate min-h-[44px]"
                                 disabled={saving}
                                 on:click={() => openExisting(wp)}
                             >{name}</button>
@@ -276,8 +276,8 @@
                 {/if}
 
                 <div class="flex justify-end">
-                    <button class="btn-primary" on:click={goNext}>
-                        Los geht's →
+                    <button class="et-btn et-btn-primary" on:click={goNext}>
+                        Los geht's
                     </button>
                 </div>
             {/if}
@@ -285,19 +285,19 @@
             <!-- Step 2: Workspace -->
             {#if step === 2}
                 <div class="flex flex-col gap-2">
-                    <div class="text-xs font-medium text-muted uppercase tracking-wide">Schritt 1 von 2</div>
-                    <h2 class="text-xl font-semibold text-primary">Speicherorte festlegen</h2>
-                    <p class="text-sm text-secondary">
+                    <div class="text-xs font-medium text-[var(--et-text-3)] uppercase tracking-wide">Schritt 1 von 2</div>
+                    <h2 class="text-xl font-semibold text-[var(--et-text)]">Speicherorte festlegen</h2>
+                    <p class="text-sm text-[var(--et-text-2)]">
                         eTasks legt pro Testnutzer einen eigenen Arbeitsbereichsordner an. Darin liegen die SQLite-Datenbank und später auch Zusatzdateien wie Logos.
                     </p>
                 </div>
 
                 <div class="flex flex-col gap-3">
                     <label class="flex flex-col gap-1.5">
-                        <span class="text-xs font-medium text-secondary">Name des Arbeitsbereichs</span>
+                        <span class="et-label">Name des Arbeitsbereichs</span>
                         <!-- svelte-ignore a11y-autofocus -->
                         <input
-                            class="setup-input"
+                            class="et-field"
                             bind:value={tenantName}
                             placeholder="z. B. Studio Nord oder Max Mustermann"
                             autofocus
@@ -305,93 +305,93 @@
                         />
                     </label>
 
-                    <div class="rounded-xl border border-border bg-bg/60 p-4 flex flex-col gap-3">
-                        <div class="text-xs font-medium text-secondary">Arbeitsbereichsordner</div>
-                        <label class="flex items-center gap-2 text-sm text-secondary">
+                    <div class="rounded-[12px] border border-[var(--et-border)] bg-[var(--et-surface-sunken)] p-4 flex flex-col gap-3">
+                        <div class="et-label">Arbeitsbereichsordner</div>
+                        <label class="flex items-center gap-2 min-h-[44px] text-sm text-[var(--et-text-2)]">
                             <input type="radio" bind:group={workspaceLocation} value="documents" />
-                            <span>Dokumente <span class="text-muted">(empfohlen für Testnutzer)</span></span>
+                            <span>Dokumente <span class="text-[var(--et-text-3)]">(empfohlen für Testnutzer)</span></span>
                         </label>
                         {#if appPaths.documentsDir}
-                            <p class="text-[11px] text-muted ml-6 break-all">{appPaths.documentsDir}</p>
+                            <p class="text-[12px] text-[var(--et-text-3)] ml-6 break-all">{appPaths.documentsDir}</p>
                         {/if}
-                        <label class="flex items-center gap-2 text-sm text-secondary">
+                        <label class="flex items-center gap-2 min-h-[44px] text-sm text-[var(--et-text-2)]">
                             <input type="radio" bind:group={workspaceLocation} value="appdata" />
                             <span>Versteckter App-Datenordner</span>
                         </label>
                         {#if appPaths.appDataDir}
-                            <p class="text-[11px] text-muted ml-6 break-all">{appPaths.appDataDir}</p>
+                            <p class="text-[12px] text-[var(--et-text-3)] ml-6 break-all">{appPaths.appDataDir}</p>
                         {/if}
-                        <label class="flex items-center gap-2 text-sm text-secondary">
+                        <label class="flex items-center gap-2 min-h-[44px] text-sm text-[var(--et-text-2)]">
                             <input type="radio" bind:group={workspaceLocation} value="custom" />
                             <span>Eigener Projektordner</span>
                         </label>
                         <div class="ml-6 flex items-center gap-2">
-                            <button class="btn-ghost text-[11px]" on:click={pickWorkspaceDirectory} disabled={!isTauriAvailable()}>
+                            <button class="et-btn et-btn-sm" on:click={pickWorkspaceDirectory} disabled={!isTauriAvailable()}>
                                 Ordner wählen
                             </button>
-                            <span class="text-[11px] text-muted truncate">{customWorkspaceDir || "Noch kein Ordner gewählt"}</span>
+                            <span class="text-[12px] text-[var(--et-text-3)] truncate">{customWorkspaceDir || "Noch kein Ordner gewählt"}</span>
                         </div>
                     </div>
 
-                    <div class="rounded-xl border border-border bg-bg/60 p-4 flex flex-col gap-3">
-                        <div class="text-xs font-medium text-secondary">Standardordner für Exporte und PDFs</div>
-                        <label class="flex items-center gap-2 text-sm text-secondary">
+                    <div class="rounded-[12px] border border-[var(--et-border)] bg-[var(--et-surface-sunken)] p-4 flex flex-col gap-3">
+                        <div class="et-label">Standardordner für Exporte und PDFs</div>
+                        <label class="flex items-center gap-2 min-h-[44px] text-sm text-[var(--et-text-2)]">
                             <input type="radio" bind:group={exportLocation} value="downloads" />
                             <span>Downloads</span>
                         </label>
                         {#if appPaths.downloadsDir}
-                            <p class="text-[11px] text-muted ml-6 break-all">{appPaths.downloadsDir}</p>
+                            <p class="text-[12px] text-[var(--et-text-3)] ml-6 break-all">{appPaths.downloadsDir}</p>
                         {/if}
-                        <label class="flex items-center gap-2 text-sm text-secondary">
+                        <label class="flex items-center gap-2 min-h-[44px] text-sm text-[var(--et-text-2)]">
                             <input type="radio" bind:group={exportLocation} value="documents" />
                             <span>Dokumente</span>
                         </label>
                         {#if appPaths.documentsDir}
-                            <p class="text-[11px] text-muted ml-6 break-all">{appPaths.documentsDir}</p>
+                            <p class="text-[12px] text-[var(--et-text-3)] ml-6 break-all">{appPaths.documentsDir}</p>
                         {/if}
-                        <label class="flex items-center gap-2 text-sm text-secondary">
+                        <label class="flex items-center gap-2 min-h-[44px] text-sm text-[var(--et-text-2)]">
                             <input type="radio" bind:group={exportLocation} value="custom" />
                             <span>Eigener Ordner</span>
                         </label>
                         <div class="ml-6 flex items-center gap-2">
-                            <button class="btn-ghost text-[11px]" on:click={pickExportDirectory} disabled={!isTauriAvailable()}>
+                            <button class="et-btn et-btn-sm" on:click={pickExportDirectory} disabled={!isTauriAvailable()}>
                                 Ordner wählen
                             </button>
-                            <span class="text-[11px] text-muted truncate">{customExportDir || "Noch kein Ordner gewählt"}</span>
+                            <span class="text-[12px] text-[var(--et-text-3)] truncate">{customExportDir || "Noch kein Ordner gewählt"}</span>
                         </div>
                     </div>
 
                     {#if existingInCustomDir}
-                        <div class="rounded-xl border border-border bg-bg/60 p-3 text-xs text-secondary flex flex-col gap-2">
+                        <div class="rounded-[12px] border border-[var(--et-border)] bg-[var(--et-surface-sunken)] p-3 text-xs text-[var(--et-text-2)] flex flex-col gap-2">
                             <span>In diesem Ordner liegt bereits ein Arbeitsbereich. Ein neuer Arbeitsbereich wird in einem eigenen Unterordner angelegt; der vorhandene bleibt unverändert.</span>
                             <button
-                                class="self-start px-3 py-1.5 rounded-lg border border-border text-[12px] text-primary hover:bg-bg transition-colors"
+                                class="et-btn et-btn-sm self-start"
                                 disabled={saving}
                                 on:click={() => existingInCustomDir && openExisting(existingInCustomDir)}
                             >Vorhandenen Arbeitsbereich öffnen</button>
                         </div>
                     {/if}
                     {#if pathPreview}
-                        <div class="rounded-lg bg-accent/5 border border-accent/20 px-3 py-2.5 text-xs text-secondary flex flex-col gap-1.5">
-                            <div><span class="font-medium text-accent">Ordner:</span> <span class="font-mono break-all">{pathPreview.workspaceDir}</span></div>
-                            <div><span class="font-medium text-accent">Datenbank:</span> <span class="font-mono break-all">{pathPreview.databasePath}</span></div>
-                            <div><span class="font-medium text-accent">Assets:</span> <span class="font-mono break-all">{pathPreview.assetsDir}</span></div>
+                        <div class="rounded-[9px] bg-[var(--et-accent-soft)] border border-[var(--et-accent)] px-3 py-2.5 text-xs text-[var(--et-text-2)] flex flex-col gap-1.5">
+                            <div><span class="font-semibold text-[var(--et-accent-strong)]">Ordner:</span> <span class="font-mono break-all">{pathPreview.workspaceDir}</span></div>
+                            <div><span class="font-semibold text-[var(--et-accent-strong)]">Datenbank:</span> <span class="font-mono break-all">{pathPreview.databasePath}</span></div>
+                            <div><span class="font-semibold text-[var(--et-accent-strong)]">Assets:</span> <span class="font-mono break-all">{pathPreview.assetsDir}</span></div>
                         </div>
                     {/if}
 
                     {#if errorMsg}
-                        <p class="text-xs text-red-500">{errorMsg}</p>
+                        <p class="text-[13px] text-[var(--et-danger)]">{errorMsg}</p>
                     {/if}
                 </div>
 
                 <div class="flex justify-between">
-                    <button class="btn-ghost" on:click={() => step = 1}>← Zurück</button>
+                    <button class="et-btn et-btn-ghost" on:click={() => step = 1}>Zurück</button>
                     <button
-                        class="btn-primary"
+                        class="et-btn et-btn-primary"
                         disabled={!tenantName.trim()}
                         on:click={goNext}
                     >
-                        Weiter →
+                        Weiter
                     </button>
                 </div>
             {/if}
@@ -399,9 +399,9 @@
             <!-- Step 3: Profile -->
             {#if step === 3}
                 <div class="flex flex-col gap-2">
-                    <div class="text-xs font-medium text-muted uppercase tracking-wide">Schritt 2 von 2</div>
-                    <h2 class="text-xl font-semibold text-primary">Dein Profil</h2>
-                    <p class="text-sm text-secondary">
+                    <div class="text-xs font-medium text-[var(--et-text-3)] uppercase tracking-wide">Schritt 2 von 2</div>
+                    <h2 class="text-xl font-semibold text-[var(--et-text)]">Dein Profil</h2>
+                    <p class="text-sm text-[var(--et-text-2)]">
                         Diese Angaben erscheinen auf Rechnungen. Straße, Ort, Steuernummer und IBAN ergänzt du in den Einstellungen → Profil, bevor du das erste PDF erzeugst.
                     </p>
                 </div>
@@ -409,36 +409,36 @@
                 <div class="flex flex-col gap-3">
                     <div class="grid grid-cols-2 gap-3">
                         <label class="flex flex-col gap-1.5">
-                            <span class="text-xs font-medium text-secondary">Vorname</span>
-                            <input class="setup-input" bind:value={firstName} placeholder="Max" />
+                            <span class="et-label">Vorname</span>
+                            <input class="et-field" bind:value={firstName} placeholder="Max" />
                         </label>
                         <label class="flex flex-col gap-1.5">
-                            <span class="text-xs font-medium text-secondary">Nachname</span>
-                            <input class="setup-input" bind:value={lastName} placeholder="Mustermann" />
+                            <span class="et-label">Nachname</span>
+                            <input class="et-field" bind:value={lastName} placeholder="Mustermann" />
                         </label>
                     </div>
                     <label class="flex flex-col gap-1.5">
-                        <span class="text-xs font-medium text-secondary">E-Mail</span>
-                        <input class="setup-input" type="email" bind:value={email} placeholder="max@beispiel.de" />
+                        <span class="et-label">E-Mail</span>
+                        <input class="et-field" type="email" bind:value={email} placeholder="max@beispiel.de" />
                     </label>
                     <label class="flex flex-col gap-1.5">
-                        <span class="text-xs font-medium text-secondary">Unternehmen <span class="text-muted font-normal">(optional)</span></span>
-                        <input class="setup-input" bind:value={company} placeholder="Mein Unternehmen GmbH" />
+                        <span class="et-label">Unternehmen <span class="text-[var(--et-text-3)] font-normal">(optional)</span></span>
+                        <input class="et-field" bind:value={company} placeholder="Mein Unternehmen GmbH" />
                     </label>
 
                     {#if errorMsg}
-                        <p class="text-xs text-red-500">{errorMsg}</p>
+                        <p class="text-[13px] text-[var(--et-danger)]">{errorMsg}</p>
                     {/if}
                 </div>
 
                 <div class="flex justify-between">
-                    <button class="btn-ghost" on:click={() => step = 2}>← Zurück</button>
+                    <button class="et-btn et-btn-ghost" on:click={() => step = 2}>Zurück</button>
                     <button
-                        class="btn-primary"
+                        class="et-btn et-btn-primary"
                         disabled={saving}
                         on:click={finish}
                     >
-                        {saving ? "Wird eingerichtet…" : "eTasks starten →"}
+                        {saving ? "Wird eingerichtet…" : "eTasks starten"}
                     </button>
                 </div>
             {/if}
@@ -446,49 +446,3 @@
         </div>
     </div>
 </div>
-
-<style>
-    .setup-input {
-        width: 100%;
-        padding: 8px 12px;
-        background: var(--color-bg);
-        border: 1px solid var(--color-border);
-        border-radius: 8px;
-        color: var(--color-text-primary);
-        font-size: 13px;
-        outline: none;
-        transition: border-color 0.15s;
-    }
-    .setup-input:focus {
-        border-color: var(--color-accent);
-    }
-    .btn-primary {
-        padding: 8px 18px;
-        background: var(--color-accent);
-        color: white;
-        border-radius: 8px;
-        font-size: 13px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: opacity 0.15s;
-    }
-    .btn-primary:hover:not(:disabled) {
-        opacity: 0.88;
-    }
-    .btn-primary:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-    }
-    .btn-ghost {
-        padding: 8px 14px;
-        color: var(--color-text-secondary);
-        border-radius: 8px;
-        font-size: 13px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: background 0.15s;
-    }
-    .btn-ghost:hover {
-        background: var(--color-bg);
-    }
-</style>

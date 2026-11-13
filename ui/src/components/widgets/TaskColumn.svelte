@@ -45,7 +45,6 @@
   <div class="flex-1 overflow-y-auto px-2 flex flex-col gap-[1px] stagger-children" use:staggerReveal>
     {#if tasks.length === 0}
       <EmptyState
-        icon="◻"
         title="Noch nichts für heute"
         description="Füge eine Aufgabe hinzu oder ziehe sie aus dem Backlog"
         actionLabel="Aufgabe hinzufügen"

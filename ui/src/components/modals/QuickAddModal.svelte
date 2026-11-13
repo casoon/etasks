@@ -50,25 +50,31 @@
 {#if open}
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div
-  class="fixed inset-0 bg-black/40 flex items-start justify-center pt-[20vh] z-[100] backdrop-blur-sm"
+  class="fixed inset-0 flex items-start justify-center pt-[20vh] z-[100]"
+  style="background:rgba(28,27,25,0.45)"
   on:click={handleOverlayClick}
 >
   <div
-    class="bg-surface border border-border rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-[520px] max-w-[calc(100vw-32px)] overflow-hidden"
+    class="w-[520px] max-w-[calc(100vw-32px)] overflow-hidden rounded-[14px]"
+    style="background:var(--et-surface);border:1px solid var(--et-border);box-shadow:var(--et-shadow-overlay)"
     role="dialog"
     aria-modal="true"
-    aria-label="Aufgabe hinzufügen"
+    aria-labelledby="quick-add-title"
   >
-    <p class="text-[11px] font-bold uppercase tracking-[0.06em] text-muted px-4 py-2 border-b border-border-subtle">{quickAddShortcutLabel()} — Neue Aufgabe</p>
+    <h2 id="quick-add-title" class="et-th px-4 py-2.5" style="border-bottom:1px solid var(--et-border-subtle)">Neue Aufgabe <span class="normal-case tracking-normal font-medium">· {quickAddShortcutLabel()}</span></h2>
     <form on:submit={handleSubmit}>
+      <label class="sr-only" for="quick-add-title-input">Titel der Aufgabe</label>
       <input
+        id="quick-add-title-input"
         bind:this={inputEl}
-        class="w-full px-4 py-4 text-base border-b border-border outline-none bg-transparent text-primary placeholder:text-muted"
+        class="w-full min-h-[56px] px-4 text-base bg-transparent outline-none placeholder:text-[var(--et-text-3)]"
+        style="border-bottom:1px solid var(--et-border-subtle)"
         bind:value={title}
         placeholder="Was steht an?"
       />
       <div class="flex items-center gap-3 px-4 py-3 flex-wrap">
-        <select class="border border-border rounded-md px-2 py-[2px] text-[12px] bg-bg outline-none max-w-[120px]" bind:value={duration}>
+        <label class="sr-only" for="quick-add-duration">Geschätzte Dauer</label>
+        <select id="quick-add-duration" class="et-field w-auto max-w-[140px]" bind:value={duration}>
           <option value={15}>15 min</option>
           <option value={30}>30 min</option>
           <option value={45}>45 min</option>
@@ -77,18 +83,18 @@
           <option value={120}>2 h</option>
         </select>
         {#if activeProjects.length > 0}
-          <select class="border border-border rounded-md px-2 py-[2px] text-[12px] bg-bg outline-none max-w-[120px]" bind:value={projectId}>
+          <label class="sr-only" for="quick-add-project">Projekt</label>
+          <select id="quick-add-project" class="et-field w-auto max-w-[200px]" bind:value={projectId}>
             <option value="">Kein Projekt</option>
             {#each activeProjects as p (p.id)}
               <option value={p.id}>{p.name}</option>
             {/each}
           </select>
         {/if}
-        <button
-          type="submit"
-          class="ml-auto px-3 py-1.5 bg-accent text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
-          disabled={!title.trim()}
-        >Hinzufügen ↵</button>
+        <button type="submit" class="et-btn et-btn-primary ml-auto" disabled={!title.trim()}>
+          Hinzufügen
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6v6a2 2 0 0 1-2 2H5M9 10l-4 4 4 4"></path></svg>
+        </button>
       </div>
     </form>
   </div>

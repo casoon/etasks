@@ -8,9 +8,9 @@
   onDestroy(toastsStore.subscribe(v => { toasts = [...v]; }));
 
   const icons = {
-    success: '✓',
-    error:   '✕',
-    info:    'i',
+    success: 'M5 12l5 5 9-10',
+    error:   'M6 6l12 12M18 6L6 18',
+    info:    'M12 11v6M12 7h.01',
   };
 
   const colors = {
@@ -32,15 +32,15 @@
              animate-fade-in-up {colors[t.type]}"
     >
       <span
-        class="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold border {colors[t.type]}"
+        class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center border {colors[t.type]}"
         aria-hidden="true"
-      >{icons[t.type]}</span>
+      ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d={icons[t.type]}></path></svg></span>
       <span class="flex-1 text-primary">{t.message}</span>
       <button
         on:click={() => dismissToast(t.id)}
-        class="flex-shrink-0 text-muted hover:text-primary transition-colors ml-1"
+        class="et-btn et-btn-ghost et-btn-icon et-btn-sm flex-shrink-0"
         aria-label="Schließen"
-      >✕</button>
+      ><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
     </div>
   {/each}
 </div>

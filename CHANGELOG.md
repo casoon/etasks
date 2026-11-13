@@ -25,6 +25,8 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Changed
 
+- **Dialogs:** Neue Aufgabe, the forgotten-timer dialog, the energy check, the template picker, the toasts, the Pomodoro buttons, the empty state, the setup wizard and the startup problem screens use the new tokens and shared buttons and fields; emoji and Unicode symbols are SVG icons, fields have labels and buttons are at least 44 px.
+- **Window:** the minimum window width is 1100 px.
 - **Einstellungen:** a sub-navigation (Profil, Rechnungen und Angebote, Tagesablauf, Arbeitsbereiche, Daten und Sicherung) with a state line per entry such as "IBAN fehlt"; all existing fields are kept, now in the form style of the invoice head. "Daten und Sicherung" shows the backup status with "Jetzt sichern", the folder, the last backups with "Wiederherstellen" (Desktop app), the full export and the import from a file.
 - **Übersicht:** the start page shows four tiles that link into their areas (Aufgaben heute, Zeit heute, Diese Woche, Offene Rechnungen) and the cards Heute (running task first), Aktive Projekte (progress, deadline mark) and Abrechnung (unpaid invoices, overdue first), with the actions "Tag planen" and "Weiterarbeiten". The app opens on it.
 - **Woche:** one page for the week with week navigation: weekly goals with seven day buttons, counter and streak, Fokus-Projekte chips, the "Was soll am Freitag stehen?" note, figures (tracked, done, for customers), bars planned vs. tracked per day (a click opens that day in Heute) and time by project or by category. Weekly goals are editable again (add, mark days, delete).

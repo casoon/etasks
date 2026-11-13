@@ -110,34 +110,26 @@
 
     <!-- Action buttons -->
     <div class="flex flex-col gap-1.5">
-      <button
-        class="px-3 py-1 bg-accent text-white rounded-lg text-[12px] font-medium hover:bg-blue-600 transition-colors flex items-center gap-1.5 min-w-[80px] justify-center"
-        on:click={togglePomodoro}
-        aria-label={running ? 'Pausieren' : 'Starten'}
-      >
+      <button class="et-btn et-btn-primary min-w-[110px]" on:click={togglePomodoro}>
         {#if running}
-          <span>⏸</span> Pause
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"></rect><rect x="14" y="5" width="4" height="14" rx="1"></rect></svg>
+          Pause
         {:else}
-          <span>▶</span> Start
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+          Start
         {/if}
       </button>
 
       {#if mode === 'work'}
-        <button
-          class="px-3 py-1 bg-surface border border-border text-secondary rounded-lg text-[12px] font-medium hover:border-success hover:text-success transition-colors min-w-[80px]"
-          on:click={startPomodoroBreak}
-          aria-label="Pause starten"
-        >
-          ☕ Pause
+        <button class="et-btn min-w-[110px]" on:click={startPomodoroBreak}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9h11v5a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4zM16 10h2a2 2 0 0 1 0 4h-2M8 3v3M12 3v3"></path></svg>
+          Pause machen
         </button>
       {/if}
 
-      <button
-        class="px-3 py-1 bg-surface border border-border text-muted rounded-lg text-[12px] font-medium hover:border-red-400 hover:text-red-500 transition-colors min-w-[80px]"
-        on:click={cancelPomodoro}
-        aria-label="Abbrechen"
-      >
-        × Abbruch
+      <button class="et-btn et-btn-danger min-w-[110px]" on:click={cancelPomodoro}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+        Abbrechen
       </button>
     </div>
   </div>
