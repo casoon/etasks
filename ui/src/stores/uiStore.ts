@@ -2,7 +2,7 @@
 import { atom } from 'nanostores';
 import type { NavItem, TodayPhase } from '../domain/types';
 
-export const $navItem = atom<NavItem>('today');
+export const $navItem = atom<NavItem>('overview');
 export const $todayPhase = atom<TodayPhase>('work');
 /** Pomodoro/focus surface inside „Heute · Arbeiten“. */
 export const $focusOpen = atom<boolean>(false);

@@ -69,9 +69,9 @@ describe('etasks:nav CustomEvent Mechanismus', () => {
 // --- 2. Nanostore $navItem ---
 
 describe('$navItem nanostore', () => {
-  it('hat "today" als Startwert', async () => {
+  it('hat "overview" als Startwert', async () => {
     const { $navItem } = await import('../stores/uiStore');
-    expect($navItem.get()).toBe('today');
+    expect($navItem.get()).toBe('overview');
   });
 
   it('set() ändert den Wert', async () => {
