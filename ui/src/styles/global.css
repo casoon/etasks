@@ -223,6 +223,7 @@ input, textarea, select {
   .et-btn-accent { border-color: var(--et-accent); color: var(--et-accent-strong); }
   .et-btn-danger { color: var(--et-danger); }
   .et-btn-sm { height: 36px; padding: 0 12px; font-size: 13px; font-weight: 500; border-radius: 8px; }
+  .et-btn-md { height: 40px; padding: 0 14px; border-radius: var(--et-radius-md); }
   .et-btn-icon { width: 44px; padding: 0; }
   .et-btn-icon.et-btn-sm { width: 36px; }
   .et-btn-ghost { border-color: transparent; background: transparent; color: var(--et-text-2); }
@@ -236,6 +237,7 @@ input, textarea, select {
   .et-seg > button[aria-pressed="true"] { background: var(--et-surface); color: var(--et-text); font-weight: 600; box-shadow: var(--et-shadow-segment); }
 
   .et-field { box-sizing: border-box; width: 100%; height: 44px; padding: 0 12px; border: 1px solid var(--et-border-strong); border-radius: var(--et-radius-md); background: var(--et-surface); color: var(--et-text); }
+  .et-field-cell { height: 40px; padding: 0 10px; min-width: 0; }
   textarea.et-field { height: auto; padding: 12px; }
   .et-field:disabled { background: var(--et-surface-sunken); color: var(--et-text-3); }
   .et-label { font-size: 12px; font-weight: 600; color: var(--et-text-3); }
