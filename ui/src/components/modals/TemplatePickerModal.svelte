@@ -4,7 +4,8 @@
   import type { ProjectTemplate } from '../../domain/types';
   import { formatDuration } from '../../domain/dateUtils';
 
-  export let projectId: string;
+  /** `null` opens the list only (preview and delete); applying needs a project. */
+  export let projectId: string | null;
   export let onClose: () => void;
 
   $: templates = $templatesStore;
@@ -12,17 +13,20 @@
   let applied = false;
 
   function handleDelete(tpl: ProjectTemplate) {
-    if (!confirm(`Template „${tpl.name}“ löschen?`)) return;
+    if (!confirm(`Vorlage „${tpl.name}“ löschen?`)) return;
     removeTemplate(tpl.id);
     preview = null;
   }
 
   function handleApply(tpl: ProjectTemplate) {
+    if (!projectId) return;
     applyProjectTemplate(tpl.id, projectId);
     applied = true;
     setTimeout(onClose, 1000);
   }
 </script>
+
+<svelte:window on:keydown={(e) => { if (e.key === 'Escape') onClose(); }} />
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div
@@ -33,17 +37,17 @@
     class="bg-surface border border-border rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.3)] w-[640px] max-w-[calc(100vw-32px)] max-h-[70vh] flex flex-col overflow-hidden"
     role="dialog"
     aria-modal="true"
+    aria-labelledby="tpl-title"
   >
     <div class="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
-      <h2 class="text-[15px] font-semibold text-primary">Projekt-Template anwenden</h2>
-      <button
-        class="px-3 py-1 text-secondary rounded-lg text-[13px] hover:bg-gray-100 transition-colors"
-        on:click={onClose}
-      >✕</button>
+      <h2 id="tpl-title" class="text-[15px] font-semibold text-primary">{projectId ? 'Vorlage anwenden' : 'Vorlagen'}</h2>
+      <button class="et-btn et-btn-ghost et-btn-icon" aria-label="Schließen" on:click={onClose}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
     </div>
 
     {#if applied}
-      <div class="p-8 text-center text-lg text-success">✓ Tasks wurden angelegt</div>
+      <div class="p-8 text-center text-lg text-success" role="status">Aufgaben wurden angelegt.</div>
     {:else}
       <div class="grid flex-1 overflow-hidden" style="grid-template-columns: 220px 1fr">
         <div class="border-r border-border overflow-y-auto flex flex-col p-2 gap-[1px]">
@@ -53,9 +57,9 @@
               on:click={() => preview = tpl}
             >
               <span class="text-[13px] font-medium text-primary">{tpl.name}</span>
-              <span class="text-[11px] text-muted">{tpl.tasks.length} Tasks</span>
+              <span class="text-[11px] text-muted">{tpl.tasks.length} Aufgaben</span>
               {#if tpl.isBuiltIn}
-                <span class="text-[10px] text-accent px-[5px] py-[1px] bg-accent-subtle rounded self-start">Built-in</span>
+                <span class="et-badge et-badge-blue self-start">Mitgeliefert</span>
               {/if}
             </button>
           {/each}
@@ -76,17 +80,15 @@
               <span class="text-[12px] text-muted">
                 Gesamt: {formatDuration(preview.tasks.reduce((s, t) => s + t.estimatedMinutes, 0))}
               </span>
-              <button
-                class="px-3 py-1.5 bg-accent text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
-                on:click={() => preview && handleApply(preview)}
-              >Anwenden</button>
+              {#if projectId}
+                <button class="et-btn et-btn-primary" on:click={() => preview && handleApply(preview)}>Anwenden</button>
+              {:else}
+                <span class="text-[12px] text-muted">Zum Anwenden ein Projekt öffnen: Mehr › Vorlage anwenden.</span>
+              {/if}
             </div>
             <div class="flex justify-end">
               {#if !preview.isBuiltIn}
-                <button
-                  class="px-3 py-1 text-red-500 border border-red-200 rounded-lg text-[12px] hover:bg-red-50 transition-colors"
-                  on:click={() => preview && handleDelete(preview)}
-                >Template löschen</button>
+                <button class="et-btn et-btn-danger" on:click={() => preview && handleDelete(preview)}>Vorlage löschen</button>
               {/if}
             </div>
           </div>
