@@ -25,9 +25,8 @@
     import OverviewView from "../views/OverviewView.svelte";
     import ClientManager from "../modals/ClientManager.svelte";
     import ServiceCatalog from "../modals/ServiceCatalog.svelte";
-    import WeeklyPlanningView from "../views/WeeklyPlanningView.svelte";
+    import WeekView from "../views/WeekView.svelte";
     import StaleTimerDialog from "../modals/StaleTimerDialog.svelte";
-    import AnalyticsView from "../views/AnalyticsView.svelte";
     import ProjectsView from "../views/ProjectsView.svelte";
     import TimeTrackingView from "../views/TimeTrackingView.svelte";
     import ClientsView from "../views/ClientsView.svelte";
@@ -181,15 +180,8 @@
     {/if}
 
     {#if nav === "week"}
-        <div
-            class="flex-1 grid overflow-hidden animate-fade-in"
-            style="grid-template-columns: minmax(280px, 340px) 1fr"
-            use:pageReveal={{ distance: 18 }}
-        >
-            <div class="border-r border-border overflow-hidden flex flex-col">
-                <WeeklyPlanningView />
-            </div>
-            <AnalyticsView />
+        <div class="flex-1 overflow-hidden flex flex-col animate-fade-in" use:pageReveal={{ distance: 18 }}>
+            <WeekView />
         </div>
     {/if}
 

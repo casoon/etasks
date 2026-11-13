@@ -8,6 +8,7 @@ import { initBillingItems } from '../stores/billingStore';
 import { initServices } from '../stores/serviceStore';
 import { initInvoices } from '../stores/invoiceStore';
 import { initWeekPlans } from '../stores/weekPlanStore';
+import { initGoals } from '../stores/weeklyGoalStore';
 import { initTermine } from '../stores/terminStore';
 import { initRecurringTasks } from './recurrenceService';
 import { removeOrphanedBlocks } from './taskActions';
@@ -26,6 +27,7 @@ export function reinitStores(): void {
   initServices();
   initInvoices();
   initWeekPlans();
+  initGoals();
   initTermine();
   $dayPlans.set(loadDayPlans());
 }

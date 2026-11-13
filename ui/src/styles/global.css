@@ -206,6 +206,52 @@ input, textarea, select {
   font-size: inherit;
 }
 
+/* ── Bausteine (design/README.md, Abschnitt 4) ──────────────────────────── */
+@layer components {
+  .et-card { background: var(--et-surface); border: 1px solid var(--et-border); border-radius: var(--et-radius-2xl); }
+  .et-tile { display: flex; flex-direction: column; gap: 4px; padding: 16px; background: var(--et-surface); border: 1px solid var(--et-border); border-radius: var(--et-radius-xl); }
+  .et-tile-label { font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--et-text-3); }
+  .et-tile-value { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .et-tile-note { font-size: 13px; color: var(--et-text-3); }
+  .et-h2 { margin: 0; font-size: 15px; font-weight: 600; }
+
+  .et-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 16px; border: 1px solid var(--et-border-strong); border-radius: var(--et-radius-lg); background: var(--et-surface); color: var(--et-text); font-weight: 600; white-space: nowrap; transition: background-color 120ms; }
+  .et-btn:hover:not(:disabled) { background: var(--et-surface-sunken); }
+  .et-btn:disabled { background: var(--et-border-strong); border-color: var(--et-border-strong); color: var(--et-text-2); cursor: not-allowed; }
+  .et-btn-primary { background: var(--et-accent); border-color: var(--et-accent); color: var(--et-text-inverse); }
+  .et-btn-primary:hover:not(:disabled) { background: var(--et-accent-strong); border-color: var(--et-accent-strong); }
+  .et-btn-accent { border-color: var(--et-accent); color: var(--et-accent-strong); }
+  .et-btn-danger { color: var(--et-danger); }
+  .et-btn-sm { height: 36px; padding: 0 12px; font-size: 13px; font-weight: 500; border-radius: 8px; }
+  .et-btn-icon { width: 44px; padding: 0; }
+  .et-btn-icon.et-btn-sm { width: 36px; }
+  .et-btn-ghost { border-color: transparent; background: transparent; color: var(--et-text-2); }
+
+  .et-chip { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border: 1px solid var(--et-border-strong); border-radius: var(--et-radius-pill); background: var(--et-surface); color: var(--et-text-2); font-size: 13px; font-weight: 500; transition: background-color 120ms; }
+  .et-chip:hover { background: var(--et-surface-sunken); }
+  .et-chip[aria-pressed="true"] { background: var(--et-inverse); border-color: var(--et-inverse); color: var(--et-text-inverse); }
+
+  .et-seg { display: inline-flex; gap: 4px; padding: 4px; border-radius: var(--et-radius-xl); background: var(--et-track); }
+  .et-seg > button { height: 36px; padding: 0 14px; border-radius: var(--et-radius-md); color: var(--et-text-2); font-weight: 500; }
+  .et-seg > button[aria-pressed="true"] { background: var(--et-surface); color: var(--et-text); font-weight: 600; box-shadow: var(--et-shadow-segment); }
+
+  .et-field { box-sizing: border-box; width: 100%; height: 44px; padding: 0 12px; border: 1px solid var(--et-border-strong); border-radius: var(--et-radius-md); background: var(--et-surface); color: var(--et-text); }
+  textarea.et-field { height: auto; padding: 12px; }
+  .et-field:disabled { background: var(--et-surface-sunken); color: var(--et-text-3); }
+  .et-label { font-size: 12px; font-weight: 600; color: var(--et-text-3); }
+
+  .et-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: var(--et-radius-sm); background: var(--et-track); color: var(--et-text-2); font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .et-badge-blue { background: var(--et-accent-soft); color: var(--et-accent-strong); }
+  .et-badge-green { background: var(--et-success-soft); color: var(--et-success-text); }
+  .et-badge-yellow { background: var(--et-warning-soft); color: var(--et-warning-text); }
+  .et-badge-red { background: var(--et-danger-soft); color: var(--et-danger); }
+
+  .et-hint { padding: 14px 20px; border: 1px dashed var(--et-border-control); border-radius: var(--et-radius-xl); color: var(--et-text-2); font-size: 13px; }
+  .et-row { border-top: 1px solid var(--et-border-subtle); transition: background-color 120ms; }
+  a.et-row:hover, button.et-row:hover { background: var(--et-surface-sunken); }
+  .et-th { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--et-text-3); }
+}
+
 /* ── WebSpire: animations/stagger ─────────────────────────────────────────── */
 .stagger-children > * {
   --stagger-delay: 35ms;

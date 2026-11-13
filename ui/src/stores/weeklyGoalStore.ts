@@ -15,12 +15,12 @@ export function initGoals(): void {
   $goals.set(loadGoals());
 }
 
-export function addGoal(title: string): void {
+export function addGoal(title: string, weekStart: string = getWeekStart(new Date())): void {
   const goal: WeeklyGoal = {
     id: crypto.randomUUID(),
     title,
     done: false,
-    weekStart: getWeekStart(new Date()),
+    weekStart,
     taskIds: [],
   };
   $goals.set(upsertGoal(goal));
