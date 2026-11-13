@@ -1,5 +1,5 @@
 // @core
-import { $tasks, removeTask } from '../stores/taskStore';
+import { $tasks, removeTask, updateTask } from '../stores/taskStore';
 import { $blocks, removeBlock, removeBlockForTask } from '../stores/calendarStore';
 import { $activeEntry, stopActiveTimer, removeTimeEntriesWhere } from '../stores/timerStore';
 import { $billingItems, removeBillingItem, removeTaskLinks } from '../stores/billingStore';
@@ -14,6 +14,19 @@ export function deleteTaskCascade(id: string): void {
   removeBlockForTask(id);
   removeTaskLinks(id);
   removeTask(id);
+}
+
+// „Morgen“ in the day close: plan the task for another day, drop its calendar block and Top-3 rank.
+export function postponeTask(id: string, plannedDate: string): void {
+  removeBlockForTask(id);
+  updateTask(id, { plannedDate, scheduledStart: null, scheduledEnd: null, priorityRank: null });
+}
+
+// „In den Pool“ in the day close: take the task off the day (no planned date), drop its
+// calendar block and Top-3 rank, so it is back among the unplanned tasks.
+export function moveTaskToPool(id: string): void {
+  removeBlockForTask(id);
+  updateTask(id, { plannedDate: null, scheduledStart: null, scheduledEnd: null, priorityRank: null });
 }
 
 // Remove calendar blocks of tasks that no longer exist or are not scheduled any more

@@ -21,7 +21,7 @@ import { $timeEntries } from '../stores/timerStore';
 import { $billingItems, $billingItemTasks, $unlockedBillingItemIds } from '../stores/billingStore';
 import { $termine } from '../stores/terminStore';
 import { $clients, $projects } from '../stores/projectStore';
-import { deleteClientCascade, deleteProjectCascade, deleteTaskCascade, removeOrphanedBlocks } from './taskActions';
+import { deleteClientCascade, deleteProjectCascade, deleteTaskCascade, moveTaskToPool, postponeTask, removeOrphanedBlocks } from './taskActions';
 
 const now = '2026-03-10T10:00:00.000Z';
 const task = (id: string, projectId: string, status = 'todo') =>
@@ -103,5 +103,47 @@ describe('updateTask', () => {
     const t = $tasks.get().find((x) => x.id === 't1')!;
     expect(t.sortOrder).toBe(5);
     expect(t.updatedAt).toBe(now);
+  });
+});
+
+describe('moveTaskToPool / postponeTask', () => {
+  const planned = () =>
+    seed($tasks, 'tasks', [
+      {
+        ...(task('t1', 'p1') as object),
+        plannedDate: '2026-03-10',
+        scheduledStart: '2026-03-10T09:00:00.000Z',
+        scheduledEnd: '2026-03-10T10:00:00.000Z',
+        priorityRank: 1,
+      } as never,
+      { ...(task('t2', 'p1') as object), plannedDate: '2026-03-10', priorityRank: 2 } as never,
+    ]);
+  const block = (id: string, taskId: string) =>
+    ({ id, taskId, start: now, end: now, date: '2026-03-10' }) as never;
+
+  it('moves the task to the pool: no date, no slot, no Top-3 rank, no calendar block', () => {
+    planned();
+    seed($blocks, 'blocks', [block('b1', 't1'), block('b2', 't2')]);
+    moveTaskToPool('t1');
+    const t1 = $tasks.get().find((t) => t.id === 't1')!;
+    expect(t1.plannedDate).toBeNull();
+    expect(t1.scheduledStart).toBeNull();
+    expect(t1.scheduledEnd).toBeNull();
+    expect(t1.priorityRank).toBeNull();
+    expect($blocks.get().map((b) => b.id)).toEqual(['b2']);
+    const t2 = $tasks.get().find((t) => t.id === 't2')!;
+    expect(t2.plannedDate).toBe('2026-03-10');
+    expect(t2.priorityRank).toBe(2);
+  });
+
+  it('postpones to the given day and clears slot, rank and block', () => {
+    planned();
+    seed($blocks, 'blocks', [block('b1', 't1')]);
+    postponeTask('t1', '2026-03-11');
+    const t1 = $tasks.get().find((t) => t.id === 't1')!;
+    expect(t1.plannedDate).toBe('2026-03-11');
+    expect(t1.scheduledStart).toBeNull();
+    expect(t1.priorityRank).toBeNull();
+    expect($blocks.get()).toEqual([]);
   });
 });
