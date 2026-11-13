@@ -195,6 +195,12 @@ html, body {
   }
 }
 
+/* Keyboard focus ring (design: 2 px ring, 2 px gap) */
+:where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--et-accent);
+  outline-offset: 2px;
+}
+
 input, textarea, select {
   font-family: inherit;
   font-size: inherit;

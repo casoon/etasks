@@ -112,3 +112,30 @@ export function formatElapsed(startedAt: string): string {
   const elapsed = Math.round((Date.now() - new Date(startedAt).getTime()) / 1000);
   return formatTrackedTime(elapsed);
 }
+
+/** `2026-11-12` plus `days` (may be negative) as a date key. */
+export function addDaysToKey(dateKey: string, days: number): string {
+  const d = new Date(`${dateKey}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return toDateKey(d);
+}
+
+/** ISO calendar week number (Monday start) of a date key. */
+export function isoWeekNumber(dateKey: string): number {
+  const d = new Date(`${dateKey}T00:00:00`);
+  const day = (d.getDay() + 6) % 7; // Monday = 0
+  d.setDate(d.getDate() - day + 3); // Thursday of that week decides the year
+  const firstThursday = new Date(d.getFullYear(), 0, 4);
+  const firstDay = (firstThursday.getDay() + 6) % 7;
+  firstThursday.setDate(firstThursday.getDate() - firstDay + 3);
+  return 1 + Math.round((d.getTime() - firstThursday.getTime()) / (7 * 86_400_000));
+}
+
+/** Duration in the design's style: `5 h 15`, `2 h`, `30 min`, `0 min`. */
+export function formatHm(totalMinutes: number): string {
+  const m = Math.max(0, Math.round(totalMinutes));
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  if (h === 0) return `${r} min`;
+  return r === 0 ? `${h} h` : `${h} h ${String(r).padStart(2, '0')}`;
+}

@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+  addDaysToKey,
+  isoWeekNumber,
+  formatHm,
   diffDays,
   formatDateDe,
   toDateKey,
@@ -157,5 +160,23 @@ describe('formatDateDe', () => {
     expect(formatDateDe('2026-11-12T10:00:00Z')).toBe('12.11.2026');
     expect(formatDateDe('')).toBe('');
     expect(formatDateDe('kein Datum')).toBe('kein Datum');
+  });
+});
+
+describe('addDaysToKey / isoWeekNumber / formatHm', () => {
+  it('adds days across month and year boundaries', () => {
+    expect(addDaysToKey('2026-11-30', 1)).toBe('2026-12-01');
+    expect(addDaysToKey('2026-01-01', -1)).toBe('2025-12-31');
+  });
+  it('computes the ISO week', () => {
+    expect(isoWeekNumber('2026-11-12')).toBe(46);
+    expect(isoWeekNumber('2026-01-01')).toBe(1);
+    expect(isoWeekNumber('2027-01-01')).toBe(53);
+  });
+  it('formats minutes like the design', () => {
+    expect(formatHm(315)).toBe('5 h 15');
+    expect(formatHm(120)).toBe('2 h');
+    expect(formatHm(30)).toBe('30 min');
+    expect(formatHm(65)).toBe('1 h 05');
   });
 });
