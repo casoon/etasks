@@ -2,256 +2,185 @@
 <script lang="ts">
   import { $tasks as tasksStore } from '../../stores/taskStore';
   import { $timeEntries as timeEntriesStore } from '../../stores/timerStore';
-  import { today, toDateKey } from '../../domain/dateUtils';
   import { $projects as projectsStore, $clients as clientsStore } from '../../stores/projectStore';
   import { $termine as termineStore } from '../../stores/terminStore';
-  import { buildReportRows, buildTerminRows } from '../../lib/reportService';
+  import { formatDateDe, formatHm } from '../../domain/dateUtils';
+  import {
+    buildViewRows,
+    detectPreset,
+    formatDuration,
+    periodLabel,
+    presetRange,
+    reportText,
+    reportTotals,
+    type PeriodPreset,
+  } from '../../lib/reportView';
+  import { toast } from '../../stores/toastStore';
+
+  /** Creates an invoice draft for a client and period (wired by the app shell). */
+  export let onCreateInvoice: (clientId: string, period: { from: string; to: string; label: string }) => void;
 
   type ReportMode = 'personal' | 'client';
+  const PRESETS: { id: Exclude<PeriodPreset, 'custom'>; label: string }[] = [
+    { id: 'week', label: 'Diese Woche' },
+    { id: 'last-week', label: 'Letzte Woche' },
+    { id: 'month', label: 'Dieser Monat' },
+  ];
 
-  let mode: ReportMode = 'personal';
-  let scopeType: 'all' | 'project' = 'all';
-  let selectedProjectId = '';
-  let selectedClientId = '';
-  let dateFrom = (() => {
-    const d = new Date();
-    d.setDate(1);
-    return toDateKey(d);
-  })();
-  let dateTo = today();
+  let mode: ReportMode = 'client';
+  let clientId = '';
+  let projectId = '';
+  let { from: dateFrom, to: dateTo } = presetRange('month', new Date());
+  // „Eigener Zeitraum“ keeps the date fields open even when the range happens to match a preset.
+  let customPicked = false;
 
-  $: tasks = $tasksStore;
-  $: timeEntries = $timeEntriesStore;
-  $: termine = $termineStore;
-  $: projects = $projectsStore;
   $: clients = $clientsStore;
+  $: projects = $projectsStore;
+  $: preset = customPicked ? 'custom' : detectPreset(dateFrom, dateTo, new Date());
+  $: projectChoices = projects.filter((p) => (!clientId || p.clientId === clientId) && (p.status === 'active' || p.status === 'done'));
+  $: if (projectId && !projectChoices.some((p) => p.id === projectId)) projectId = '';
 
-  $: clientProjects = selectedClientId
-    ? projects.filter(p => p.clientId === selectedClientId)
-    : projects;
+  $: rows = buildViewRows(
+    { tasks: $tasksStore, timeEntries: $timeEntriesStore, termine: $termineStore, projects, clients },
+    { from: dateFrom, to: dateTo, clientId, projectId },
+  );
+  $: totals = reportTotals(rows);
+  $: showClientColumn = mode === 'personal' || !clientId;
+  $: client = clientId ? (clients.find((c) => c.id === clientId) ?? null) : null;
+  // The client for an invoice: the chosen one, else the owner of the chosen project.
+  $: invoiceClient = client ?? clients.find((c) => c.id === projects.find((p) => p.id === projectId)?.clientId) ?? null;
 
-  interface ViewRow {
-    taskId: string;
-    title: string;
-    done: boolean;
-    projectName: string;
-    clientName: string;
-    projectColor: string;
-    completedDate: string;
-    trackedMinutes: number;
-    estimatedMinutes: number;
+  function pick(id: Exclude<PeriodPreset, 'custom'>) {
+    customPicked = false;
+    ({ from: dateFrom, to: dateTo } = presetRange(id, new Date()));
   }
 
-  $: rows = (() => {
-    const projectMap = new Map(projects.map(p => [p.id, p]));
-    const clientMap = new Map(clients.map(c => [c.id, c]));
-
-    const inScope = (projectId: string | undefined) => {
-      if (scopeType === 'project' && selectedProjectId && projectId !== selectedProjectId) return false;
-      if (mode === 'client' && selectedClientId) {
-        const proj = projectId ? projectMap.get(projectId) : null;
-        if (!proj || proj.clientId !== selectedClientId) return false;
-      }
-      return true;
-    };
-
-    const reportRows = [
-      ...buildReportRows(tasks, timeEntries, dateFrom, dateTo, inScope),
-      ...buildTerminRows(termine, dateFrom, dateTo, inScope),
-    ].sort((a, b) => a.completedDate.localeCompare(b.completedDate));
-    return reportRows.map((r): ViewRow => {
-      const proj = r.projectId ? projectMap.get(r.projectId) : null;
-      const client = proj?.clientId ? clientMap.get(proj.clientId) : null;
-      return {
-        taskId: r.taskId,
-        title: r.terminTitle ? `Termin: ${r.terminTitle}` : r.task?.title ?? 'Gelöschte Aufgabe',
-        done: r.done,
-        projectName: proj?.name ?? '—',
-        clientName: client?.name ?? '—',
-        projectColor: proj?.color ?? '#6366f1',
-        completedDate: r.completedDate,
-        trackedMinutes: r.trackedMinutes,
-        estimatedMinutes: r.estimatedMinutes,
-      };
-    });
-  })();
-
-  $: totalMinutes = rows.reduce((sum, r) => sum + r.trackedMinutes, 0);
-  $: totalEstimated = rows.reduce((sum, r) => sum + r.estimatedMinutes, 0);
-
-  function formatDuration(minutes: number): string {
-    if (!minutes) return '—';
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    if (h === 0) return `${m} min`;
-    if (m === 0) return `${h} h`;
-    return `${h} h ${m} min`;
-  }
-
-  function formatDate(iso: string): string {
-    return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  }
-
-  // Client report text for copy
-  $: clientReportText = (() => {
-    if (mode !== 'client') return '';
-    const client = selectedClientId ? clients.find(c => c.id === selectedClientId) : null;
-    const header = client
-      ? `Tätigkeitsbericht für ${client.name}\nZeitraum: ${formatDate(dateFrom)} – ${formatDate(dateTo)}\n\n`
-      : `Tätigkeitsbericht\nZeitraum: ${formatDate(dateFrom)} – ${formatDate(dateTo)}\n\n`;
-
-    const grouped = new Map<string, ViewRow[]>();
-    for (const row of rows) {
-      const key = row.projectName;
-      if (!grouped.has(key)) grouped.set(key, []);
-      grouped.get(key)!.push(row);
+  let copied = false;
+  async function copyText() {
+    try {
+      await navigator.clipboard.writeText(reportText(rows, mode === 'client' ? (client?.name ?? null) : null, dateFrom, dateTo));
+      copied = true;
+      setTimeout(() => (copied = false), 2000);
+    } catch (e) {
+      toast(`Kopieren fehlgeschlagen: ${String(e)}`, 'error', 4000);
     }
+  }
 
-    let body = '';
-    for (const [projectName, projectRows] of grouped) {
-      body += `${projectName}\n`;
-      for (const row of projectRows) {
-        const dur = row.trackedMinutes ? ` (${formatDuration(row.trackedMinutes)})` : '';
-        body += `  • ${formatDate(row.completedDate)}  ${row.title}${row.done ? '' : ' [offen]'}${dur}\n`;
-      }
-      const projectMinutes = projectRows.reduce((s, r) => s + r.trackedMinutes, 0);
-      if (projectMinutes) body += `  Gesamt: ${formatDuration(projectMinutes)}\n`;
-      body += '\n';
-    }
-
-    body += `Gesamtaufwand: ${formatDuration(totalMinutes)}`;
-    return header + body;
-  })();
-
-  let copySuccess = false;
-  async function copyToClipboard() {
-    await navigator.clipboard.writeText(clientReportText);
-    copySuccess = true;
-    setTimeout(() => { copySuccess = false; }, 2000);
+  function createInvoice() {
+    if (!invoiceClient) return;
+    onCreateInvoice(invoiceClient.id, { from: dateFrom, to: dateTo, label: periodLabel(dateFrom, dateTo) });
   }
 </script>
 
-<div class="flex flex-col h-full overflow-hidden">
-  <!-- Header -->
-  <div class="flex items-center gap-3 px-6 pt-5 pb-4 flex-shrink-0 border-b border-border">
-    <h1 class="text-[13px] font-bold uppercase tracking-[0.07em] text-muted flex-shrink-0">Berichte</h1>
+<div class="flex-1 overflow-y-auto">
+  <div class="flex flex-col gap-[18px] px-8 pt-5 pb-7">
+    <header class="flex flex-wrap items-center gap-3">
+      <div class="flex-[1_1_280px] flex flex-col gap-0.5">
+        <h1 class="text-[24px] font-bold tracking-[-0.01em] leading-tight">Berichte</h1>
+        <span class="text-[13px]" style="color:var(--et-text-3)">Was wurde wann für wen erledigt</span>
+      </div>
+      <button class="et-btn" disabled={rows.length === 0} on:click={copyText}>{copied ? 'Kopiert' : 'Als Text kopieren'}</button>
+    </header>
 
-    <!-- Mode toggle -->
-    <div class="flex rounded-lg border border-border overflow-hidden text-[12px] ml-2">
-      <button
-        class="px-3 py-1.5 transition-colors {mode === 'personal' ? 'bg-accent text-white font-semibold' : 'bg-surface text-secondary hover:text-primary'}"
-        on:click={() => { mode = 'personal'; selectedClientId = ''; }}
-      >Eigene Übersicht</button>
-      <button
-        class="px-3 py-1.5 transition-colors border-l border-border {mode === 'client' ? 'bg-accent text-white font-semibold' : 'bg-surface text-secondary hover:text-primary'}"
-        on:click={() => { mode = 'client'; }}
-      >Kundenbericht</button>
-    </div>
-
-    <div class="flex-1" />
-
-    <!-- Date range -->
-    <div class="flex items-center gap-2 text-[12px]">
-      <span class="text-muted">Von</span>
-      <input type="date" class="border border-border rounded-md px-2 py-1 text-[12px] bg-bg outline-none focus:border-accent" bind:value={dateFrom} />
-      <span class="text-muted">Bis</span>
-      <input type="date" class="border border-border rounded-md px-2 py-1 text-[12px] bg-bg outline-none focus:border-accent" bind:value={dateTo} />
-    </div>
-  </div>
-
-  <!-- Filters row -->
-  <div class="flex items-center gap-3 px-6 py-3 flex-shrink-0 border-b border-border bg-surface">
-    {#if mode === 'client'}
-      <div class="flex items-center gap-2 text-[12px]">
-        <span class="text-muted font-medium">Kunde</span>
-        <select class="border border-border rounded-md px-2 py-1 text-[12px] bg-bg outline-none focus:border-accent" bind:value={selectedClientId} on:change={() => { selectedProjectId = ''; scopeType = selectedProjectId ? 'project' : 'all'; }}>
-          <option value="">Alle Kunden</option>
-          {#each clients as c (c.id)}
-            <option value={c.id}>{c.name}</option>
+    <section aria-label="Filter" class="et-card flex flex-col gap-3.5 px-5 py-4">
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-3">
+        <div class="et-seg" role="group" aria-label="Berichtsart">
+          <button aria-pressed={mode === 'personal'} on:click={() => (mode = 'personal')}>Eigene Übersicht</button>
+          <button aria-pressed={mode === 'client'} on:click={() => (mode = 'client')}>Kundenbericht</button>
+        </div>
+        <div class="flex flex-wrap gap-1.5" role="group" aria-label="Zeitraum">
+          {#each PRESETS as p (p.id)}
+            <button class="et-chip" aria-pressed={preset === p.id} on:click={() => pick(p.id)}>{p.label}</button>
           {/each}
-        </select>
+          <button class="et-chip" aria-pressed={preset === 'custom'} on:click={() => (customPicked = true)}>Eigener Zeitraum</button>
+        </div>
       </div>
-    {/if}
-
-    <div class="flex items-center gap-2 text-[12px]">
-      <span class="text-muted font-medium">Projekt</span>
-      <select
-        class="border border-border rounded-md px-2 py-1 text-[12px] bg-bg outline-none focus:border-accent"
-        bind:value={selectedProjectId}
-        on:change={() => { scopeType = selectedProjectId ? 'project' : 'all'; }}
-      >
-        <option value="">Alle Projekte</option>
-        {#each (mode === 'client' && selectedClientId ? clientProjects : projects).filter(p => p.status === 'active' || p.status === 'done') as p (p.id)}
-          <option value={p.id}>{p.name}</option>
-        {/each}
-      </select>
-    </div>
-
-    <div class="flex-1" />
-
-    <div class="text-[12px] text-muted">
-      {rows.length} {rows.length !== 1 ? 'Einträge' : 'Eintrag'} ·
-      <span class="font-semibold text-primary">{formatDuration(totalMinutes)}</span> erfasst
-    </div>
-
-    {#if mode === 'client' && rows.length > 0}
-      <button
-        class="px-3 py-1.5 rounded-lg text-[12px] font-medium transition-colors {copySuccess ? 'bg-green-500 text-white' : 'bg-accent text-white hover:opacity-90'}"
-        on:click={copyToClipboard}
-      >{copySuccess ? '✓ Kopiert' : '⎘ Als Text kopieren'}</button>
-    {/if}
-  </div>
-
-  <!-- Table -->
-  <div class="flex-1 overflow-y-auto">
-    {#if rows.length === 0}
-      <div class="flex flex-col items-center justify-center h-full gap-2 text-center">
-        <p class="text-[13px] text-muted">Keine erledigten Aufgaben oder erfasste Zeit im gewählten Zeitraum.</p>
-        <p class="text-[12px] text-muted/70">Zeitraum oder Filter anpassen.</p>
+      <div class="grid gap-x-4 gap-y-3.5" style="grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr))">
+        <div class="flex flex-col gap-1.5">
+          <label class="et-label" for="rp-from">Von</label>
+          <input id="rp-from" class="et-field" type="date" lang="de" bind:value={dateFrom} />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="et-label" for="rp-to">Bis</label>
+          <input id="rp-to" class="et-field" type="date" lang="de" bind:value={dateTo} />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="et-label" for="rp-client">Kunde</label>
+          <select id="rp-client" class="et-field" bind:value={clientId}>
+            <option value="">Alle Kunden</option>
+            {#each clients as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
+          </select>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="et-label" for="rp-project">Projekt</label>
+          <select id="rp-project" class="et-field" bind:value={projectId}>
+            <option value="">Alle Projekte</option>
+            {#each projectChoices as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
+          </select>
+        </div>
       </div>
-    {:else}
-      <table class="w-full text-[12px]">
-        <thead class="sticky top-0 bg-surface border-b border-border">
-          <tr>
-            <th class="text-left px-6 py-2.5 text-muted font-medium">Datum</th>
-            <th class="text-left px-3 py-2.5 text-muted font-medium">Aufgabe</th>
-            <th class="text-left px-3 py-2.5 text-muted font-medium">Projekt</th>
-            {#if mode === 'personal' || !selectedClientId}
-              <th class="text-left px-3 py-2.5 text-muted font-medium">Kunde</th>
-            {/if}
-            <th class="text-right px-3 py-2.5 text-muted font-medium">Geschätzt</th>
-            <th class="text-right px-6 py-2.5 text-muted font-medium">Erfasst</th>
+    </section>
+
+    <dl class="flex flex-wrap gap-x-8 gap-y-3 px-1 m-0">
+      <div class="flex flex-col"><dt class="text-[12px]" style="color:var(--et-text-3)">Einträge</dt><dd class="m-0 text-[18px] font-semibold tabular-nums">{totals.count}</dd></div>
+      <div class="flex flex-col"><dt class="text-[12px]" style="color:var(--et-text-3)">Erfasst</dt><dd class="m-0 text-[18px] font-semibold tabular-nums">{formatHm(totals.trackedMinutes)}</dd></div>
+      <div class="flex flex-col"><dt class="text-[12px]" style="color:var(--et-text-3)">Geschätzt</dt><dd class="m-0 text-[18px] font-semibold tabular-nums">{formatHm(totals.estimatedMinutes)}</dd></div>
+      <div class="flex flex-col"><dt class="text-[12px]" style="color:var(--et-text-3)">Abrechenbare Termine</dt><dd class="m-0 text-[18px] font-semibold tabular-nums">{totals.terminCount} · {formatHm(totals.terminMinutes)}</dd></div>
+    </dl>
+
+    <div class="overflow-x-auto et-card">
+      <table class="w-full min-w-[760px] border-collapse tabular-nums">
+        <thead>
+          <tr class="et-th text-left">
+            <th class="px-5 py-2.5 font-semibold">Datum</th>
+            <th class="px-3 py-2.5 font-semibold">Aufgabe</th>
+            <th class="px-3 py-2.5 font-semibold">Projekt</th>
+            {#if showClientColumn}<th class="px-3 py-2.5 font-semibold">Kunde</th>{/if}
+            <th class="px-3 py-2.5 font-semibold text-right">Geschätzt</th>
+            <th class="px-5 py-2.5 font-semibold text-right">Erfasst</th>
           </tr>
         </thead>
         <tbody>
-          {#each rows as row (row.taskId)}
-            <tr class="border-b border-border-subtle hover:bg-surface/50 transition-colors">
-              <td class="px-6 py-2.5 text-secondary whitespace-nowrap">{formatDate(row.completedDate)}</td>
-              <td class="px-3 py-2.5 text-primary font-medium max-w-[280px]">
-                <span class="block truncate" title={row.title}>{row.title}{#if !row.done} <span class="text-muted font-normal">(offen)</span>{/if}</span>
+          {#each rows as row (row.key)}
+            <tr class="et-row">
+              <td class="px-5 py-3.5 whitespace-nowrap">{formatDateDe(row.completedDate).slice(0, 6)}</td>
+              <td class="px-3 py-3.5 font-medium max-w-[320px]">
+                <span class="block truncate" title={row.title}>{row.title}</span>
+                {#if !row.done}<span class="text-[12px] font-semibold" style="color:var(--et-warning-text)">offen</span>{/if}
               </td>
-              <td class="px-3 py-2.5 text-secondary">
-                <span class="flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:{row.projectColor}" />
-                  {row.projectName}
+              <td class="px-3 py-3.5" style="color:var(--et-text-2)">
+                <span class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-[3px] flex-shrink-0" style="background:{row.projectColor}" aria-hidden="true"></span>{row.projectName}
                 </span>
               </td>
-              {#if mode === 'personal' || !selectedClientId}
-                <td class="px-3 py-2.5 text-muted">{row.clientName}</td>
-              {/if}
-              <td class="px-3 py-2.5 text-right text-muted tabular-nums">{formatDuration(row.estimatedMinutes)}</td>
-              <td class="px-6 py-2.5 text-right text-secondary tabular-nums">{formatDuration(row.trackedMinutes)}</td>
+              {#if showClientColumn}<td class="px-3 py-3.5" style="color:var(--et-text-2)">{row.clientName}</td>{/if}
+              <td class="px-3 py-3.5 text-right" style="color:var(--et-text-3)">{formatDuration(row.estimatedMinutes)}</td>
+              <td class="px-5 py-3.5 text-right">{formatDuration(row.trackedMinutes)}</td>
             </tr>
           {/each}
+          {#if rows.length === 0}
+            <tr class="et-row"><td colspan={showClientColumn ? 6 : 5} class="px-5 py-8 text-[13px]" style="color:var(--et-text-3)">Keine erledigten Aufgaben oder erfasste Zeit im gewählten Zeitraum. Passe Zeitraum oder Filter an.</td></tr>
+          {/if}
         </tbody>
-        <tfoot>
-          <tr class="border-t border-border bg-surface">
-            <td colspan={mode === 'personal' || !selectedClientId ? 4 : 3} class="px-6 py-2.5 text-[11px] text-muted font-medium uppercase tracking-wide">Gesamt</td>
-            <td class="px-3 py-2.5 text-right text-muted tabular-nums">{formatDuration(totalEstimated)}</td>
-            <td class="px-6 py-2.5 text-right font-bold text-primary tabular-nums">{formatDuration(totalMinutes)}</td>
-          </tr>
-        </tfoot>
+        {#if rows.length > 0}
+          <tfoot>
+            <tr class="font-bold" style="border-top:2px solid var(--et-border)">
+              <td colspan={showClientColumn ? 4 : 3} class="px-5 py-3.5">Gesamt</td>
+              <td class="px-3 py-3.5 text-right">{formatDuration(totals.estimatedMinutes)}</td>
+              <td class="px-5 py-3.5 text-right">{formatDuration(totals.trackedMinutes)}</td>
+            </tr>
+          </tfoot>
+        {/if}
       </table>
-    {/if}
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 text-[13px]">
+      {#if invoiceClient}
+        <span class="flex-[1_1_320px]" style="color:var(--et-text-3)">Rechnung für {invoiceClient.name} und den Zeitraum {periodLabel(dateFrom, dateTo)}: die erfasste Zeit lässt sich dort direkt übernehmen.</span>
+        <button class="font-semibold min-h-11 px-1" style="color:var(--et-accent)" on:click={createInvoice}>Rechnung aus diesem Zeitraum erstellen →</button>
+      {:else}
+        <span class="flex-1" style="color:var(--et-text-3)">Wähle einen Kunden oder ein Projekt mit Kunde, um eine Rechnung für diesen Zeitraum zu erstellen.</span>
+      {/if}
+    </div>
   </div>
 </div>
