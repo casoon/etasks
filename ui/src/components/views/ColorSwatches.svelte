@@ -4,12 +4,13 @@
 
   export let color: string;
   export let onPick: (color: string) => void;
+  export let label = 'Projektfarbe';
 
   // Names follow the order of PROJECT_COLORS.
   const NAMES = ['Blau', 'Violett', 'Rosa', 'Gelb', 'Grün', 'Rot', 'Türkis', 'Limette', 'Orange', 'Indigo'];
 </script>
 
-<div class="flex flex-wrap gap-2" role="group" aria-label="Projektfarbe">
+<div class="flex flex-wrap gap-2" role="group" aria-label={label}>
   {#each PROJECT_COLORS as c, i (c)}
     <button
       class="w-9 h-9 rounded-lg flex items-center justify-center text-white"

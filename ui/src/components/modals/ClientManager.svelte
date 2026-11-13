@@ -1,84 +1,70 @@
 <!-- @module:projects -->
 <script lang="ts">
-    import { onDestroy } from "svelte";
-    import { command } from "@casoon/origin-client";
     import {
         $clients as clientsStore,
         $projects as projectsStore,
+        $selectedClientId as selectedClientIdStore,
         addClient,
-        updateClient,
     } from "../../stores/projectStore";
     import { deleteClientCascade } from "../../lib/taskActions";
     import { $tasks as tasksStore } from "../../stores/taskStore";
     import { $bridgeTimeEntries as timeEntriesStore, $bridgeInvoices as invoicesStore } from "../../stores/coreBridge";
-    import { PROJECT_COLORS } from "../../domain/types";
-    import { csvEscape } from "../../lib/csv";
-    import { entrySeconds } from "../../domain/dateUtils";
-    import type { Client } from "../../domain/types";
-    import { isTauriAvailable } from "../../lib/platform";
-    import { $appConfig as appConfigStore } from "../../stores/configStore";
+    import { toast } from "../../stores/toastStore";
+    import { today } from "../../domain/dateUtils";
+    import { formatEuro } from "../../lib/invoiceMoney";
+    import { clientStats, filterClients, textOnColor } from "../../lib/clientStats";
+    import { clientCsvFilename, clientTimeCsv } from "../../lib/clientCsv";
+    import { saveCsvFile } from "../../lib/csvExport";
+    import { nameInitials } from "../../lib/navigation";
+    import ClientDetail from "./ClientDetail.svelte";
 
-    export let onProjectOpen: ((projectId: string) => void) | undefined =
-        undefined;
-    export let emptyProjectsMessage = "Noch keine Projekte für diesen Kunden.";
+    export let onProjectOpen: (projectId: string) => void;
+    export let onInvoiceOpen: (invoiceId: string) => void;
+    export let onNewInvoice: (clientId: string) => void;
 
     $: clients = $clientsStore;
     $: projects = $projectsStore;
     $: tasks = $tasksStore;
     $: timeEntries = $timeEntriesStore;
     $: invoices = $invoicesStore;
+    $: todayKey = today();
 
-    let selectedClientId: string | null = null;
+    let query = "";
     let addingClient = false;
     let newClientName = "";
-    // One pending save per client and field; the client id is bound when the edit happens.
-    const pendingClientSaves = new Map<string, { timer: ReturnType<typeof setTimeout>; run: () => void }>();
-    let editingClientName = false;
-    let editClientNameVal = "";
-    let csvExporting = false;
+    let csvBusy = false;
     let csvMessage = "";
 
-    $: selectedClient = selectedClientId
-        ? (clients.find((c) => c.id === selectedClientId) ?? null)
-        : null;
-    $: clientProjects = selectedClientId
-        ? projects.filter((p) => p.clientId === selectedClientId)
-        : [];
-    $: clientProjectIds = new Set(clientProjects.map((project) => project.id));
-    $: clientTasks = tasks.filter(
-        (task) => task.projectId && clientProjectIds.has(task.projectId),
+    $: selectedClientId = $selectedClientIdStore;
+    $: selectedClient = selectedClientId ? (clients.find((c) => c.id === selectedClientId) ?? null) : null;
+    $: selectedStats = selectedClient ? statsById.get(selectedClient.id) : undefined;
+    $: shown = filterClients(clients, query);
+    $: statsById = new Map(
+        clients.map((c) => [c.id, clientStats(c.id, projects, tasks, timeEntries, invoices, todayKey, Date.now())]),
     );
-    $: clientInvoices = invoices.filter(
-        (invoice) => invoice.clientId === selectedClientId,
-    );
+    $: activeProjects = projects.filter((p) => p.status === "active" && p.clientId).length;
 
-    function handleAddClient(e: Event) {
-        e.preventDefault();
+    function subline(clientId: string): { text: string; warn: boolean } {
+        const s = statsById.get(clientId);
+        if (!s) return { text: "", warn: false };
+        if (s.overdueCount > 0) return { text: `${formatEuro(s.overdueCents)} überfällig`, warn: true };
+        const parts = [`${s.projectCount} ${s.projectCount === 1 ? "Projekt" : "Projekte"}`];
+        if (s.openCents > 0) parts.push(`${formatEuro(s.openCents)} offen`);
+        else if (s.draftCount > 0) parts.push(`${s.draftCount} ${s.draftCount === 1 ? "Entwurf" : "Entwürfe"}`);
+        return { text: parts.join(" · "), warn: false };
+    }
+
+    function handleAddClient() {
         if (!newClientName.trim()) return;
         const client = addClient(newClientName.trim());
-        selectedClientId = client.id;
+        selectedClientIdStore.set(client.id);
         newClientName = "";
         addingClient = false;
     }
 
-    function startEditClientName() {
-        if (!selectedClient) return;
-        editClientNameVal = selectedClient.name;
-        editingClientName = true;
-    }
-
-    function saveClientName() {
-        if (selectedClientId && editClientNameVal.trim()) {
-            updateClient(selectedClientId, { name: editClientNameVal.trim() });
-        }
-        editingClientName = false;
-    }
-
     function handleDeleteClient() {
         if (!selectedClient) return;
-        const clientProjectIds = new Set(
-            projects.filter((p) => p.clientId === selectedClient!.id).map((p) => p.id),
-        );
+        const clientProjectIds = new Set(projects.filter((p) => p.clientId === selectedClient!.id).map((p) => p.id));
         const taskCount = tasks.filter((t) => t.projectId && clientProjectIds.has(t.projectId)).length;
         const invoiceCount = invoices.filter((i) => i.clientId === selectedClient!.id).length;
         if (
@@ -90,143 +76,23 @@
             )
         ) {
             deleteClientCascade(selectedClient.id);
-            selectedClientId = null;
+            selectedClientIdStore.set(null);
         }
-    }
-
-    function scheduleClientSave(clientId: string, field: keyof Client, value: unknown) {
-        const key = `${clientId}:${field}`;
-        const prev = pendingClientSaves.get(key);
-        if (prev) clearTimeout(prev.timer);
-        const run = () => {
-            pendingClientSaves.delete(key);
-            updateClient(clientId, { [field]: value } as Partial<Client>);
-        };
-        pendingClientSaves.set(key, { timer: setTimeout(run, 400), run });
-    }
-
-    function flushClientSaves() {
-        for (const { timer, run } of [...pendingClientSaves.values()]) {
-            clearTimeout(timer);
-            run();
-        }
-    }
-
-    onDestroy(flushClientSaves);
-
-    function onClientStr(field: keyof Client) {
-        return (e: Event) => {
-            if (!selectedClientId) return;
-            const value = (
-                e.currentTarget as HTMLInputElement | HTMLTextAreaElement
-            ).value;
-            if (field === "name" && !value.trim()) return;
-            scheduleClientSave(selectedClientId, field, value);
-        };
-    }
-
-    function onClientNum(field: keyof Client) {
-        return (e: Event) => {
-            if (!selectedClientId) return;
-            const raw = (e.currentTarget as HTMLInputElement).value;
-            scheduleClientSave(selectedClientId, field, parseFloat(raw) || undefined);
-        };
     }
 
     async function exportClientCsv() {
         if (!selectedClient) return;
-
-        const tasksById = new Map(clientTasks.map((task) => [task.id, task]));
-        const projectsById = new Map(
-            clientProjects.map((project) => [project.id, project]),
-        );
-        const invoiceByTaskId = new Map<
-            string,
-            { invoiceNumber: string; status: string }
-        >();
-        for (const invoice of clientInvoices) {
-            for (const lineItem of invoice.lineItems) {
-                for (const taskId of lineItem.taskIds) {
-                    invoiceByTaskId.set(taskId, {
-                        invoiceNumber: invoice.invoiceNumber,
-                        status: invoice.status,
-                    });
-                }
-            }
-        }
-
-        const rows = [
-            [
-                "Kunde",
-                "Projekt",
-                "Aufgabe",
-                "Start",
-                "Ende",
-                "Minuten",
-                "Stunden",
-                "Rechnung",
-                "Rechnungsstatus",
-            ],
-            ...timeEntries
-                .filter(
-                    (entry) =>
-                        entry.projectId &&
-                        clientProjectIds.has(entry.projectId),
-                )
-                .sort((a, b) => a.startAt.localeCompare(b.startAt))
-                .map((entry) => {
-                    const task = tasksById.get(entry.taskId);
-                    const project = entry.projectId
-                        ? projectsById.get(entry.projectId)
-                        : null;
-                    const invoice = invoiceByTaskId.get(entry.taskId);
-                    const seconds = entrySeconds(entry);
-                    return [
-                        selectedClient.name,
-                        project?.name ?? "",
-                        task?.title ?? "",
-                        entry.startAt,
-                        entry.endAt ?? "",
-                        Math.round(seconds / 60),
-                        (Math.round((seconds / 3600) * 100) / 100)
-                            .toString()
-                            .replace(".", ","),
-                        invoice?.invoiceNumber ?? "",
-                        invoice?.status ?? "",
-                    ];
-                }),
-        ];
-        // UTF-8 BOM so Excel reads umlauts correctly
-        const csv =
-            "\uFEFF" +
-            rows.map((row) => row.map(csvEscape).join(";")).join("\n");
-        const filename = `etasks-${selectedClient.name.toLowerCase().replace(/[^a-z0-9]+/gi, "-")}-abrechnung.csv`;
-
-        csvExporting = true;
+        const csv = clientTimeCsv(selectedClient.name, selectedClient.id, projects, tasks, timeEntries, invoices);
+        csvBusy = true;
         csvMessage = "";
         try {
-            if (isTauriAvailable()) {
-                await command("export_to_file", {
-                    json: csv,
-                    filename,
-                    directory: $appConfigStore?.default_export_dir ?? null,
-                });
-            } else {
-                const blob = new Blob([csv], {
-                    type: "text/csv;charset=utf-8",
-                });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.href = url;
-                link.download = filename;
-                link.click();
-                URL.revokeObjectURL(url);
-            }
+            await saveCsvFile(clientCsvFilename(selectedClient.name), csv);
             csvMessage = "CSV exportiert.";
         } catch (error) {
             csvMessage = `CSV-Export fehlgeschlagen: ${String(error)}`;
+            toast(csvMessage, "error", 5000);
         } finally {
-            csvExporting = false;
+            csvBusy = false;
             setTimeout(() => {
                 csvMessage = "";
             }, 4000);
@@ -234,289 +100,77 @@
     }
 </script>
 
-<div
-    class="flex-1 overflow-hidden grid"
-    style="grid-template-columns: 200px 1fr"
->
-    <div class="border-r border-border flex flex-col overflow-hidden">
-        <div
-            class="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0"
-        >
-            <span class="text-[11px] text-muted">{clients.length} Kunden</span>
-            <button
-                class="w-6 h-6 flex items-center justify-center rounded-lg text-muted text-lg hover:bg-bg hover:text-primary transition-colors"
-                on:click={() => {
-                    addingClient = true;
-                }}
-                title="Neuer Kunde">+</button
-            >
-        </div>
-        <div class="flex-1 overflow-y-auto px-2 py-2 flex flex-col gap-1">
-            {#each clients as client (client.id)}
-                <button
-                    class="flex items-center gap-2 py-[6px] px-2 rounded-lg w-full text-left transition-colors min-w-0 {selectedClientId ===
-                    client.id
-                        ? 'bg-accent-subtle'
-                        : 'hover:bg-bg'}"
-                    on:click={() => (selectedClientId = client.id)}
-                >
-                    <span
-                        class="w-2 h-2 rounded-full flex-shrink-0"
-                        style="background:{client.color}"
-                    />
-                    <span
-                        class="flex-1 text-[13px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 {selectedClientId ===
-                        client.id
-                            ? 'text-accent font-medium'
-                            : 'text-primary'}">{client.name}</span
-                    >
-                    <span class="text-[11px] text-muted flex-shrink-0"
-                        >{projects.filter((p) => p.clientId === client.id)
-                            .length}P</span
-                    >
-                </button>
-            {/each}
-            {#if addingClient}
-                <form class="py-1" on:submit={handleAddClient}>
+<div class="flex-1 overflow-y-auto">
+    <div class="flex flex-col gap-5 px-8 pt-5 pb-7">
+        <header class="flex flex-wrap items-center gap-3">
+            <div class="flex-[1_1_280px] flex flex-col gap-0.5">
+                <h1 class="text-[24px] font-bold tracking-[-0.01em] leading-tight">Kunden</h1>
+                <span class="text-[13px]" style="color:var(--et-text-3)">{clients.length} {clients.length === 1 ? "Kunde" : "Kunden"} · {activeProjects} aktive {activeProjects === 1 ? "Projekt" : "Projekte"}</span>
+            </div>
+            <button class="et-btn et-btn-primary" aria-expanded={addingClient} on:click={() => (addingClient = !addingClient)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+                Neuer Kunde
+            </button>
+        </header>
+
+        {#if addingClient}
+            <form class="flex flex-wrap items-end gap-3 px-5 py-4 rounded-xl" style="background:var(--et-accent-soft)" aria-label="Neuer Kunde" on:submit|preventDefault={handleAddClient}>
+                <div class="flex-[1_1_260px] flex flex-col gap-1">
+                    <label class="et-label" for="nc-name">Kundenname</label>
                     <!-- svelte-ignore a11y-autofocus -->
-                    <input
-                        class="w-full px-2 py-[5px] border border-accent rounded-lg text-[13px] outline-none bg-surface"
-                        bind:value={newClientName}
-                        placeholder="Kundenname..."
-                        autofocus
-                        on:keydown={(e) => {
-                            if (e.key === "Escape") addingClient = false;
-                        }}
+                    <input id="nc-name" class="et-field" bind:value={newClientName} autofocus on:keydown={(e) => e.key === "Escape" && (addingClient = false)} />
+                </div>
+                <button type="submit" class="et-btn et-btn-primary" disabled={!newClientName.trim()}>Anlegen</button>
+                <button type="button" class="et-btn" on:click={() => (addingClient = false)}>Abbrechen</button>
+            </form>
+        {/if}
+
+        <div class="flex flex-wrap items-start gap-5">
+            <section aria-label="Kundenliste" class="et-card flex flex-col flex-[1_1_280px] max-w-[340px] min-w-0 overflow-hidden">
+                <label class="flex items-center gap-2 min-h-12 px-4 border-b focus-within:outline-2 focus-within:-outline-offset-2" style="border-color:var(--et-border-subtle);outline-color:var(--et-accent)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--et-text-3)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6"></circle><path d="M16 16l4 4"></path></svg>
+                    <input type="search" class="flex-1 min-w-0 h-11 bg-transparent border-none outline-none" aria-label="Kunde suchen" placeholder="Kunde suchen" bind:value={query} />
+                </label>
+                {#each shown as client (client.id)}
+                    {@const sub = subline(client.id)}
+                    {@const active = selectedClientId === client.id}
+                    <button
+                        class="flex items-center gap-3 min-h-16 pr-4 text-left border-t first:border-t-0"
+                        style="padding-left:{active ? 13 : 16}px;border-color:var(--et-border-subtle);{active ? 'border-left:3px solid var(--et-accent);background:var(--et-accent-soft)' : ''}"
+                        aria-current={active ? "true" : undefined}
+                        on:click={() => selectedClientIdStore.set(client.id)}
+                    >
+                        <span class="w-8 h-8 rounded-[9px] flex items-center justify-center text-[12px] font-semibold flex-shrink-0" style="background:{client.color};color:{textOnColor(client.color)}" aria-hidden="true">{nameInitials(client.name)}</span>
+                        <span class="flex-1 min-w-0 flex flex-col">
+                            <span class="font-semibold truncate">{client.name}</span>
+                            <span class="text-[12px] truncate" style="color:{sub.warn ? 'var(--et-danger)' : 'var(--et-text-3)'};font-weight:{sub.warn ? 600 : 400}">{sub.text}</span>
+                        </span>
+                    </button>
+                {/each}
+                {#if shown.length === 0}
+                    <p class="px-4 py-4 text-[13px]" style="color:var(--et-text-3)">{clients.length === 0 ? "Noch keine Kunden." : "Kein Kunde passt zur Suche."}</p>
+                {/if}
+            </section>
+
+            {#if selectedClient && selectedStats}
+                {#key selectedClient.id}
+                    <ClientDetail
+                        client={selectedClient}
+                        projects={projects.filter((p) => p.clientId === selectedClient.id)}
+                        invoices={invoices.filter((i) => i.clientId === selectedClient.id)}
+                        stats={selectedStats}
+                        {csvBusy}
+                        {csvMessage}
+                        {onProjectOpen}
+                        {onInvoiceOpen}
+                        onNewInvoice={() => onNewInvoice(selectedClient.id)}
+                        onExportCsv={exportClientCsv}
+                        onDelete={handleDeleteClient}
                     />
-                </form>
-            {/if}
-            {#if clients.length === 0 && !addingClient}
-                <p class="text-[13px] text-muted px-2 py-4">
-                    Noch keine Kunden.
-                </p>
+                {/key}
+            {:else}
+                <div class="et-hint flex-[999_1_480px] min-w-0">{clients.length === 0 ? "Lege deinen ersten Kunden an, um Projekte und Rechnungen zuzuordnen." : "Wähle einen Kunden aus der Liste."}</div>
             {/if}
         </div>
     </div>
-
-    {#if !selectedClient}
-        <div class="flex items-center justify-center text-muted text-sm">
-            <p>Wähle einen Kunden aus.</p>
-        </div>
-    {:else}
-        <div class="overflow-y-auto p-6 flex flex-col gap-6 max-w-2xl">
-            <div class="flex items-center gap-3 pb-4 border-b border-border">
-                <span
-                    class="w-4 h-4 rounded-full flex-shrink-0"
-                    style="background:{selectedClient.color}"
-                />
-                {#if editingClientName}
-                    <!-- svelte-ignore a11y-autofocus -->
-                    <input
-                        class="flex-1 px-2 py-1 border border-accent rounded-lg text-base font-semibold outline-none bg-surface min-w-0"
-                        bind:value={editClientNameVal}
-                        autofocus
-                        on:blur={saveClientName}
-                        on:keydown={(e) => { if (e.key === 'Enter') saveClientName(); if (e.key === 'Escape') editingClientName = false; }}
-                    />
-                {:else}
-                    <!-- svelte-ignore a11y-no-static-element-interactions a11y-click-events-have-key-events -->
-                    <h2
-                        class="text-base font-semibold text-primary flex-1 cursor-text hover:bg-bg rounded px-2 py-1 -mx-2 -my-1 transition-colors"
-                        on:click={startEditClientName}
-                        title="Klicken zum Bearbeiten"
-                    >
-                        {selectedClient.name}
-                    </h2>
-                {/if}
-                <button
-                    class="px-3 py-1 border border-border rounded-lg text-[12px] text-secondary hover:bg-bg hover:text-primary transition-colors"
-                    on:click={exportClientCsv}
-                    disabled={csvExporting}
-                    >{csvExporting ? "CSV…" : "CSV exportieren"}</button
-                >
-                <button
-                    class="px-3 py-1 text-red-500 border border-red-200 rounded-lg text-[12px] hover:bg-red-50 transition-colors"
-                    on:click={handleDeleteClient}>Löschen</button
-                >
-            </div>
-            {#if csvMessage}
-                <p
-                    class="text-[12px] {csvMessage.startsWith('CSV exportiert')
-                        ? 'text-green-600'
-                        : 'text-red-500'}"
-                >
-                    {csvMessage}
-                </p>
-            {/if}
-
-            <div class="flex gap-1 flex-wrap">
-                {#each PROJECT_COLORS as c (c)}
-                    <button
-                        class="w-[18px] h-[18px] rounded-full transition-transform hover:scale-[1.15] {selectedClient.color ===
-                        c
-                            ? 'ring-2 ring-secondary ring-offset-2'
-                            : ''}"
-                        style="background:{c}"
-                        on:click={() =>
-                            updateClient(selectedClient.id, { color: c })}
-                        aria-label="Farbe {c}"
-                    />
-                {/each}
-            </div>
-
-            <div class="grid grid-cols-2 gap-3" on:focusout={flushClientSaves}>
-                <label class="flex flex-col gap-1 col-span-2">
-                    <span class="text-xs text-muted font-medium"
-                        >Kundenname</span
-                    >
-                    <input
-                        class="input"
-                        value={selectedClient.name}
-                        on:input={onClientStr("name")}
-                        on:blur={(e) => {
-                            if (!e.currentTarget.value.trim())
-                                e.currentTarget.value = selectedClient.name;
-                        }}
-                    />
-                </label>
-                <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium"
-                        >Kundennummer</span
-                    >
-                    <input
-                        class="input font-mono"
-                        value={selectedClient.customerNumber ?? ""}
-                        placeholder="A000112"
-                        on:input={onClientStr("customerNumber")}
-                    />
-                </label>
-                <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium"
-                        >Ansprechpartner</span
-                    >
-                    <input
-                        class="input"
-                        value={selectedClient.contactPerson ?? ""}
-                        placeholder="Max Mustermann"
-                        on:input={onClientStr("contactPerson")}
-                    />
-                </label>
-                <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">E-Mail</span>
-                    <input
-                        class="input"
-                        type="email"
-                        value={selectedClient.email ?? ""}
-                        placeholder="kontakt@firma.de"
-                        on:input={onClientStr("email")}
-                    />
-                </label>
-                <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">Telefon</span>
-                    <input
-                        class="input"
-                        value={selectedClient.phone ?? ""}
-                        placeholder="+49 30 …"
-                        on:input={onClientStr("phone")}
-                    />
-                </label>
-                <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium"
-                        >Stundensatz (€)</span
-                    >
-                    <input
-                        class="input"
-                        type="number"
-                        value={selectedClient.hourlyRate ?? ""}
-                        placeholder="95"
-                        on:input={onClientNum("hourlyRate")}
-                    />
-                </label>
-                <label class="flex flex-col gap-1 col-span-2">
-                    <span class="text-xs text-muted font-medium">Adresse</span>
-                    <input
-                        class="input"
-                        value={selectedClient.address ?? ""}
-                        placeholder="Musterstraße 1, 10115 Berlin"
-                        on:input={onClientStr("address")}
-                    />
-                </label>
-                <label class="flex flex-col gap-1 col-span-2">
-                    <span class="text-xs text-muted font-medium">Notizen</span>
-                    <textarea
-                        class="input resize-y min-h-[80px] font-mono leading-relaxed"
-                        value={selectedClient.notes ?? ""}
-                        placeholder="Zugänge, Besonderheiten, Ansprechpartner-Info…"
-                        on:input={onClientStr("notes")}
-                        rows={4}
-                    />
-                </label>
-            </div>
-
-            <div class="flex flex-col gap-2">
-                <h3
-                    class="text-[11px] font-bold uppercase tracking-widest text-muted"
-                >
-                    Projekte
-                </h3>
-                {#if clientProjects.length === 0}
-                    <p class="text-[12px] text-muted italic">
-                        {emptyProjectsMessage}
-                    </p>
-                {:else}
-                    {#each clientProjects as p (p.id)}
-                        {#if onProjectOpen}
-                            <button
-                                class="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-bg text-left transition-colors"
-                                on:click={() => onProjectOpen?.(p.id)}
-                            >
-                                <span
-                                    class="w-2 h-2 rounded-full flex-shrink-0"
-                                    style="background:{p.color}"
-                                />
-                                <span class="flex-1 text-[13px] text-primary"
-                                    >{p.name}</span
-                                >
-                                <span class="text-[11px] text-muted capitalize"
-                                    >{p.status}</span
-                                >
-                            </button>
-                        {:else}
-                            <div
-                                class="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-bg"
-                            >
-                                <span
-                                    class="w-2 h-2 rounded-full flex-shrink-0"
-                                    style="background:{p.color}"
-                                />
-                                <span class="flex-1 text-[13px] text-primary"
-                                    >{p.name}</span
-                                >
-                                <span class="text-[11px] text-muted capitalize"
-                                    >{p.status}</span
-                                >
-                            </div>
-                        {/if}
-                    {/each}
-                {/if}
-            </div>
-        </div>
-    {/if}
 </div>
-
-<style>
-    .input {
-        width: 100%;
-        padding: 6px 10px;
-        background: var(--color-bg);
-        border: 1px solid var(--color-border);
-        border-radius: 6px;
-        color: var(--color-text-primary);
-        font-size: 13px;
-        outline: none;
-        transition: border-color 0.15s;
-    }
-    .input:focus {
-        border-color: var(--color-accent);
-    }
-</style>
