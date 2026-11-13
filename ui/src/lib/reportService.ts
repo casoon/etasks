@@ -1,6 +1,7 @@
 // @module:reporting
 import { command } from '@casoon/origin-client';
 import type { Task, Project, TimeEntry, Termin } from '../domain/types';
+import { KANBAN_COLUMNS } from '../domain/types';
 import { entrySeconds, toDateKeyFromIso } from '../domain/dateUtils';
 import { $appConfig } from '../stores/configStore';
 
@@ -103,6 +104,18 @@ export function buildTerminRows(
     }));
 }
 
+const PROJECT_STATUS_LABELS: Record<Project['status'], string> = {
+  active: 'Aktiv',
+  paused: 'Pausiert',
+  done: 'Abgeschlossen',
+};
+
+function taskStatusLabel(t: Task): string {
+  if (t.status === 'archived') return 'Archiviert';
+  if (t.status === 'done') return 'Erledigt';
+  return KANBAN_COLUMNS.find((c) => c.id === (t.kanbanStatus ?? 'backlog'))?.label ?? 'Backlog';
+}
+
 export function buildProjectReportInput(
   project: Project,
   tasks: Task[],
@@ -127,7 +140,7 @@ export function buildProjectReportInput(
 
   return {
     name: project.name,
-    status: project.status,
+    status: PROJECT_STATUS_LABELS[project.status],
     completion_rate: completionRate,
     total_tasks: projectTasks.length,
     done_tasks: doneTasks.length,
@@ -135,7 +148,7 @@ export function buildProjectReportInput(
     planned_hours: plannedMinutes / 60,
     tasks: projectTasks.map((t) => ({
       title: t.title,
-      status: t.status,
+      status: taskStatusLabel(t),
       duration_minutes: Math.round(
         projectEntries.filter((e) => e.taskId === t.id).reduce((s, e) => s + entrySeconds(e), 0) / 60,
       ),
