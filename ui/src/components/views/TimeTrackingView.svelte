@@ -5,21 +5,44 @@
     $timeEntries as timeEntriesStore,
     $activeEntry as activeEntryStore,
     stopActiveTimer,
-    addTimeEntry,
-    updateTimeEntry,
     deleteTimeEntryById,
   } from '../../stores/timerStore';
   import { $tasks as tasksStore } from '../../stores/taskStore';
+  import { $projects as projectsStore, $clients as clientsStore } from '../../stores/projectStore';
   import { openToday } from '../../stores/uiStore';
-  import { $projects as projectsStore } from '../../stores/projectStore';
-  import { formatTrackedTime, entrySeconds } from '../../domain/dateUtils';
-  import { formatTime, toDateKey, getWeekRange } from '../../domain/dateUtils';
+  import { toast } from '../../stores/toastStore';
+  import {
+    addDaysToKey,
+    entrySeconds,
+    formatDate,
+    formatHm,
+    formatTime,
+    getWeekStart,
+    isoWeekNumber,
+    today,
+  } from '../../domain/dateUtils';
   import type { TimeEntry } from '../../domain/types';
+  import { entryTrackedSeconds, formatClock, trackedSecondsOn } from '../../lib/dayStats';
+  import { saveCsvFile } from '../../lib/csvExport';
+  import { customerMinutes, formatWeekRange } from '../../lib/weekStats';
+  import {
+    entryProjectId,
+    filterEntries,
+    groupByDay,
+    timeEntriesCsv,
+    type ProjectFilter,
+  } from '../../lib/timeWeek';
+  import TimeEntryForm from './TimeEntryForm.svelte';
 
   $: entries = $timeEntriesStore;
   $: tasks = $tasksStore;
   $: projects = $projectsStore;
   $: activeEntry = $activeEntryStore;
+
+  let weekStart = getWeekStart(new Date());
+  let projectFilter: ProjectFilter = 'all';
+  /** `'new'` shows the empty form, an entry id edits that row. */
+  let editing: 'new' | string | null = null;
 
   // Ticks once per second while a timer runs; drives the live clock and the running totals.
   let now = Date.now();
@@ -33,172 +56,179 @@
   }
   onDestroy(() => { if (interval) clearInterval(interval); });
 
-  function secondsOf(e: TimeEntry, at: number): number {
-    return e.endAt ? entrySeconds(e) : Math.max(0, Math.round((at - new Date(e.startAt).getTime()) / 1000));
-  }
+  const secondsOf = (e: TimeEntry, at: number) => entryTrackedSeconds(e, at);
 
-  $: sorted = [...entries].sort(
-    (a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime()
-  );
+  $: weekEnd = addDaysToKey(weekStart, 6);
+  $: isCurrentWeek = weekStart === getWeekStart(new Date(now));
+  $: weekEntries = filterEntries(entries, tasks, weekStart, weekEnd, 'all');
+  $: visible = filterEntries(entries, tasks, weekStart, weekEnd, projectFilter);
+  $: groups = groupByDay(visible);
 
-  $: byDate = (() => {
-    const map: Record<string, typeof sorted> = {};
-    for (const entry of sorted) {
-      const d = toDateKey(new Date(entry.startAt));
-      map[d] = map[d] ?? [];
-      map[d].push(entry);
-    }
-    return map;
-  })();
+  $: todaySeconds = trackedSecondsOn(entries, today(), now);
+  $: weekSeconds = weekEntries.reduce((s, e) => s + secondsOf(e, now), 0);
+  $: split = customerMinutes(entries, projects, weekStart, weekEnd, now);
 
-  // Calendar week Monday–Sunday, same as in Analytics
-  $: week = getWeekRange(new Date(now));
-  $: weekSeconds = sorted
-    .filter(e => { const d = toDateKey(new Date(e.startAt)); return d >= week.start && d <= week.end; })
-    .reduce((s, e) => s + secondsOf(e, now), 0);
+  // Chips: only projects that have entries in the shown week, plus „Ohne Projekt“.
+  $: chipProjects = projects.filter((p) => weekEntries.some((e) => entryProjectId(e, tasks) === p.id));
+  $: hasNoProject = weekEntries.some((e) => !entryProjectId(e, tasks));
+  $: if (projectFilter !== 'all' && !(projectFilter === 'none' ? hasNoProject : chipProjects.some((p) => p.id === projectFilter))) projectFilter = 'all';
 
-  function getTask(id: string) { return tasks.find(t => t.id === id); }
-  function getProject(id?: string) { return id ? projects.find(p => p.id === id) : null; }
+  $: activeTask = activeEntry ? tasks.find((t) => t.id === activeEntry.taskId) : undefined;
+  $: activeProject = activeEntry ? projects.find((p) => p.id === entryProjectId(activeEntry, tasks)) : undefined;
 
-  function dateLabel(d: string) {
-    const today = toDateKey(new Date());
-    const yesterday = toDateKey(new Date(Date.now() - 86400000));
-    if (d === today) return 'Heute';
-    if (d === yesterday) return 'Gestern';
-    return new Date(d + 'T00:00:00').toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'short' });
-  }
+  const getTask = (id: string) => tasks.find((t) => t.id === id);
+  const getProject = (e: TimeEntry) => projects.find((p) => p.id === entryProjectId(e, tasks));
 
-  // --- Edit / add ---
-  interface Draft { id: string | null; taskId: string; date: string; start: string; end: string }
-  let draft: Draft | null = null;
-  let error = '';
-
-  $: selectableTasks = tasks
-    .filter(t => t.status !== 'done' || t.id === draft?.taskId)
-    .sort((a, b) => a.title.localeCompare(b.title, 'de'));
-
-  function hhmm(iso: string) {
-    const d = new Date(iso);
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  }
-
-  function startAdd() {
-    const d = new Date();
-    draft = { id: null, taskId: '', date: toDateKey(d), start: '', end: hhmm(d.toISOString()) };
-    error = '';
-  }
-
-  function startEdit(e: TimeEntry) {
-    draft = { id: e.id, taskId: e.taskId, date: toDateKey(new Date(e.startAt)), start: hhmm(e.startAt), end: hhmm(e.endAt!) };
-    error = '';
-  }
-
-  function saveDraft() {
-    if (!draft) return;
-    if (!draft.taskId) { error = 'Bitte eine Aufgabe wählen.'; return; }
-    if (!draft.date || !draft.start || !draft.end) { error = 'Bitte Datum, Start und Ende angeben.'; return; }
-    const startAt = new Date(`${draft.date}T${draft.start}`);
-    const endAt = new Date(`${draft.date}T${draft.end}`);
-    if (!(endAt.getTime() > startAt.getTime())) { error = 'Das Ende muss nach dem Start liegen.'; return; }
-    if (draft.id) updateTimeEntry(draft.id, draft.taskId, startAt.toISOString(), endAt.toISOString());
-    else addTimeEntry(draft.taskId, startAt.toISOString(), endAt.toISOString());
-    draft = null;
+  function dayHeading(date: string): string {
+    return date === today() ? `Heute · ${formatDate(date)}` : formatDate(date);
   }
 
   function removeEntry(e: TimeEntry) {
     const title = getTask(e.taskId)?.title ?? 'Gelöschte Aufgabe';
-    if (!confirm(`Zeiteintrag „${title}“ (${formatTrackedTime(entrySeconds(e))}) löschen?`)) return;
+    if (!confirm(`Zeiteintrag „${title}“ (${formatHm(entrySeconds(e) / 60)}) löschen?`)) return;
     deleteTimeEntryById(e.id);
   }
 
-  const inputCls = 'border border-border rounded-md px-2 py-1 text-[13px] bg-bg text-primary';
+  let exporting = false;
+  async function exportCsv() {
+    if (exporting || visible.length === 0) return;
+    exporting = true;
+    try {
+      const csv = timeEntriesCsv(visible, tasks, projects, $clientsStore, Date.now());
+      const path = await saveCsvFile(`etasks-zeiten-${weekStart}.csv`, csv);
+      toast(path ? `CSV gespeichert: ${path}` : 'CSV exportiert.', 'success', 4000);
+    } catch (error) {
+      toast(`CSV-Export fehlgeschlagen: ${String(error)}`, 'error', 6000);
+    } finally {
+      exporting = false;
+    }
+  }
 </script>
 
-<div class="flex-1 flex flex-col overflow-hidden">
-  {#if activeEntry}
-    {@const activeTask = getTask(activeEntry.taskId)}
-    <div class="flex items-center gap-3 px-6 py-2 bg-accent-subtle border-b border-border text-[13px] text-accent flex-shrink-0">
-      <span class="w-2 h-2 rounded-full bg-accent flex-shrink-0 animate-pulse" />
-      <span class="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">Läuft: {activeTask?.title ?? 'Gelöschte Aufgabe'}</span>
-      <span class="font-semibold tabular-nums flex-shrink-0">{formatTrackedTime(secondsOf(activeEntry, now))}</span>
-      <button
-        class="px-3 py-1 text-secondary rounded-lg text-[13px] hover:bg-gray-100 transition-colors flex-shrink-0"
-        on:click={() => stopActiveTimer()}
-      >⏹ Stoppen</button>
-    </div>
-  {/if}
+<div class="flex-1 overflow-y-auto">
+  <div class="flex flex-col gap-[18px] px-8 pt-5 pb-7">
+    <header class="flex flex-wrap items-center gap-3">
+      <div class="flex-1 min-w-[260px] flex flex-col gap-0.5">
+        <h1 class="text-[24px] font-bold tracking-[-0.01em] leading-tight">Zeiten</h1>
+        <span class="text-[13px]" style="color:var(--et-text-3)">KW {isoWeekNumber(weekStart)} · {formatWeekRange(weekStart)}</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button class="et-btn et-btn-icon" style="border-color:var(--et-border)" aria-label="Vorherige Woche" on:click={() => (weekStart = addDaysToKey(weekStart, -7))}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+        </button>
+        <button class="et-btn" style="border-color:var(--et-border)" disabled={isCurrentWeek} on:click={() => (weekStart = getWeekStart(new Date()))}>Diese Woche</button>
+        <button class="et-btn et-btn-icon" style="border-color:var(--et-border)" aria-label="Nächste Woche" on:click={() => (weekStart = addDaysToKey(weekStart, 7))}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+        </button>
+      </div>
+      <button class="et-btn et-btn-primary" on:click={() => (editing = 'new')}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+        Eintrag nachtragen
+      </button>
+    </header>
 
-  <div class="flex gap-3 flex-wrap items-center px-6 py-4 border-b border-border flex-shrink-0">
-    <div class="bg-surface border border-border rounded-xl px-4 py-3 flex flex-col gap-1 min-w-[120px]">
-      <span class="text-[10px] font-bold uppercase tracking-[0.06em] text-muted">Diese Woche</span>
-      <span class="text-[22px] font-bold text-primary tabular-nums">{formatTrackedTime(weekSeconds)}</span>
-    </div>
-    <div class="bg-surface border border-border rounded-xl px-4 py-3 flex flex-col gap-1 min-w-[120px]">
-      <span class="text-[10px] font-bold uppercase tracking-[0.06em] text-muted">Einträge gesamt</span>
-      <span class="text-[22px] font-bold text-primary tabular-nums">{entries.length}</span>
-    </div>
-    <button
-      class="ml-auto px-3 py-1.5 rounded-lg border border-border text-[13px] text-secondary hover:bg-bg hover:text-primary transition-colors"
-      on:click={startAdd}
-    >+ Eintrag hinzufügen</button>
-  </div>
-
-  <div class="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-6">
-    {#if draft}
-      <form class="flex flex-col gap-3 px-4 py-3 rounded-lg border border-border bg-surface" on:submit|preventDefault={saveDraft}>
-        <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-muted">{draft.id ? 'Eintrag bearbeiten' : 'Neuer Eintrag'}</span>
-        <div class="flex items-center gap-2 flex-wrap">
-          <select class="{inputCls} max-w-[240px]" bind:value={draft.taskId} aria-label="Aufgabe">
-            <option value="">Aufgabe wählen</option>
-            {#each selectableTasks as t (t.id)}<option value={t.id}>{t.title}</option>{/each}
-          </select>
-          <input type="date" class={inputCls} bind:value={draft.date} aria-label="Datum" />
-          <input type="time" class={inputCls} bind:value={draft.start} aria-label="Start" />
-          <span class="text-muted text-[13px]">–</span>
-          <input type="time" class={inputCls} bind:value={draft.end} aria-label="Ende" />
-        </div>
-        {#if error}<p class="text-[12px] text-red-500">{error}</p>{/if}
-        <div class="flex items-center gap-2">
-          <button type="submit" class="px-3 py-1.5 rounded-lg bg-accent text-white text-[13px] font-medium hover:bg-blue-600 transition-colors">Speichern</button>
-          <button type="button" class="px-3 py-1.5 rounded-lg text-[13px] text-secondary hover:bg-bg transition-colors" on:click={() => (draft = null)}>Abbrechen</button>
-        </div>
-      </form>
-    {/if}
-
-    {#if entries.length === 0 && !draft}
-      <div class="flex flex-col items-center gap-4 py-10 px-6 text-center">
-        <p class="text-[13px] text-muted leading-relaxed max-w-xs">Noch keine Zeiteinträge. Starte den Timer über den ▶-Button an einer Aufgabe in „Heute“ oder in der Tagesplanung, oder füge einen Eintrag von Hand hinzu.</p>
-        <button
-          class="px-4 py-2 rounded-lg border border-border text-[13px] text-secondary hover:bg-bg hover:text-primary transition-colors"
-          on:click={() => openToday('plan')}
-        >Zur Tagesplanung →</button>
+    {#if activeEntry}
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-3 px-5 py-3.5 rounded-xl" style="background:var(--et-inverse);color:#fff">
+        <span class="w-2.5 h-2.5 rounded-full animate-pulse" style="background:#6FD39B" aria-hidden="true"></span>
+        <span class="flex-[1_1_260px] flex flex-col min-w-0">
+          <span class="font-semibold truncate">{activeTask?.title ?? 'Gelöschte Aufgabe'}</span>
+          <span class="text-[12px]" style="color:#D6D3CC">{activeProject?.name ?? 'Ohne Projekt'} · gestartet {formatTime(activeEntry.startAt)}</span>
+        </span>
+        <span class="text-[22px] font-semibold tabular-nums" role="timer" aria-label="Laufzeit">{formatClock(secondsOf(activeEntry, now))}</span>
+        <button class="et-btn" style="border-color:#fff" on:click={() => stopActiveTimer()}>
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="1" y="1" width="10" height="10" rx="2" fill="currentColor"></rect></svg>
+          Stoppen
+        </button>
       </div>
     {/if}
 
-    {#each Object.entries(byDate) as [date, dateEntries] (date)}
-      {@const dayTotal = dateEntries.reduce((s, e) => s + secondsOf(e, now), 0)}
-      <div class="flex flex-col gap-2">
-        <div class="flex items-center justify-between pb-2 border-b border-border-subtle">
-          <span class="text-[11px] font-bold uppercase tracking-[0.06em] text-muted">{dateLabel(date)}</span>
-          <span class="text-[12px] font-semibold text-secondary tabular-nums">{formatTrackedTime(dayTotal)}</span>
-        </div>
-        {#each dateEntries as entry (entry.id)}
-          {@const task = getTask(entry.taskId)}
-          {@const project = getProject(entry.projectId ?? task?.projectId)}
-            <div class="group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-bg">
-              {#if project}<span class="w-2 h-2 rounded-full flex-shrink-0" style="background:{project.color}" />{/if}
-              <span class="flex-1 text-[13px] text-primary overflow-hidden text-ellipsis whitespace-nowrap min-w-0">{task?.title ?? 'Gelöschte Aufgabe'}</span>
-              {#if project}<span class="text-[11px] text-muted whitespace-nowrap">{project.name}</span>{/if}
-              <span class="text-[11px] text-muted whitespace-nowrap">{formatTime(entry.startAt)} – {entry.endAt ? formatTime(entry.endAt) : '…'}</span>
-              {#if !entry.endAt}<span class="text-[11px] font-semibold text-accent whitespace-nowrap">läuft</span>{/if}
-              <span class="text-[12px] font-semibold text-secondary tabular-nums whitespace-nowrap">{formatTrackedTime(secondsOf(entry, now))}</span>
-              {#if entry.endAt}
-                <button class="text-[12px] text-muted opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-primary transition-opacity" title="Bearbeiten" aria-label="Eintrag bearbeiten" on:click={() => startEdit(entry)}>✎</button>
-                <button class="text-[12px] text-muted opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-red-500 transition-opacity" title="Löschen" aria-label="Eintrag löschen" on:click={() => removeEntry(entry)}>✕</button>
-              {/if}
-            </div>
+    <div class="grid gap-4" style="grid-template-columns:repeat(auto-fit,minmax(min(230px,100%),1fr))">
+      <div class="et-tile">
+        <span class="et-tile-label">Heute</span>
+        <span class="et-tile-value">{formatHm(todaySeconds / 60)}</span>
+        <span class="et-tile-note">{activeEntry ? 'inklusive laufendem Timer' : 'erfasst'}</span>
+      </div>
+      <div class="et-tile">
+        <span class="et-tile-label">{isCurrentWeek ? 'Diese Woche' : `KW ${isoWeekNumber(weekStart)}`}</span>
+        <span class="et-tile-value">{formatHm(weekSeconds / 60)}</span>
+        <span class="et-tile-note">davon {formatHm(split.customer)} für Kunden</span>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <button class="et-chip" aria-pressed={projectFilter === 'all'} on:click={() => (projectFilter = 'all')}>Alle Projekte</button>
+      {#each chipProjects as project (project.id)}
+        <button class="et-chip" aria-pressed={projectFilter === project.id} on:click={() => (projectFilter = project.id)}>{project.name}</button>
+      {/each}
+      {#if hasNoProject}
+        <button class="et-chip" aria-pressed={projectFilter === 'none'} on:click={() => (projectFilter = 'none')}>Ohne Projekt</button>
+      {/if}
+      <span class="flex-1"></span>
+      <button class="et-chip" style="border-radius:8px" disabled={visible.length === 0 || exporting} on:click={exportCsv}>Als CSV exportieren</button>
+    </div>
+
+    <div class="overflow-x-auto et-card">
+      <div class="min-w-[820px] flex flex-col">
+        {#if editing === 'new'}
+          <TimeEntryForm entry={null} defaultDate={isCurrentWeek ? today() : weekStart} onDone={() => (editing = null)} />
+        {/if}
+
+        {#if groups.length === 0 && editing !== 'new'}
+          <div class="flex flex-col items-center gap-4 py-10 px-6 text-center">
+            <p class="text-[13px] max-w-md" style="color:var(--et-text-3)">
+              {entries.length === 0
+                ? 'Noch keine Zeiteinträge. Starte den Timer an einer Aufgabe in „Heute“ oder trage einen Eintrag von Hand nach.'
+                : weekEntries.length === 0
+                  ? 'In dieser Woche wurde keine Zeit erfasst.'
+                  : 'Für diesen Filter gibt es keine Einträge.'}
+            </p>
+            {#if entries.length === 0}
+              <button class="et-btn" on:click={() => openToday('plan')}>Zur Tagesplanung</button>
+            {/if}
+          </div>
+        {/if}
+
+        {#each groups as group, gi (group.date)}
+          {@const dayTotal = group.entries.reduce((s, e) => s + secondsOf(e, now), 0)}
+          <div class="flex items-center gap-3 px-5 py-3 {gi > 0 || editing === 'new' ? 'border-t' : 'rounded-t-[14px]'}" style="background:var(--et-surface-sunken);border-color:var(--et-border)">
+            <h2 class="flex-1 text-[14px] font-semibold">{dayHeading(group.date)}</h2>
+            <span class="font-semibold tabular-nums">{formatHm(dayTotal / 60)}</span>
+          </div>
+          {#each group.entries as entry (entry.id)}
+            {@const task = getTask(entry.taskId)}
+            {@const project = getProject(entry)}
+            {@const running = !entry.endAt}
+            {#if editing === entry.id}
+              <TimeEntryForm {entry} defaultDate={group.date} onDone={() => (editing = null)} />
+            {:else}
+              <div
+                class="et-row grid items-center gap-4 min-h-[52px] pl-5 pr-3"
+                style="grid-template-columns:2.4fr 1.4fr 1.2fr 0.7fr 96px;{running ? 'background:var(--et-accent-soft)' : ''}"
+              >
+                <span class="flex items-center gap-2.5 min-w-0">
+                  <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:{project?.color ?? 'var(--et-project-neutral)'}" aria-hidden="true"></span>
+                  <span class="truncate {running ? 'font-semibold' : 'font-medium'}">{task?.title ?? 'Gelöschte Aufgabe'}</span>
+                </span>
+                <span class="text-[13px] truncate" style="color:{running ? 'var(--et-text-2)' : 'var(--et-text-3)'}">{project?.name ?? 'Ohne Projekt'}</span>
+                <span class="text-[13px] tabular-nums">{formatTime(entry.startAt)} – {entry.endAt ? formatTime(entry.endAt) : 'jetzt'}</span>
+                <span class="font-semibold tabular-nums">{formatHm(secondsOf(entry, now) / 60)}</span>
+                {#if running}
+                  <span class="text-[12px] font-semibold" style="color:var(--et-accent-strong)">läuft</span>
+                {:else}
+                  <span class="flex gap-1">
+                    <button class="et-btn et-btn-ghost et-btn-icon" style="width:40px;height:40px" aria-label="Eintrag bearbeiten" on:click={() => (editing = entry.id)}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>
+                    </button>
+                    <button class="et-btn et-btn-ghost et-btn-icon" style="width:40px;height:40px" aria-label="Eintrag löschen" on:click={() => removeEntry(entry)}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg>
+                    </button>
+                  </span>
+                {/if}
+              </div>
+            {/if}
+          {/each}
         {/each}
       </div>
-    {/each}
+    </div>
   </div>
 </div>

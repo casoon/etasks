@@ -188,10 +188,7 @@
     {#if nav === "projects"}<div class="flex-1 overflow-hidden animate-fade-in" use:pageReveal>
             <ProjectsView />
         </div>{/if}
-    {#if nav === "time"}<div
-            class="flex-1 overflow-hidden animate-fade-in"
-            use:pageReveal
-        >
+    {#if nav === "time"}<div class="flex-1 overflow-hidden flex flex-col animate-fade-in" use:pageReveal>
             <TimeTrackingView />
         </div>{/if}
     {#if nav === "clients"}<div class="flex-1 overflow-hidden flex flex-col animate-fade-in" use:pageReveal>

@@ -27,6 +27,7 @@ All notable changes to eTasks are listed here. eTasks follows
 
 - **Woche:** one page for the week with week navigation: weekly goals with seven day buttons, counter and streak, Fokus-Projekte chips, the "Was soll am Freitag stehen?" note, figures (tracked, done, for customers), bars planned vs. tracked per day (a click opens that day in Heute) and time by project or by category. Weekly goals are editable again (add, mark days, delete).
 - **Heute:** "Arbeiten" follows the new layout (intention, Top 3 cards, further tasks, Tagesplan with Geplant/Erfasst and a now line); the Tagesplanung no longer limits "Heute" to five tasks, the capacity bar shows overload instead.
+- **Zeiten:** week view with week navigation, the running timer as a dark bar with "Stoppen", tiles for today and the week (with the part for customers), project filter chips, entries grouped by day with day totals, "Eintrag nachtragen" and editing in place. "Als CSV exportieren" saves the shown week and filter. The running entry is highlighted and cannot be edited.
 - **Heute:** the day close is a page instead of a dialog.
 - **Design:** new look "A · Tagesfluss" (flat cards, warm grey background, blue accent, system font instead of Inter until a font file is bundled); gradient, stripe pattern and glass styles are gone.
 - **Navigation:** Kunden and Leistungen are own menu items, Rechnungen is the former Abrechnung page; the Fokus (Pomodoro) view opens from "Heute · Arbeiten" via "Fokus".
