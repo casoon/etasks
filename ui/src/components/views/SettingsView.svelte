@@ -11,6 +11,10 @@
         normalizeProfileNumbers,
         type ProfileNumberErrors,
     } from "../../lib/profileNumbers";
+    import { onMount } from "svelte";
+    import { KEYS, storageGet } from "../../lib/storage";
+    import { snapshotLabel, type SnapshotMeta } from "../../lib/navigation";
+    import { settingsEntries, type SettingsSectionId } from "../../lib/settingsStatus";
     import SettingsDatenSection from "./SettingsDatenSection.svelte";
     import SettingsArbeitsbereichSection from "./SettingsArbeitsbereichSection.svelte";
 
@@ -22,8 +26,8 @@
     let numberErrors: ProfileNumberErrors = {};
     let logoImporting = false;
     let logoPreviewError = false;
-    type SettingsSection = "profil" | "arbeitsbereich" | "daten";
-    let activeSection: SettingsSection = "profil";
+    let activeSection: SettingsSectionId = "profil";
+    let snapshot: string | null = null;
 
     let logoPreviewUrl = "";
     $: updateLogoPreview(profile.logo);
@@ -135,112 +139,103 @@
         }
         return "";
     }
+
+    function readSnapshot() {
+        snapshot = snapshotLabel(storageGet<SnapshotMeta>(KEYS.exportMeta));
+    }
+    onMount(() => {
+        readSnapshot();
+        const id = setInterval(readSnapshot, 15 * 1000);
+        return () => clearInterval(id);
+    });
+
+    $: desktop = isTauriAvailable();
+    $: workspaceName = config.tenants?.find((t) => t.path === config.active_tenant)?.name ?? null;
+    $: entries = settingsEntries({ profile, workspaceName: desktop ? workspaceName : null, snapshot, desktop });
 </script>
 
-<div class="flex-1 overflow-y-auto p-6 flex flex-col gap-8 max-w-3xl">
-    <section
-        class="sticky top-0 z-10 flex flex-col gap-3 rounded-3xl border border-border bg-white/75 p-4 backdrop-blur-xl shadow-[0_10px_30px_rgba(15,23,42,0.06)]"
-    >
-        <div class="flex items-start justify-between gap-4">
-            <div>
-                <h1 class="text-lg font-semibold text-primary">
-                    Einstellungen
-                </h1>
-                <p class="mt-1 text-sm text-secondary">
-                    {isTauriAvailable()
-                        ? "Desktop-Modus mit lokalem Workspace, PDFs und Snapshots."
-                        : "Browser-Modus ohne lokale Dateifunktionen. Daten bleiben im Browser-Kontext."}
-                </p>
-            </div>
-            <span class="pill">
-                {isTauriAvailable() ? "Desktop" : "Browser"}
-            </span>
-        </div>
+<div class="flex-1 overflow-y-auto">
+  <div class="flex flex-col gap-5 px-8 pt-5 pb-7">
+    <header class="flex flex-col gap-0.5">
+        <h1 class="text-[24px] font-bold tracking-[-0.01em] leading-tight">Einstellungen</h1>
+        <span class="text-[13px]" style="color:var(--et-text-3)">
+            {desktop ? `Arbeitsbereich „${workspaceName ?? "–"}“ · Desktop-App` : "Browser-Modus · Daten bleiben im Browser-Speicher"}
+        </span>
+    </header>
 
-        <div class="section-tabs">
-            <button
-                class:section-tab-active={activeSection === "profil"}
-                class="section-tab"
-                on:click={() => (activeSection = "profil")}
-            >
-                Profil
-            </button>
-            <button
-                class:section-tab-active={activeSection === "arbeitsbereich"}
-                class="section-tab"
-                on:click={() => (activeSection = "arbeitsbereich")}
-            >
-                Arbeitsbereich
-            </button>
-            <button
-                class:section-tab-active={activeSection === "daten"}
-                class="section-tab"
-                on:click={() => (activeSection = "daten")}
-            >
-                Daten & Backups
-            </button>
-        </div>
-    </section>
+    <div class="flex flex-wrap gap-6 items-start">
+        <nav class="flex-[1_1_200px] max-w-[240px] flex flex-col gap-0.5" aria-label="Einstellungsbereiche">
+            {#each entries as entry (entry.id)}
+                <button
+                    class="settings-nav flex flex-col justify-center min-h-[52px] px-3 rounded-[9px] text-left"
+                    class:settings-nav-active={activeSection === entry.id}
+                    aria-current={activeSection === entry.id ? "page" : undefined}
+                    on:click={() => (activeSection = entry.id)}
+                >
+                    <span class="{activeSection === entry.id ? 'font-semibold' : 'font-medium'}">{entry.label}</span>
+                    <span class="text-[12px]" style="color:{entry.tone === 'warn' ? 'var(--et-warning-text)' : activeSection === entry.id ? 'var(--et-text-2)' : 'var(--et-text-3)'}">{entry.state}</span>
+                </button>
+            {/each}
+        </nav>
 
+        <div class="flex-[999_1_480px] min-w-0 max-w-[820px] flex flex-col gap-4">
     {#if activeSection === "profil"}
         <!-- Profile section -->
-        <section class="panel-section flex flex-col gap-4">
-            <h2
-                class="text-base font-semibold text-primary border-b border-border pb-2"
-            >
+        <section class="et-card p-5 flex flex-col gap-4">
+            <h2 class="et-h2">
                 Profil
             </h2>
 
             <div class="grid grid-cols-2 gap-3">
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">Vorname</span>
-                    <input class="input" bind:value={profile.first_name} placeholder="Max" />
+                    <span class="et-label">Vorname</span>
+                    <input class="et-field" bind:value={profile.first_name} placeholder="Max" />
                 </label>
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">Nachname</span>
-                    <input class="input" bind:value={profile.last_name} placeholder="Mustermann" />
+                    <span class="et-label">Nachname</span>
+                    <input class="et-field" bind:value={profile.last_name} placeholder="Mustermann" />
                 </label>
                 <label class="flex flex-col gap-1 col-span-2">
-                    <span class="text-xs text-muted font-medium">E-Mail</span>
+                    <span class="et-label">E-Mail</span>
                     <input
-                        class="input"
+                        class="et-field"
                         type="email"
                         bind:value={profile.email}
                         placeholder="max@beispiel.de"
                     />
                 </label>
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">Telefon</span>
-                    <input class="input" bind:value={profile.phone} />
+                    <span class="et-label">Telefon</span>
+                    <input class="et-field" bind:value={profile.phone} />
                 </label>
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">Webseite</span>
+                    <span class="et-label">Webseite</span>
                     <input
-                        class="input"
+                        class="et-field"
                         bind:value={profile.website}
                         placeholder="www.example.com"
                     />
                 </label>
                 <label class="flex flex-col gap-1 col-span-2">
-                    <span class="text-xs text-muted font-medium"
+                    <span class="et-label"
                         >Unternehmen</span
                     >
-                    <input class="input" bind:value={profile.company} placeholder="Musterfirma GmbH" />
+                    <input class="et-field" bind:value={profile.company} placeholder="Musterfirma GmbH" />
                 </label>
                 <div
-                    class="col-span-2 rounded-2xl border border-border bg-white/55 p-4"
+                    class="col-span-2 rounded-[12px] border border-[var(--et-border)] bg-[var(--et-surface-sunken)] p-4"
                 >
                     <div class="flex items-center justify-between gap-3">
                         <div class="min-w-0">
-                            <p class="text-xs font-medium text-muted">
+                            <p class="text-xs font-medium text-[var(--et-text-3)]">
                                 Dokumenten-Logo
                             </p>
-                            <p class="mt-1 text-sm text-primary truncate">
+                            <p class="mt-1 text-sm text-[var(--et-text)] truncate">
                                 {profile.logo || "Noch kein Logo hinterlegt"}
                             </p>
                         </div>
                         <button
-                            class="secondary-button"
+                            class="et-btn"
                             on:click={importLogo}
                             disabled={!isTauriAvailable() || logoImporting}
                         >
@@ -248,11 +243,11 @@
                         </button>
                     </div>
                     <label class="mt-3 flex flex-col gap-1">
-                        <span class="text-xs text-muted font-medium">
+                        <span class="et-label">
                             Dateipfad
                         </span>
                         <input
-                            class="input font-mono"
+                            class="et-field font-mono"
                             bind:value={profile.logo}
                             placeholder="/Users/.../company-logo.png"
                         />
@@ -260,7 +255,7 @@
                     <div class="mt-3">
                         {#if logoPreviewUrl && !logoPreviewError}
                             <div
-                                class="flex min-h-[96px] items-center justify-center rounded-2xl border border-dashed border-border bg-white/70 p-4"
+                                class="flex min-h-[96px] items-center justify-center rounded-2xl border border-dashed border-border bg-[var(--et-surface-sunken)] p-4"
                             >
                                 <img
                                     src={logoPreviewUrl}
@@ -273,7 +268,7 @@
                             </div>
                         {:else}
                             <div
-                                class="flex min-h-[96px] items-center justify-center rounded-2xl border border-dashed border-border bg-white/50 p-4 text-sm text-muted"
+                                class="flex min-h-[96px] items-center justify-center rounded-2xl border border-dashed border-border bg-[var(--et-surface-sunken)] p-4 text-sm text-[var(--et-text-3)]"
                             >
                                 {#if profile.logo?.trim() && logoPreviewError}
                                     Logo konnte nicht geladen werden.
@@ -285,97 +280,98 @@
                     </div>
                 </div>
                 <label class="flex flex-col gap-1 col-span-2">
-                    <span class="text-xs text-muted font-medium">Straße</span>
-                    <input class="input" bind:value={profile.street} placeholder="Musterstraße 1" />
+                    <span class="et-label">Straße</span>
+                    <input class="et-field" bind:value={profile.street} placeholder="Musterstraße 1" />
                 </label>
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">PLZ</span>
-                    <input class="input" bind:value={profile.zip} placeholder="12345" />
+                    <span class="et-label">PLZ</span>
+                    <input class="et-field" bind:value={profile.zip} placeholder="12345" />
                 </label>
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">Stadt</span>
-                    <input class="input" bind:value={profile.city} placeholder="Musterstadt" />
+                    <span class="et-label">Stadt</span>
+                    <input class="et-field" bind:value={profile.city} placeholder="Musterstadt" />
                 </label>
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">Land</span>
-                    <input class="input" bind:value={profile.country} />
+                    <span class="et-label">Land</span>
+                    <input class="et-field" bind:value={profile.country} />
                 </label>
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium"
+                    <span class="et-label"
                         >Stundensatz (€)</span
                     >
                     <input
-                        class="input"
+                        class="et-field"
                         type="number"
                         bind:value={profile.hourly_rate}
                     />
                 {#if numberErrors.hourly_rate}
-                        <span class="text-[11px] text-red-500">{numberErrors.hourly_rate}</span>
+                        <span class="text-[12px] text-[var(--et-danger)]">{numberErrors.hourly_rate}</span>
                     {/if}
                 </label>
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium"
+                    <span class="et-label"
                         >Steuernummer / USt-IdNr. (Fußzeile: „USt-IdNr.“)</span
                     >
-                    <input class="input" bind:value={profile.tax_id} placeholder="z. B. 12/345/67890 oder USt-IdNr." />
+                    <input class="et-field" bind:value={profile.tax_id} placeholder="z. B. 12/345/67890 oder USt-IdNr." />
                 </label>
                 <label class="flex flex-col gap-1 col-span-2">
-                    <span class="text-xs text-muted font-medium">IBAN</span>
-                    <input class="input font-mono" bind:value={profile.iban} placeholder="DE89 3704 0044 0532 0130 00" />
+                    <span class="et-label">IBAN</span>
+                    <input class="et-field font-mono" bind:value={profile.iban} placeholder="DE89 3704 0044 0532 0130 00" />
                 </label>
             </div>
 
             <div class="flex items-center gap-3">
                 <button
-                    class="primary-button"
+                    class="et-btn et-btn-primary"
                     disabled={saving}
                     on:click={saveProfile}
                 >
                     {saving ? "Speichern…" : "Profil speichern"}
                 </button>
                 {#if saved}
-                    <span class="text-xs text-green-500">Gespeichert ✓</span>
+                    <span class="text-[13px] text-[var(--et-success-text)]">Gespeichert</span>
                 {/if}
                 {#if errorMsg}
-                    <span class="text-xs text-red-500">{errorMsg}</span>
+                    <span class="text-[13px] text-[var(--et-danger)]">{errorMsg}</span>
                 {/if}
             </div>
         </section>
 
+    {/if}
+
+    {#if activeSection === "rechnungen"}
         <!-- Rechnungsgrunddaten section -->
-        <section class="panel-section flex flex-col gap-4">
-            <h2
-                class="text-base font-semibold text-primary border-b border-border pb-2"
-            >
+        <section class="et-card p-5 flex flex-col gap-4">
+            <h2 class="et-h2">
                 Rechnungsgrunddaten
             </h2>
 
             <div class="grid grid-cols-2 gap-3">
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium"
+                    <span class="et-label"
                         >Nummernkreis-Präfix</span
                     >
                     <input
-                        class="input font-mono"
+                        class="et-field font-mono"
                         bind:value={profile.invoice_number_prefix}
                         placeholder="RE-2026-"
                     />
-                    <span class="text-[11px] text-muted">
+                    <span class="text-[12px] text-[var(--et-text-3)]">
                         Beispiel: {invoicePrefixPreview} · der Zähler läuft pro
                         Arbeitsbereich
                     </span>
                     {#if invoicePrefixError}
-                        <span class="text-[11px] text-red-500">
+                        <span class="text-[12px] text-[var(--et-danger)]">
                             {invoicePrefixError}
                         </span>
                     {/if}
                 </label>
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium"
+                    <span class="et-label"
                         >Zahlungsziel (Tage)</span
                     >
                     <input
-                        class="input"
+                        class="et-field"
                         type="number"
                         min="0"
                         step="1"
@@ -383,45 +379,45 @@
                         placeholder="14"
                     />
                 {#if numberErrors.payment_days}
-                        <span class="text-[11px] text-red-500">{numberErrors.payment_days}</span>
+                        <span class="text-[12px] text-[var(--et-danger)]">{numberErrors.payment_days}</span>
                     {/if}
                 </label>
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium"
+                    <span class="et-label"
                         >Standard-MwSt. (%)</span
                     >
                     <input
-                        class="input"
+                        class="et-field"
                         type="number"
                         bind:value={profile.default_vat_rate}
                         placeholder="19"
                     />
                 {#if numberErrors.default_vat_rate}
-                        <span class="text-[11px] text-red-500">{numberErrors.default_vat_rate}</span>
+                        <span class="text-[12px] text-[var(--et-danger)]">{numberErrors.default_vat_rate}</span>
                     {/if}
                 </label>
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">Bankname</span>
+                    <span class="et-label">Bankname</span>
                     <input
-                        class="input"
+                        class="et-field"
                         bind:value={profile.bank_name}
                         placeholder="Sparkasse Berlin"
                     />
                 </label>
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">BIC</span>
+                    <span class="et-label">BIC</span>
                     <input
-                        class="input font-mono"
+                        class="et-field font-mono"
                         bind:value={profile.bic}
                         placeholder="BELADEBEXXX"
                     />
                 </label>
                 <label class="flex flex-col gap-1 col-span-2">
-                    <span class="text-xs text-muted font-medium"
+                    <span class="et-label"
                         >Dankestext (unter der Anrede)</span
                     >
                     <input
-                        class="input"
+                        class="et-field"
                         bind:value={profile.invoice_footer_text}
                         placeholder="Vielen Dank für Ihren Auftrag."
                     />
@@ -430,54 +426,52 @@
 
             <div class="flex items-center gap-3">
                 <button
-                    class="primary-button"
+                    class="et-btn et-btn-primary"
                     disabled={saving}
                     on:click={saveProfile}
                 >
                     {saving ? "Speichern…" : "Speichern"}
                 </button>
                 {#if saved}
-                    <span class="text-xs text-green-500">Gespeichert ✓</span>
+                    <span class="text-[13px] text-[var(--et-success-text)]">Gespeichert</span>
                 {/if}
                 {#if errorMsg}
-                    <span class="text-xs text-red-500">{errorMsg}</span>
+                    <span class="text-[13px] text-[var(--et-danger)]">{errorMsg}</span>
                 {/if}
             </div>
         </section>
 
-        <section class="panel-section flex flex-col gap-4">
-            <h2
-                class="text-base font-semibold text-primary border-b border-border pb-2"
-            >
+        <section class="et-card p-5 flex flex-col gap-4">
+            <h2 class="et-h2">
                 Angebotsgrunddaten
             </h2>
 
             <div class="grid grid-cols-2 gap-3">
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">
+                    <span class="et-label">
                         Angebots-Präfix
                     </span>
                     <input
-                        class="input font-mono"
+                        class="et-field font-mono"
                         bind:value={profile.offer_number_prefix}
                         placeholder="ANG-2026-"
                     />
-                    <span class="text-[11px] text-muted">
+                    <span class="text-[12px] text-[var(--et-text-3)]">
                         Beispiel: {offerPrefixPreview} · der Zähler läuft pro
                         Arbeitsbereich
                     </span>
                     {#if offerPrefixError}
-                        <span class="text-[11px] text-red-500">
+                        <span class="text-[12px] text-[var(--et-danger)]">
                             {offerPrefixError}
                         </span>
                     {/if}
                 </label>
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">
+                    <span class="et-label">
                         Gültigkeit (Tage)
                     </span>
                     <input
-                        class="input"
+                        class="et-field"
                         type="number"
                         min="0"
                         step="1"
@@ -485,35 +479,35 @@
                         placeholder="30"
                     />
                 {#if numberErrors.offer_validity_days}
-                        <span class="text-[11px] text-red-500">{numberErrors.offer_validity_days}</span>
+                        <span class="text-[12px] text-[var(--et-danger)]">{numberErrors.offer_validity_days}</span>
                     {/if}
                 </label>
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">
+                    <span class="et-label">
                         Zahlungsbedingungen
                     </span>
                     <input
-                        class="input"
+                        class="et-field"
                         bind:value={profile.offer_payment_terms}
                         placeholder="30 Tage netto nach Auftragserteilung"
                     />
                 </label>
                 <label class="flex flex-col gap-1 col-span-2">
-                    <span class="text-xs text-muted font-medium">
+                    <span class="et-label">
                         Lieferbedingungen
                     </span>
                     <input
-                        class="input"
+                        class="et-field"
                         bind:value={profile.offer_delivery_terms}
                         placeholder="ca. 8-10 Wochen nach Projektstart"
                     />
                 </label>
                 <label class="flex flex-col gap-1 col-span-2">
-                    <span class="text-xs text-muted font-medium">
+                    <span class="et-label">
                         Zusätzliche Bedingungen / AGB-Hinweise
                     </span>
                     <textarea
-                        class="input resize-y min-h-[96px]"
+                        class="et-field resize-y min-h-[96px]"
                         bind:value={profile.offer_additional_terms}
                         placeholder="Jede Zeile wird als eigener Punkt auf der zweiten Seite ausgegeben."
                         rows={4}
@@ -523,40 +517,43 @@
 
             <div class="flex items-center gap-3">
                 <button
-                    class="primary-button"
+                    class="et-btn et-btn-primary"
                     disabled={saving}
                     on:click={saveProfile}
                 >
                     {saving ? "Speichern…" : "Speichern"}
                 </button>
                 {#if saved}
-                    <span class="text-xs text-green-500">Gespeichert ✓</span>
+                    <span class="text-[13px] text-[var(--et-success-text)]">Gespeichert</span>
                 {/if}
                 {#if errorMsg}
-                    <span class="text-xs text-red-500">{errorMsg}</span>
+                    <span class="text-[13px] text-[var(--et-danger)]">{errorMsg}</span>
                 {/if}
             </div>
         </section>
 
-        <section class="panel-section flex flex-col gap-4">
-            <h2 class="text-base font-semibold text-primary border-b border-border pb-2">
+    {/if}
+
+    {#if activeSection === "tagesablauf"}
+        <section class="et-card p-5 flex flex-col gap-4">
+            <h2 class="et-h2">
                 Benachrichtigungen & Tagesrhythmus
             </h2>
             <div class="grid grid-cols-2 gap-3">
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">Tagesabschluss-Uhrzeit</span>
+                    <span class="et-label">Tagesabschluss-Uhrzeit</span>
                     <input
-                        class="input"
+                        class="et-field"
                         type="time"
                         bind:value={profile.shutdown_time}
                         placeholder="17:00"
                     />
-                    <span class="text-[11px] text-muted">Benachrichtigung zum Feierabend</span>
+                    <span class="text-[12px] text-[var(--et-text-3)]">Benachrichtigung zum Feierabend</span>
                 </label>
                 <label class="flex flex-col gap-1">
-                    <span class="text-xs text-muted font-medium">Pausenerinnerung (Minuten)</span>
+                    <span class="et-label">Pausenerinnerung (Minuten)</span>
                     <input
-                        class="input"
+                        class="et-field"
                         type="number"
                         min="0"
                         max="240"
@@ -564,25 +561,25 @@
                         bind:value={profile.break_interval_minutes}
                         placeholder="90"
                     />
-                    <span class="text-[11px] text-muted">0 = deaktiviert</span>
+                    <span class="text-[12px] text-[var(--et-text-3)]">0 = deaktiviert</span>
                 {#if numberErrors.break_interval_minutes}
-                        <span class="text-[11px] text-red-500">{numberErrors.break_interval_minutes}</span>
+                        <span class="text-[12px] text-[var(--et-danger)]">{numberErrors.break_interval_minutes}</span>
                     {/if}
                 </label>
             </div>
             <div class="flex items-center gap-3">
                 <button
-                    class="primary-button"
+                    class="et-btn et-btn-primary"
                     disabled={saving}
                     on:click={saveProfile}
                 >
                     {saving ? "Speichern…" : "Speichern"}
                 </button>
                 {#if saved}
-                    <span class="text-xs text-green-500">Gespeichert ✓</span>
+                    <span class="text-[13px] text-[var(--et-success-text)]">Gespeichert</span>
                 {/if}
                 {#if errorMsg}
-                    <span class="text-xs text-red-500">{errorMsg}</span>
+                    <span class="text-[13px] text-[var(--et-danger)]">{errorMsg}</span>
                 {/if}
             </div>
         </section>
@@ -593,124 +590,25 @@
         <SettingsDatenSection />
     {/if}
 
-    {#if activeSection === "arbeitsbereich"}
+    {#if activeSection === "arbeitsbereiche"}
         <SettingsArbeitsbereichSection />
     {/if}
+        </div>
+    </div>
+  </div>
 </div>
 
 <style>
-    .section-tabs {
-        display: inline-flex;
-        gap: 6px;
-        padding: 4px;
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.66);
-        border: 1px solid var(--color-border);
-        width: fit-content;
-        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.75) inset;
+    .settings-nav {
+        color: var(--et-text-2);
+        transition: background-color 120ms;
     }
-    .section-tab {
-        padding: 8px 12px;
-        border-radius: 12px;
-        color: var(--color-text-secondary);
-        font-size: 13px;
-        font-weight: 600;
-        transition:
-            background 0.15s,
-            color 0.15s,
-            box-shadow 0.15s;
+    .settings-nav:hover {
+        background: var(--et-surface-sunken);
     }
-    .section-tab:hover {
-        color: var(--color-text-primary);
-        background: rgba(255, 255, 255, 0.7);
-    }
-    .section-tab-active {
-        color: var(--color-text-primary);
-        background: white;
-        box-shadow:
-            0 1px 0 rgba(255, 255, 255, 0.8) inset,
-            0 8px 18px rgba(15, 23, 42, 0.06);
-    }
-    .input {
-        width: 100%;
-        padding: 8px 11px;
-        background: rgba(255, 255, 255, 0.72);
-        border: 1px solid var(--color-border);
-        border-radius: 12px;
-        color: var(--color-text-primary);
-        font-size: 13px;
-        outline: none;
-        transition:
-            border-color 0.15s,
-            background 0.15s,
-            box-shadow 0.15s;
-    }
-    .input:focus {
-        border-color: var(--color-accent);
-        background: rgba(255, 255, 255, 0.92);
-        box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.12);
-    }
-    .panel-section {
-        padding: 20px;
-        border: 1px solid color-mix(in srgb, var(--color-border) 78%, white);
-        border-radius: 20px;
-        background: linear-gradient(
-            180deg,
-            rgba(255, 255, 255, 0.88),
-            rgba(255, 255, 255, 0.68)
-        );
-        box-shadow:
-            0 1px 0 rgba(255, 255, 255, 0.7) inset,
-            0 14px 28px rgba(15, 23, 42, 0.05);
-        backdrop-filter: blur(14px);
-    }
-    .pill {
-        padding: 5px 10px;
-        border-radius: 999px;
-        background: rgba(10, 132, 255, 0.1);
-        color: var(--color-accent);
-        font-size: 12px;
-        font-weight: 600;
-    }
-    .primary-button {
-        padding: 10px 16px;
-        border-radius: 14px;
-        background: linear-gradient(180deg, #0a84ff, #0066d6);
-        color: white;
-        font-size: 13px;
-        font-weight: 600;
-        transition:
-            opacity 0.15s,
-            transform 0.15s,
-            box-shadow 0.15s;
-        box-shadow:
-            0 1px 0 rgba(255, 255, 255, 0.25) inset,
-            0 8px 18px rgba(0, 102, 214, 0.24);
-    }
-    .primary-button:hover:not(:disabled) {
-        transform: translateY(-1px);
-    }
-    .primary-button:disabled {
-        opacity: 0.4;
-    }
-    .secondary-button {
-        padding: 8px 12px;
-        border-radius: 12px;
-        border: 1px solid var(--color-border);
-        background: rgba(255, 255, 255, 0.66);
-        color: var(--color-text-secondary);
-        font-size: 13px;
-        transition:
-            background 0.15s,
-            color 0.15s,
-            border-color 0.15s;
-    }
-    .secondary-button:hover:not(:disabled) {
-        background: rgba(255, 255, 255, 0.92);
-        color: var(--color-text-primary);
-        border-color: color-mix(in srgb, var(--color-accent) 55%, white);
-    }
-    .secondary-button:disabled {
-        opacity: 0.45;
+    .settings-nav-active,
+    .settings-nav-active:hover {
+        background: var(--et-accent-soft);
+        color: var(--et-accent-strong);
     }
 </style>

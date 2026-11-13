@@ -283,87 +283,87 @@
     }
 </script>
 
-<section class="panel-section flex flex-col gap-4">
+<section class="et-card p-5 flex flex-col gap-4">
     <div
-        class="flex items-start justify-between gap-4 border-b border-border pb-2"
+        class="flex items-start justify-between gap-4 "
     >
         <div>
-            <h2 class="text-base font-semibold text-primary">
+            <h2 class="et-h2">
                 Aktiver Arbeitsbereich
             </h2>
-            <p class="mt-1 text-sm text-secondary">
+            <p class="mt-1 text-sm text-[var(--et-text-3)]">
                 Standardwerte und Metadaten für Rechnungen und
                 Restore-Ziele.
             </p>
         </div>
         {#if activeTenant}
-            <span class="pill">Aktiv</span>
+            <span class="et-badge et-badge-blue">Aktiv</span>
         {/if}
     </div>
 
     <div class="grid grid-cols-2 gap-3">
         <label class="flex flex-col gap-1 col-span-2">
-            <span class="text-xs text-muted font-medium"
+            <span class="et-label"
                 >Anzeigename</span
             >
             <input
-                class="input"
+                class="et-field"
                 bind:value={workspaceName}
                 placeholder="z. B. Freelance 2026"
             />
         </label>
         <label class="flex flex-col gap-1">
-            <span class="text-xs text-muted font-medium">
+            <span class="et-label">
                 Standard-Zahlungsziel
             </span>
             <input
-                class="input"
+                class="et-field"
                 type="number"
                 bind:value={workspacePaymentDays}
                 placeholder="14"
             />
         </label>
         <label class="flex flex-col gap-1">
-            <span class="text-xs text-muted font-medium">
+            <span class="et-label">
                 Standard-Rechnungspräfix
             </span>
             <input
-                class="input font-mono"
+                class="et-field font-mono"
                 bind:value={workspaceInvoicePrefix}
                 placeholder="RE"
             />
         </label>
     </div>
 
-    <div class="rounded-2xl border border-border bg-white/55 px-4 py-3">
+    <div class="rounded-[12px] border border-[var(--et-border)] bg-[var(--et-surface-sunken)] px-4 py-3">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
             <div class="flex flex-col gap-1">
                 <span
-                    class="text-xs uppercase tracking-[0.08em] text-muted"
+                    class="text-xs uppercase tracking-[0.08em] text-[var(--et-text-3)]"
                 >
                     Arbeitsbereich
                 </span>
-                <span class="text-primary break-all">
+                <span class="text-[var(--et-text)] break-all">
                     {workspaceFs?.workspaceDir ?? activeTenant?.path ?? "Browser-Modus"}
                 </span>
             </div>
             <div class="flex flex-col gap-1">
                 <span
-                    class="text-xs uppercase tracking-[0.08em] text-muted"
+                    class="text-xs uppercase tracking-[0.08em] text-[var(--et-text-3)]"
                 >
                     Datenbank
                 </span>
-                <span class="text-primary break-all">
+                <span class="text-[var(--et-text)] break-all">
                     {workspaceFs?.databasePath ?? activeTenant?.path ?? "Nicht verfügbar"}
                 </span>
             </div>
             <div class="flex flex-col gap-1">
                 <span
-                    class="text-xs uppercase tracking-[0.08em] text-muted"
+                    class="text-xs uppercase tracking-[0.08em] text-[var(--et-text-3)]"
                 >
                     Angelegt
                 </span>
-                <span class="text-primary">
+                <span class="text-[var(--et-text)]">
                     {workspaceCreatedAt
                         ? new Date(workspaceCreatedAt).toLocaleString(
                               "de-DE",
@@ -373,11 +373,11 @@
             </div>
             <div class="flex flex-col gap-1">
                 <span
-                    class="text-xs uppercase tracking-[0.08em] text-muted"
+                    class="text-xs uppercase tracking-[0.08em] text-[var(--et-text-3)]"
                 >
                     Assets
                 </span>
-                <span class="text-primary break-all">
+                <span class="text-[var(--et-text)] break-all">
                     {workspaceFs?.assetsDir ?? "Nicht verfügbar"}
                 </span>
             </div>
@@ -386,23 +386,23 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <label class="flex flex-col gap-1">
-            <span class="text-xs text-muted font-medium">
+            <span class="et-label">
                 Standardordner neue Arbeitsbereiche
             </span>
             <div class="flex items-center gap-2">
-                <input class="input" bind:value={defaultWorkspaceDir} placeholder={appPaths.documentsDir ?? "Ordner"} />
-                <button class="secondary-button whitespace-nowrap" on:click={pickDefaultWorkspaceDirectory} disabled={!isTauriAvailable()}>
+                <input class="et-field" bind:value={defaultWorkspaceDir} placeholder={appPaths.documentsDir ?? "Ordner"} />
+                <button class="et-btn" on:click={pickDefaultWorkspaceDirectory} disabled={!isTauriAvailable()}>
                     Ordner wählen
                 </button>
             </div>
         </label>
         <label class="flex flex-col gap-1">
-            <span class="text-xs text-muted font-medium">
+            <span class="et-label">
                 Standardordner Exporte & PDFs
             </span>
             <div class="flex items-center gap-2">
-                <input class="input" bind:value={defaultExportDir} placeholder={appPaths.downloadsDir ?? "Ordner"} />
-                <button class="secondary-button whitespace-nowrap" on:click={pickDefaultExportDirectory} disabled={!isTauriAvailable()}>
+                <input class="et-field" bind:value={defaultExportDir} placeholder={appPaths.downloadsDir ?? "Ordner"} />
+                <button class="et-btn" on:click={pickDefaultExportDirectory} disabled={!isTauriAvailable()}>
                     Ordner wählen
                 </button>
             </div>
@@ -410,26 +410,26 @@
     </div>
 
     <label class="flex flex-col gap-1 max-w-xs">
-        <span class="text-xs text-muted font-medium">Nächste Rechnungsnummer</span>
+        <span class="et-label">Nächste Rechnungsnummer</span>
         <input
-            class="input font-mono"
+            class="et-field font-mono"
             type="number"
             min="1"
             step="1"
             bind:value={nextInvoiceCounter}
             disabled={invoiceCounterReset}
         />
-        <span class="text-[11px] text-muted">
+        <span class="text-[12px] text-[var(--et-text-3)]">
             Nächste Nummer: {formatInvoiceNumber(invoicePrefix, Number(nextInvoiceCounter) || 1)}
             · gilt nur für diesen Arbeitsbereich, nie unter bereits vergebenen Nummern
         </span>
         {#if invoiceCounterError}
-            <span class="text-[11px] text-red-500">{invoiceCounterError}</span>
+            <span class="text-[12px] text-[var(--et-danger)]">{invoiceCounterError}</span>
         {/if}
     </label>
 
     <label
-        class="inline-flex items-center gap-2 text-sm text-secondary"
+        class="inline-flex items-center gap-2 min-h-[44px] text-sm text-[var(--et-text-3)]"
     >
         <input type="checkbox" bind:checked={invoiceCounterReset} />
         <span
@@ -441,7 +441,7 @@
 
     <div class="flex items-center gap-3">
         <button
-            class="primary-button"
+            class="et-btn et-btn-primary"
             on:click={saveWorkspaceSettings}
             disabled={workspaceSaving}
         >
@@ -450,18 +450,18 @@
                 : "Arbeitsbereich speichern"}
         </button>
         {#if workspaceSaved}
-            <span class="text-xs text-green-500">Gespeichert ✓</span>
+            <span class="text-[13px] text-[var(--et-success-text)]">Gespeichert</span>
         {/if}
     </div>
 
     {#if workspaceError}
-        <p class="text-xs text-red-500">{workspaceError}</p>
+        <p class="text-[13px] text-[var(--et-danger)]">{workspaceError}</p>
     {/if}
 </section>
 
-<section class="panel-section flex flex-col gap-4">
+<section class="et-card p-5 flex flex-col gap-4">
     <h2
-        class="text-base font-semibold text-primary border-b border-border pb-2"
+        class="et-h2"
     >
         App-Hinweise
     </h2>
@@ -498,9 +498,9 @@
     </div>
 </section>
 
-<section class="panel-section flex flex-col gap-4">
+<section class="et-card p-5 flex flex-col gap-4">
     <h2
-        class="text-base font-semibold text-primary border-b border-border pb-2"
+        class="et-h2"
     >
         Arbeitsbereiche
     </h2>
@@ -510,36 +510,38 @@
             <li
                 class="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border {tenant.path ===
                 config.active_tenant
-                    ? 'border-accent bg-accent/5'
-                    : 'border-border bg-bg'}"
+                    ? 'border-[var(--et-accent)] bg-[var(--et-accent-soft)]'
+                    : 'border-[var(--et-border)] bg-[var(--et-surface-sunken)]'}"
             >
                 <div class="flex flex-col gap-0.5 min-w-0">
-                    <span class="text-sm font-medium text-primary"
+                    <span class="text-sm font-medium text-[var(--et-text)]"
                         >{tenant.name}</span
                     >
-                    <span class="text-xs text-muted truncate"
+                    <span class="text-xs text-[var(--et-text-3)] truncate"
                         >{tenant.path}</span
                     >
                 </div>
                 {#if tenant.path === config.active_tenant}
                     <span
-                        class="text-xs text-accent font-medium flex-shrink-0"
+                        class="text-[13px] font-semibold text-[var(--et-accent-strong)] flex-shrink-0"
                         >Aktiv</span
                     >
                 {:else}
                     <div class="flex items-center gap-1 flex-shrink-0">
                         <button
-                            class="secondary-button text-xs"
+                            class="et-btn et-btn-sm"
                             on:click={() => switchTenant(tenant.path)}
                         >
                             Wechseln
                         </button>
                         <button
-                            class="text-xs text-muted hover:text-red-500 px-2 py-1 transition-colors"
+                            class="et-btn et-btn-sm et-btn-icon et-btn-ghost"
+                            aria-label="{tenant.name} aus der Liste entfernen"
                             title="Aus Liste entfernen"
                             on:click={() => removeTenant(tenant.path)}
-                            >×</button
                         >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+                        </button>
                     </div>
                 {/if}
             </li>
@@ -548,30 +550,30 @@
 
     {#if addingTenant}
         <div
-            class="rounded-2xl border border-border bg-white/60 p-4 flex flex-col gap-3 shadow-[0_1px_0_rgba(255,255,255,0.75)_inset]"
+            class="rounded-[12px] border border-[var(--et-border)] bg-[var(--et-surface-sunken)] p-4 flex flex-col gap-3"
         >
             <label class="flex flex-col gap-1">
-                <span class="text-xs text-muted font-medium">Name</span>
+                <span class="et-label">Name</span>
                 <input
-                    class="input"
+                    class="et-field"
                     bind:value={tenantName}
                     placeholder="z. B. Freelance 2026"
                 />
             </label>
 
             <div class="flex flex-col gap-1">
-                <span class="text-xs text-muted font-medium"
+                <span class="et-label"
                     >Übergeordneter Ordner (darin entsteht ein eigener Unterordner)</span
                 >
                 <div class="flex items-center gap-2">
                     <button
-                        class="secondary-button"
+                        class="et-btn"
                         on:click={pickTenantDirectory}
                         disabled={!isTauriAvailable()}
                     >
                         Ordner wählen
                     </button>
-                    <span class="text-xs text-muted truncate"
+                    <span class="text-xs text-[var(--et-text-3)] truncate"
                         >{tenantDir || "Noch kein Ordner gewählt"}</span
                     >
                 </div>
@@ -579,14 +581,14 @@
 
             <div class="flex items-center gap-2">
                 <button
-                    class="primary-button"
+                    class="et-btn et-btn-primary"
                     on:click={addTenant}
                     disabled={!isTauriAvailable()}
                 >
                     Arbeitsbereich anlegen
                 </button>
                 <button
-                    class="secondary-button"
+                    class="et-btn"
                     on:click={() => {
                         addingTenant = false;
                         tenantName = "";
@@ -600,127 +602,46 @@
         </div>
     {:else}
         <button
-            class="self-start flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-white/60 text-secondary text-sm hover:bg-white hover:text-primary transition-colors shadow-[0_1px_0_rgba(255,255,255,0.75)_inset]"
+            class="et-btn self-start"
             on:click={() => {
                 addingTenant = true;
                 errorMsg = "";
             }}
         >
-            <span>+</span>
+            <span aria-hidden="true">+</span>
             <span>Neuen Arbeitsbereich hinzufügen</span>
         </button>
     {/if}
 
     {#if errorMsg}
-        <p class="text-xs text-red-500">{errorMsg}</p>
+        <p class="text-[13px] text-[var(--et-danger)]">{errorMsg}</p>
     {/if}
 </section>
 
 <style>
-    .panel-section {
-        padding: 20px;
-        border: 1px solid color-mix(in srgb, var(--color-border) 78%, white);
-        border-radius: 20px;
-        background: linear-gradient(
-            180deg,
-            rgba(255, 255, 255, 0.88),
-            rgba(255, 255, 255, 0.68)
-        );
-        box-shadow:
-            0 1px 0 rgba(255, 255, 255, 0.7) inset,
-            0 14px 28px rgba(15, 23, 42, 0.05);
-        backdrop-filter: blur(14px);
-    }
-    .pill {
-        padding: 5px 10px;
-        border-radius: 999px;
-        background: rgba(10, 132, 255, 0.1);
-        color: var(--color-accent);
-        font-size: 12px;
-        font-weight: 600;
-    }
-    .input {
-        width: 100%;
-        padding: 8px 11px;
-        background: rgba(255, 255, 255, 0.72);
-        border: 1px solid var(--color-border);
-        border-radius: 12px;
-        color: var(--color-text-primary);
-        font-size: 13px;
-        outline: none;
-        transition:
-            border-color 0.15s,
-            background 0.15s,
-            box-shadow 0.15s;
-    }
-    .input:focus {
-        border-color: var(--color-accent);
-        background: rgba(255, 255, 255, 0.92);
-        box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.12);
-    }
-    .primary-button {
-        padding: 10px 16px;
-        border-radius: 14px;
-        background: linear-gradient(180deg, #0a84ff, #0066d6);
-        color: white;
-        font-size: 13px;
-        font-weight: 600;
-        transition:
-            opacity 0.15s,
-            transform 0.15s,
-            box-shadow 0.15s;
-        box-shadow:
-            0 1px 0 rgba(255, 255, 255, 0.25) inset,
-            0 8px 18px rgba(0, 102, 214, 0.24);
-    }
-    .primary-button:hover:not(:disabled) {
-        transform: translateY(-1px);
-    }
-    .primary-button:disabled {
-        opacity: 0.4;
-    }
-    .secondary-button {
-        padding: 8px 12px;
-        border-radius: 12px;
-        border: 1px solid var(--color-border);
-        background: rgba(255, 255, 255, 0.66);
-        color: var(--color-text-secondary);
-        font-size: 13px;
-        transition:
-            background 0.15s,
-            color 0.15s,
-            border-color 0.15s;
-    }
-    .secondary-button:hover:not(:disabled) {
-        background: rgba(255, 255, 255, 0.92);
-        color: var(--color-text-primary);
-        border-color: color-mix(in srgb, var(--color-accent) 55%, white);
-    }
-    .secondary-button:disabled {
-        opacity: 0.45;
-    }
     .info-card {
         display: flex;
         flex-direction: column;
         gap: 6px;
         padding: 14px;
-        border: 1px solid var(--color-border);
-        border-radius: 18px;
-        background: rgba(255, 255, 255, 0.62);
+        border: 1px solid var(--et-border);
+        border-radius: var(--et-radius-xl);
+        background: var(--et-surface-sunken);
     }
     .info-card__label {
-        font-size: 11px;
+        font-size: 12px;
+        font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--color-text-muted);
+        letter-spacing: 0.05em;
+        color: var(--et-text-3);
     }
     .info-card__value {
         font-size: 14px;
-        color: var(--color-text-primary);
+        color: var(--et-text);
     }
     .info-card__text {
         font-size: 12px;
         line-height: 1.45;
-        color: var(--color-text-secondary);
+        color: var(--et-text-3);
     }
 </style>
