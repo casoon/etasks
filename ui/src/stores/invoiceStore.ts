@@ -11,6 +11,12 @@ import { $bridgeInvoices } from "./coreBridge";
 export const $invoices = atom<Invoice[]>(loadInvoices());
 $invoices.subscribe(val => $bridgeInvoices.set(val as Invoice[]));
 
+/** Invoice open in the editor; null shows the list. */
+export const $selectedInvoiceId = atom<string | null>(null);
+
+/** Period handed over by „Rechnung aus diesem Zeitraum erstellen“; the editor opens the time import for it once. */
+export const $pendingImportRange = atom<{ from: string; to: string } | null>(null);
+
 export function initInvoices(): void {
   $invoices.set(loadInvoices());
 }
@@ -36,4 +42,5 @@ export function updateInvoice(
 
 export function removeInvoice(id: string): void {
   $invoices.set(dbDeleteInvoice(id));
+  if ($selectedInvoiceId.get() === id) $selectedInvoiceId.set(null);
 }

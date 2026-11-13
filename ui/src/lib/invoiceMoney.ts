@@ -62,3 +62,8 @@ export function isValidVatRate(value: number): boolean {
 export function isValidQuantity(value: number): boolean {
   return Number.isFinite(value) && value > 0;
 }
+
+/** „1.951,60 €“ */
+export function formatEuro(cents: number): string {
+  return `${fromCents(cents).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+}

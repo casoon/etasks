@@ -12,6 +12,8 @@ import {
 export const $clients = atom<Client[]>([]);
 export const $projects = atom<Project[]>([]);
 export const $selectedProjectId = atom<string | null>(null);
+/** Client shown in Kunden; set by links from other areas. */
+export const $selectedClientId = atom<string | null>(null);
 
 // ── Derived ──────────────────────────────────────────────────────────────────
 

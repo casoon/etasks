@@ -6,6 +6,8 @@
         $quickAddOpen as quickAddOpenStore,
     } from "../../stores/uiStore";
     import { $selectedProjectId as selectedProjectIdStore } from "../../stores/projectStore";
+    import { $selectedInvoiceId as selectedInvoiceIdStore } from "../../stores/invoiceStore";
+    import { createInvoiceDraft } from "../../lib/invoiceCreate";
     import { reinitStores } from "../../lib/storeInit";
     import { scheduleDailySnapshot } from "../../lib/exportService";
     import {
@@ -29,7 +31,7 @@
     import StaleTimerDialog from "../modals/StaleTimerDialog.svelte";
     import ProjectsView from "../views/ProjectsView.svelte";
     import TimeTrackingView from "../views/TimeTrackingView.svelte";
-    import ClientsView from "../views/ClientsView.svelte";
+    import InvoicesView from "../views/InvoicesView.svelte";
     import QuickAddModal from "../modals/QuickAddModal.svelte";
     import SetupWizard from "./SetupWizard.svelte";
     import StartupProblem from "./StartupProblem.svelte";
@@ -197,17 +199,21 @@
                     selectedProjectIdStore.set(projectId);
                     navItemStore.set("projects");
                 }}
-                emptyProjectsMessage="Noch keine Projekte für diesen Kunden."
+                onInvoiceOpen={(invoiceId) => {
+                    selectedInvoiceIdStore.set(invoiceId);
+                    navItemStore.set("invoices");
+                }}
+                onNewInvoice={(clientId) => createInvoiceDraft(clientId)}
             />
         </div>{/if}
-    {#if nav === "invoices"}<div class="flex-1 overflow-hidden animate-fade-in" use:pageReveal>
-            <ClientsView />
+    {#if nav === "invoices"}<div class="flex-1 overflow-hidden flex flex-col animate-fade-in" use:pageReveal>
+            <InvoicesView />
         </div>{/if}
     {#if nav === "services"}<div class="flex-1 overflow-hidden flex flex-col animate-fade-in" use:pageReveal>
             <ServiceCatalog />
         </div>{/if}
-    {#if nav === "reports"}<div class="flex-1 overflow-hidden animate-fade-in" use:pageReveal>
-            <ReportView />
+    {#if nav === "reports"}<div class="flex-1 overflow-hidden flex flex-col animate-fade-in" use:pageReveal>
+            <ReportView onCreateInvoice={(clientId, period) => createInvoiceDraft(clientId, period)} />
         </div>{/if}
     {#if nav === "settings"}<div class="flex-1 overflow-hidden flex flex-col animate-fade-in" use:pageReveal>
             <SettingsView />

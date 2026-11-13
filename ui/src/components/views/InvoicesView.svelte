@@ -14,7 +14,7 @@
     import { $services as servicesStore } from "../../stores/serviceStore";
     import {
         $invoices as invoicesStore,
-        addInvoice,
+        $selectedInvoiceId as selectedInvoiceIdStore,
         updateInvoice,
         removeInvoice,
     } from "../../stores/invoiceStore";
@@ -24,20 +24,16 @@
         missingProfileMessage,
     } from "../../stores/configStore";
     import { toast } from "../../stores/toastStore";
-    import { today, toDateKey } from "../../domain/dateUtils";
-    import { isTauriAvailable } from "../../lib/platform";
+        import { isTauriAvailable } from "../../lib/platform";
     import { generateInvoice, type InvoiceData } from "../../lib/invoiceService";
-    import {
-        allocateInvoiceNumber,
-        isInvoiceNumberTaken,
-    } from "../../lib/invoiceNumber";
+    import { isInvoiceNumberTaken } from "../../lib/invoiceNumber";
+    import { createInvoiceDraft } from "../../lib/invoiceCreate";
     import {
         needsRevertConfirmation,
         statusBlockedReason,
     } from "../../lib/invoiceStatus";
     import { calcInvoiceTotals, fromCents, lineTotalCents } from "../../lib/invoiceMoney";
     import type { Invoice } from "../../domain/types";
-    import { $navItem as navItemStore } from "../../stores/uiStore";
     import InvoiceList from "../modals/InvoiceList.svelte";
     import InvoiceEditor from "../modals/InvoiceEditor.svelte";
 
@@ -47,10 +43,11 @@
     $: services = [...$servicesStore];
     $: invoices = [...$invoicesStore];
     $: appConfig = $appConfigStore;
+    $: missingProfileFields = appConfig ? missingPdfProfileFields(appConfig.profile) : [];
 
     let generatingPdf = false;
 
-    let selectedInvoiceId: string | null = null;
+    $: selectedInvoiceId = $selectedInvoiceIdStore;
     $: selectedInvoice = selectedInvoiceId
         ? (invoices.find((i) => i.id === selectedInvoiceId) ?? null)
         : null;
@@ -66,43 +63,9 @@
     let creatingInvoice = false;
 
     async function createNewInvoice() {
-        if (creatingInvoice) return;
         creatingInvoice = true;
-        try {
-            const config = appConfig;
-            const prefix = config?.profile.invoice_number_prefix ?? "RE-";
-            const dueDate = new Date();
-            dueDate.setDate(
-                dueDate.getDate() + (config?.profile.payment_days ?? 14),
-            );
-
-            const invoiceNumber = await allocateInvoiceNumber(
-                prefix,
-                config?.profile.invoice_number_counter,
-                () => invoicesStore.get().map((i) => i.invoiceNumber),
-            );
-            const inv = addInvoice({
-                clientId: "",
-                invoiceNumber,
-                customerNumber: "",
-                date: today(),
-                dueDate: toDateKey(dueDate),
-                performancePeriod: "",
-                projectReference: "",
-                status: "draft",
-                lineItems: [],
-            });
-
-            selectedInvoiceId = inv.id;
-        } catch (error) {
-            toast(
-                `Rechnungsnummer konnte nicht vergeben werden: ${String(error)}`,
-                "error",
-                5000,
-            );
-        } finally {
-            creatingInvoice = false;
-        }
+        await createInvoiceDraft();
+        creatingInvoice = false;
     }
 
     function updateSelectedInvoice(
@@ -120,7 +83,6 @@
             )
         ) {
             removeInvoice(selectedInvoice.id);
-            selectedInvoiceId = null;
         }
     }
 
@@ -327,59 +289,17 @@
     $: invoiceTotals = calculateInvoiceTotals(selectedInvoice);
 </script>
 
-<div
-    class="flex-1 grid overflow-hidden"
-    style="grid-template-columns: 260px 1fr"
->
-    <InvoiceList
-        {invoices}
-        {clients}
-        {selectedInvoiceId}
-        onCreate={createNewInvoice}
-        onSelect={(invoiceId) => {
-            selectedInvoiceId = invoiceId;
-        }}
-    />
-
-    <div class="flex flex-col overflow-hidden">
-        {#if !selectedInvoice}
-            <div
-                class="flex-1 flex flex-col items-center justify-center gap-5 text-center px-8"
-            >
-                {#if invoices.length === 0}
-                    <div class="flex flex-col gap-2 max-w-xs">
-                        <p class="text-[14px] font-semibold text-primary">Noch keine Rechnungen.</p>
-                        <p class="text-[13px] text-muted leading-relaxed">Erstelle Rechnungen aus Kunden, Leistungen und erfasster Zeit.</p>
-                    </div>
-                    <div class="flex flex-col gap-2 w-full max-w-[200px]">
-                        <button
-                            class="px-4 py-2 rounded-lg bg-accent text-white text-[13px] font-medium hover:opacity-90 transition-opacity"
-                            on:click={createNewInvoice}
-                        >+ Erste Rechnung erstellen</button>
-                        {#if clients.length === 0}
-                            <button
-                                class="px-4 py-1.5 rounded-lg border border-border text-[12px] text-secondary hover:bg-bg transition-colors"
-                                on:click={() => navItemStore.set("clients")}
-                            >Kunden anlegen</button>
-                        {/if}
-                        {#if services.length === 0}
-                            <button
-                                class="px-4 py-1.5 rounded-lg border border-border text-[12px] text-secondary hover:bg-bg transition-colors"
-                                on:click={() => navItemStore.set("services")}
-                            >Leistungen anlegen</button>
-                        {/if}
-                    </div>
-                {:else}
-                    <p class="text-muted text-[13px]">
-                        Wähle eine Rechnung oder erstelle eine neue.
-                    </p>
-                    <button
-                        class="px-4 py-2 rounded-lg bg-accent text-white text-[13px] font-medium hover:opacity-90 transition-opacity"
-                        on:click={createNewInvoice}
-                    >+ Neue Rechnung erstellen</button>
-                {/if}
-            </div>
-        {:else}
+<div class="flex-1 flex flex-col overflow-hidden">
+    {#if !selectedInvoice}
+        <InvoiceList
+            {invoices}
+            {clients}
+            creating={creatingInvoice}
+            onCreate={createNewInvoice}
+            onSelect={(invoiceId) => selectedInvoiceIdStore.set(invoiceId)}
+        />
+    {:else}
+        {#key selectedInvoice.id}
             <InvoiceEditor
                 invoice={selectedInvoice}
                 {clients}
@@ -387,6 +307,7 @@
                 {tasks}
                 {projects}
                 {appConfig}
+                {missingProfileFields}
                 billingItems={$billingItemsStore}
                 unlockedBillingItemIds={$unlockedBillingItemIdsStore}
                 timeEntries={$timeEntriesStore}
@@ -395,11 +316,12 @@
                 {otherInvoiceNumbers}
                 pdfBusy={generatingPdf}
                 pdfAvailable={isTauriAvailable()}
+                onBack={() => selectedInvoiceIdStore.set(null)}
                 onUpdate={updateSelectedInvoice}
                 onDelete={deleteSelectedInvoice}
                 onGeneratePdf={generateSelectedInvoicePdf}
                 onSetStatus={setSelectedInvoiceStatus}
             />
-        {/if}
-    </div>
+        {/key}
+    {/if}
 </div>
