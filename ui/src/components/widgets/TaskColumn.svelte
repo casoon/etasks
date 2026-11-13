@@ -32,7 +32,7 @@
   $: activeProjects = projects.filter(p => p.status === 'active');
 </script>
 
-<div class="flex flex-col border-r border-border overflow-hidden min-w-0 glass-card" use:pageReveal={{ delay: 0.08 }}>
+<div class="flex flex-col border-r border-border overflow-hidden min-w-0" use:pageReveal={{ delay: 0.08 }}>
   <div class="flex items-center gap-2 px-4 pt-4 pb-3 flex-shrink-0">
     <h2 class="text-[11px] font-bold uppercase tracking-[0.07em] text-muted whitespace-nowrap overflow-hidden text-ellipsis">Aufgaben</h2>
     <span class="text-[11px] text-muted bg-bg px-[7px] py-[1px] rounded-[10px] flex-shrink-0">{tasks.length}</span>

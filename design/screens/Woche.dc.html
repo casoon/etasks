@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>eTasks – Woche</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0}
+button{font:inherit;cursor:pointer}
+a{color:#2456D6}a:hover{color:#1A3FA3}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh; background: #F6F5F2; color: #1C1B19; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 1.45">
+  <dc-import name="Sidebar" active="woche" hint-size="232px,900px"></dc-import>
+
+  <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px; padding: 20px 32px 28px; box-sizing: border-box">
+
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+      <div style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 2px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em">Woche</h1>
+        <span style="font-size: 13px; color: #5C5A55">KW 46 · 9. bis 15. November</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 4px">
+        <button aria-label="Vorherige Woche" style="width: 44px; height: 44px; border: 1px solid #E4E2DC; border-radius: 10px; background: #FFFFFF; color: #1C1B19; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+        <button style="height: 44px; padding: 0 14px; border: 1px solid #E4E2DC; border-radius: 10px; background: #FFFFFF; color: #1C1B19; font-weight: 600">Diese Woche</button>
+        <button aria-label="Nächste Woche" style="width: 44px; height: 44px; border: 1px solid #E4E2DC; border-radius: 10px; background: #FFFFFF; color: #1C1B19; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+      </div>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+
+      <div style="flex: 1 1 360px; max-width: 440px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+
+        <section aria-label="Wochenziele" style="display: flex; flex-direction: column; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+          <div style="display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px">
+            <h2 style="margin: 0; flex: 1; font-size: 15px; font-weight: 600">Wochenziele</h2>
+            <span style="font-size: 12px; color: #5C5A55">Tage anklicken, an denen du dran warst</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; border-top: 1px solid #ECEAE4">
+            <div style="display: flex; align-items: baseline; gap: 8px"><span style="flex: 1; font-weight: 600">Startseite Hansen abnahmefertig</span><span style="font-size: 12px; color: #5C5A55">4 / 7 · 4 Tage in Folge</span></div>
+            <div style="display: flex; gap: 6px">
+              <sc-for list="{{g1}}" as="d" hint-placeholder-count="7"><button aria-label="{{d.aria}}" aria-pressed="{{d.on}}" style="flex: 1; height: 36px; border: 1px solid {{d.bd}}; border-radius: 8px; background: {{d.bg}}; color: {{d.fg}}; font-size: 12px; font-weight: 600">{{d.label}}</button></sc-for>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; border-top: 1px solid #ECEAE4">
+            <div style="display: flex; align-items: baseline; gap: 8px"><span style="flex: 1; font-weight: 600">Terminbuchung: Buchungsstrecke läuft</span><span style="font-size: 12px; color: #5C5A55">2 / 7</span></div>
+            <div style="display: flex; gap: 6px">
+              <sc-for list="{{g2}}" as="d" hint-placeholder-count="7"><button aria-label="{{d.aria}}" aria-pressed="{{d.on}}" style="flex: 1; height: 36px; border: 1px solid {{d.bd}}; border-radius: 8px; background: {{d.bg}}; color: {{d.fg}}; font-size: 12px; font-weight: 600">{{d.label}}</button></sc-for>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; border-top: 1px solid #ECEAE4">
+            <div style="display: flex; align-items: baseline; gap: 8px"><span style="flex: 1; font-weight: 600">Offene Rechnungen rausschicken</span><span style="font-size: 12px; color: #5C5A55">0 / 7</span></div>
+            <div style="display: flex; gap: 6px">
+              <sc-for list="{{g3}}" as="d" hint-placeholder-count="7"><button aria-label="{{d.aria}}" aria-pressed="{{d.on}}" style="flex: 1; height: 36px; border: 1px solid {{d.bd}}; border-radius: 8px; background: {{d.bg}}; color: {{d.fg}}; font-size: 12px; font-weight: 600">{{d.label}}</button></sc-for>
+            </div>
+          </div>
+          <div style="padding: 10px 16px 14px; border-top: 1px solid #ECEAE4">
+            <button style="height: 44px; width: 100%; border: 1px dashed #8A877F; border-radius: 10px; background: transparent; color: #3A3935; font-weight: 500">+ Ziel für diese Woche</button>
+          </div>
+        </section>
+
+        <section aria-label="Fokus-Projekte" style="display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 16px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+          <h2 style="margin: 0; font-size: 15px; font-weight: 600">Fokus-Projekte</h2>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px">
+            <button aria-pressed="true" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1.5px solid #2456D6; border-radius: 20px; background: #E6ECFB; color: #1A3FA3; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 50%; background: #2456D6"></span>Website-Relaunch</button>
+            <button aria-pressed="true" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1.5px solid #2456D6; border-radius: 20px; background: #E6ECFB; color: #1A3FA3; font-weight: 600"><span style="width: 8px; height: 8px; border-radius: 50%; background: #1F7A4D"></span>Online-Terminbuchung</button>
+            <button aria-pressed="false" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1px solid #C9C6BE; border-radius: 20px; background: #FFFFFF; color: #3A3935; font-weight: 500"><span style="width: 8px; height: 8px; border-radius: 50%; background: #A15C07"></span>Wartung Shop</button>
+            <button aria-pressed="false" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1px solid #C9C6BE; border-radius: 20px; background: #FFFFFF; color: #3A3935; font-weight: 500"><span style="width: 8px; height: 8px; border-radius: 50%; background: #8A877F"></span>Buchhaltung und Akquise</button>
+          </div>
+          <span style="font-size: 12px; color: #5C5A55">Der Pool in „Heute · Planen“ zeigt zuerst Aufgaben aus diesen Projekten.</span>
+        </section>
+
+        <section aria-label="Wochenergebnis" style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 16px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+          <label for="ergebnis" style="font-size: 15px; font-weight: 600">Was soll am Freitag stehen?</label>
+          <textarea id="ergebnis" rows="3" style="box-sizing: border-box; width: 100%; padding: 12px; border: 1px solid #C9C6BE; border-radius: 10px; background: #FFFFFF; color: #1C1B19; font: inherit; resize: vertical">Hansen kann die Startseite abnehmen, Lindqvist hat das Angebot und die erste Rechnung.</textarea>
+        </section>
+      </div>
+
+      <div style="flex: 999 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr)); gap: 16px">
+          <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E4E2DC"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5C5A55">Erfasst</span><span style="font-size: 24px; font-weight: 700">18 h 40</span><span style="font-size: 13px; color: #5C5A55">von 26 h geplant</span></div>
+          <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E4E2DC"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5C5A55">Erledigt</span><span style="font-size: 24px; font-weight: 700">17 von 25</span><span style="font-size: 13px; color: #5C5A55">Aufgaben dieser Woche</span></div>
+          <div style="display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E4E2DC"><span style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5C5A55">Für Kunden</span><span style="font-size: 24px; font-weight: 700">15 h 10</span><span style="font-size: 13px; color: #5C5A55">3 h 30 intern</span></div>
+        </div>
+
+        <section aria-label="Geplant und erfasst je Tag" style="display: flex; flex-direction: column; gap: 12px; padding: 16px 20px 18px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px">
+            <h2 style="margin: 0; flex: 1 1 160px; font-size: 15px; font-weight: 600">Geplant und erfasst</h2>
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5C5A55"><span style="width: 12px; height: 12px; border-radius: 3px; background: #C9D3EC"></span>Geplant</span>
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5C5A55"><span style="width: 12px; height: 12px; border-radius: 3px; background: #2456D6"></span>Erfasst</span>
+          </div>
+          <div style="display: flex; align-items: flex-end; gap: 14px; height: 200px; border-bottom: 1px solid #E4E2DC">
+            <sc-for list="{{days}}" as="d" hint-placeholder-count="7">
+              <a href="Main.dc.html" aria-label="{{d.aria}}" style="flex: 1; height: 100%; display: flex; align-items: flex-end; gap: 4px; text-decoration: none">
+                <span style="flex: 1; height: {{d.plan}}%; border-radius: 4px 4px 0 0; background: #C9D3EC"></span>
+                <span style="flex: 1; height: {{d.done}}%; border-radius: 4px 4px 0 0; background: #2456D6"></span>
+              </a>
+            </sc-for>
+          </div>
+          <div style="display: flex; gap: 14px; text-align: center; font-size: 12px; color: #5C5A55">
+            <sc-for list="{{days}}" as="d" hint-placeholder-count="7"><span style="flex: 1; display: flex; flex-direction: column"><span style="font-weight: 600; color: #1C1B19">{{d.label}}</span><span>{{d.sum}}</span></span></sc-for>
+          </div>
+        </section>
+
+        <section aria-label="Zeit nach Projekt" style="display: flex; flex-direction: column; gap: 12px; padding: 16px 20px 18px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+          <div style="display: flex; align-items: center; gap: 12px">
+            <h2 style="margin: 0; flex: 1; font-size: 15px; font-weight: 600">Zeit nach Projekt</h2>
+            <a href="Berichte.dc.html" style="font-size: 13px; font-weight: 600; text-decoration: none">Als Bericht öffnen →</a>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px"><span style="width: 180px; flex-shrink: 0">Website-Relaunch</span><span style="flex: 1; height: 10px; border-radius: 5px; background: #ECEAE4; display: flex"><span style="width: 56%; border-radius: 5px; background: #2456D6"></span></span><span style="width: 64px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums">10 h 25</span></div>
+          <div style="display: flex; align-items: center; gap: 12px"><span style="width: 180px; flex-shrink: 0">Online-Terminbuchung</span><span style="flex: 1; height: 10px; border-radius: 5px; background: #ECEAE4; display: flex"><span style="width: 25%; border-radius: 5px; background: #1F7A4D"></span></span><span style="width: 64px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums">4 h 45</span></div>
+          <div style="display: flex; align-items: center; gap: 12px"><span style="width: 180px; flex-shrink: 0">Buchhaltung und Akquise</span><span style="flex: 1; height: 10px; border-radius: 5px; background: #ECEAE4; display: flex"><span style="width: 19%; border-radius: 5px; background: #8A877F"></span></span><span style="width: 64px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums">3 h 30</span></div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+var names = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+function goal(flags) {
+return names.map(function (n, i) {
+var on = flags[i] === 1;
+return { label: n, on: on, aria: n + (on ? ' erledigt' : ' offen'), bg: on ? '#1F7A4D' : '#FFFFFF', fg: on ? '#FFFFFF' : '#3A3935', bd: on ? '#1F7A4D' : '#C9C6BE' };
+});
+}
+var plan = [75, 80, 70, 66, 40, 0, 0];
+var done = [70, 88, 79, 24, 0, 0, 0];
+var sums = ['5 h 35', '7 h 00', '6 h 20', '1 h 54', '–', '–', '–'];
+var days = names.map(function (n, i) {
+return { label: n, plan: plan[i], done: done[i], sum: sums[i], aria: n + ': ' + sums[i] + ' erfasst' };
+});
+return { g1: goal([1, 1, 1, 1, 0, 0, 0]), g2: goal([0, 1, 1, 0, 0, 0, 0]), g3: goal([0, 0, 0, 0, 0, 0, 0]), days: days };
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>eTasks – Berichte</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0}
+button{font:inherit;cursor:pointer}
+a{color:#2456D6}a:hover{color:#1A3FA3}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh; background: #F6F5F2; color: #1C1B19; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 1.45">
+  <dc-import name="Sidebar" active="berichte" hint-size="232px,900px"></dc-import>
+
+  <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 18px; padding: 20px 32px 28px; box-sizing: border-box">
+
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+      <div style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 2px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em">Berichte</h1>
+        <span style="font-size: 13px; color: #5C5A55">Was wurde wann für wen erledigt</span>
+      </div>
+      <button style="height: 44px; padding: 0 16px; border: 1px solid #C9C6BE; border-radius: 10px; background: #FFFFFF; color: #1C1B19; font-weight: 600">Als Text kopieren</button>
+      <button style="height: 44px; padding: 0 16px; border: none; border-radius: 10px; background: #2456D6; color: #FFFFFF; font-weight: 600">Als PDF speichern</button>
+    </header>
+
+    <section aria-label="Filter" style="display: flex; flex-direction: column; gap: 14px; padding: 16px 20px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px">
+        <div role="group" aria-label="Berichtsart" style="display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: #ECEAE4">
+          <button style="height: 36px; padding: 0 14px; border: none; border-radius: 9px; background: transparent; color: #3A3935; font-weight: 500">Eigene Übersicht</button>
+          <button aria-pressed="true" style="height: 36px; padding: 0 14px; border: none; border-radius: 9px; background: #FFFFFF; color: #1C1B19; font-weight: 600; box-shadow: 0 1px 2px rgba(28, 27, 25, 0.12)">Kundenbericht</button>
+        </div>
+        <div role="group" aria-label="Zeitraum" style="display: flex; flex-wrap: wrap; gap: 6px">
+          <button style="height: 36px; padding: 0 12px; border: 1px solid #C9C6BE; border-radius: 18px; background: #FFFFFF; color: #3A3935; font-size: 13px; font-weight: 500">Diese Woche</button>
+          <button style="height: 36px; padding: 0 12px; border: 1px solid #C9C6BE; border-radius: 18px; background: #FFFFFF; color: #3A3935; font-size: 13px; font-weight: 500">Letzte Woche</button>
+          <button aria-pressed="true" style="height: 36px; padding: 0 12px; border: none; border-radius: 18px; background: #1C1B19; color: #FFFFFF; font-size: 13px; font-weight: 500">Dieser Monat</button>
+          <button style="height: 36px; padding: 0 12px; border: 1px solid #C9C6BE; border-radius: 18px; background: #FFFFFF; color: #3A3935; font-size: 13px; font-weight: 500">Eigener Zeitraum</button>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 14px 16px">
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: #3A3935">Von<input type="text" value="01.11.2026" style="height: 44px; box-sizing: border-box; padding: 0 12px; border: 1px solid #C9C6BE; border-radius: 9px; background: #FFFFFF; color: #1C1B19; font: inherit; font-size: 14px; font-weight: 400"></label>
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: #3A3935">Bis<input type="text" value="12.11.2026" style="height: 44px; box-sizing: border-box; padding: 0 12px; border: 1px solid #C9C6BE; border-radius: 9px; background: #FFFFFF; color: #1C1B19; font: inherit; font-size: 14px; font-weight: 400"></label>
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: #3A3935">Kunde<select style="height: 44px; padding: 0 10px; border: 1px solid #C9C6BE; border-radius: 9px; background: #FFFFFF; color: #1C1B19; font: inherit; font-size: 14px; font-weight: 400"><option>Bäckerei Hansen</option></select></label>
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: #3A3935">Projekt<select style="height: 44px; padding: 0 10px; border: 1px solid #C9C6BE; border-radius: 9px; background: #FFFFFF; color: #1C1B19; font: inherit; font-size: 14px; font-weight: 400"><option>Alle Projekte</option></select></label>
+      </div>
+    </section>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 12px 32px; padding: 0 4px">
+      <span style="display: flex; flex-direction: column"><span style="font-size: 12px; color: #5C5A55">Einträge</span><span style="font-size: 18px; font-weight: 600">6</span></span>
+      <span style="display: flex; flex-direction: column"><span style="font-size: 12px; color: #5C5A55">Erfasst</span><span style="font-size: 18px; font-weight: 600">12 h 30</span></span>
+      <span style="display: flex; flex-direction: column"><span style="font-size: 12px; color: #5C5A55">Geschätzt</span><span style="font-size: 18px; font-weight: 600">11 h 15</span></span>
+      <span style="display: flex; flex-direction: column"><span style="font-size: 12px; color: #5C5A55">Abrechenbare Termine</span><span style="font-size: 18px; font-weight: 600">1 · 0 h 30</span></span>
+    </div>
+
+    <div style="overflow-x: auto; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+      <table style="width: 100%; min-width: 760px; border-collapse: collapse; font-size: 14px">
+        <thead>
+          <tr style="font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: #5C5A55; text-align: left">
+            <th style="padding: 10px 20px; font-weight: 600">Datum</th>
+            <th style="padding: 10px 12px; font-weight: 600">Aufgabe</th>
+            <th style="padding: 10px 12px; font-weight: 600">Projekt</th>
+            <th style="padding: 10px 12px; font-weight: 600; text-align: right">Geschätzt</th>
+            <th style="padding: 10px 20px; font-weight: 600; text-align: right">Erfasst</th>
+          </tr>
+        </thead>
+        <tbody style="font-variant-numeric: tabular-nums">
+          <tr style="border-top: 1px solid #ECEAE4"><td style="padding: 14px 20px">12.11.</td><td style="padding: 14px 12px; font-weight: 500">Startseite: Layout umsetzen <span style="font-size: 12px; font-weight: 600; color: #8A4B06">offen</span></td><td style="padding: 14px 12px; color: #3A3935">Website-Relaunch</td><td style="padding: 14px 12px; text-align: right">2 h 00</td><td style="padding: 14px 20px; text-align: right; font-weight: 600">1 h 57</td></tr>
+          <tr style="border-top: 1px solid #ECEAE4"><td style="padding: 14px 20px">12.11.</td><td style="padding: 14px 12px; font-weight: 500">Briefing-Notizen einarbeiten</td><td style="padding: 14px 12px; color: #3A3935">Website-Relaunch</td><td style="padding: 14px 12px; text-align: right">0 h 30</td><td style="padding: 14px 20px; text-align: right; font-weight: 600">0 h 35</td></tr>
+          <tr style="border-top: 1px solid #ECEAE4"><td style="padding: 14px 20px">12.11.</td><td style="padding: 14px 12px; font-weight: 500">Termin: Videocall Hansen</td><td style="padding: 14px 12px; color: #3A3935">Website-Relaunch</td><td style="padding: 14px 12px; text-align: right">–</td><td style="padding: 14px 20px; text-align: right; font-weight: 600">0 h 30</td></tr>
+          <tr style="border-top: 1px solid #ECEAE4"><td style="padding: 14px 20px">11.11.</td><td style="padding: 14px 12px; font-weight: 500">Farb- und Schriftkonzept</td><td style="padding: 14px 12px; color: #3A3935">Website-Relaunch</td><td style="padding: 14px 12px; text-align: right">3 h 00</td><td style="padding: 14px 20px; text-align: right; font-weight: 600">3 h 10</td></tr>
+          <tr style="border-top: 1px solid #ECEAE4"><td style="padding: 14px 20px">10.11.</td><td style="padding: 14px 12px; font-weight: 500">Navigation und Footer</td><td style="padding: 14px 12px; color: #3A3935">Website-Relaunch</td><td style="padding: 14px 12px; text-align: right">2 h 30</td><td style="padding: 14px 20px; text-align: right; font-weight: 600">2 h 40</td></tr>
+          <tr style="border-top: 1px solid #ECEAE4"><td style="padding: 14px 20px">09.11.</td><td style="padding: 14px 12px; font-weight: 500">Inhalte aus Altseite übernehmen</td><td style="padding: 14px 12px; color: #3A3935">Website-Relaunch</td><td style="padding: 14px 12px; text-align: right">3 h 15</td><td style="padding: 14px 20px; text-align: right; font-weight: 600">3 h 38</td></tr>
+        </tbody>
+        <tfoot>
+          <tr style="border-top: 2px solid #E4E2DC; font-weight: 700; font-variant-numeric: tabular-nums"><td colspan="3" style="padding: 14px 20px">Gesamt</td><td style="padding: 14px 12px; text-align: right">11 h 15</td><td style="padding: 14px 20px; text-align: right">12 h 30</td></tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 13px">
+      <span style="flex: 1 1 320px; color: #5C5A55">Diese 12 h 30 sind noch in keiner Rechnung.</span>
+      <a href="Rechnung.dc.html" style="font-weight: 600; text-decoration: none">Rechnung aus diesem Zeitraum erstellen →</a>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

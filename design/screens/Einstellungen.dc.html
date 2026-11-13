@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>eTasks – Einstellungen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0}
+button{font:inherit;cursor:pointer}
+a{color:#2456D6}a:hover{color:#1A3FA3}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh; background: #F6F5F2; color: #1C1B19; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 1.45">
+  <dc-import name="Sidebar" active="einstellungen" hint-size="232px,900px"></dc-import>
+
+  <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px; padding: 20px 32px 28px; box-sizing: border-box">
+
+    <header style="display: flex; flex-direction: column; gap: 2px">
+      <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em">Einstellungen</h1>
+      <span style="font-size: 13px; color: #5C5A55">Arbeitsbereich „Studio Weber“ · Desktop-App</span>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+
+      <nav aria-label="Einstellungsbereiche" style="flex: 1 1 200px; max-width: 240px; display: flex; flex-direction: column; gap: 2px">
+        <button style="display: flex; flex-direction: column; justify-content: center; min-height: 52px; padding: 0 12px; border: none; border-radius: 9px; background: transparent; color: #3A3935; text-align: left"><span style="font-weight: 500">Profil</span><span style="font-size: 12px; color: #8A4B06">IBAN fehlt</span></button>
+        <button style="display: flex; flex-direction: column; justify-content: center; min-height: 52px; padding: 0 12px; border: none; border-radius: 9px; background: transparent; color: #3A3935; text-align: left"><span style="font-weight: 500">Rechnungen und Angebote</span><span style="font-size: 12px; color: #5C5A55">Nummernkreis, Zahlungsziel, Texte</span></button>
+        <button style="display: flex; flex-direction: column; justify-content: center; min-height: 52px; padding: 0 12px; border: none; border-radius: 9px; background: transparent; color: #3A3935; text-align: left"><span style="font-weight: 500">Tagesablauf</span><span style="font-size: 12px; color: #5C5A55">Arbeitszeit, Pausen, Erinnerungen</span></button>
+        <button style="display: flex; flex-direction: column; justify-content: center; min-height: 52px; padding: 0 12px; border: none; border-radius: 9px; background: transparent; color: #3A3935; text-align: left"><span style="font-weight: 500">Arbeitsbereiche</span><span style="font-size: 12px; color: #5C5A55">2 vorhanden</span></button>
+        <button aria-current="page" style="display: flex; flex-direction: column; justify-content: center; min-height: 52px; padding: 0 12px; border: none; border-radius: 9px; background: #E6ECFB; color: #1A3FA3; text-align: left"><span style="font-weight: 600">Daten und Sicherung</span><span style="font-size: 12px; color: #3A3935">Zuletzt heute 08:02</span></button>
+      </nav>
+
+      <div style="flex: 999 1 480px; min-width: 0; max-width: 820px; display: flex; flex-direction: column; gap: 16px">
+
+        <section aria-label="Sicherung" style="display: flex; flex-direction: column; gap: 16px; padding: 20px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+            <span style="width: 40px; height: 40px; border-radius: 50%; background: #E3F3EA; color: #155C39; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span>
+            <div style="flex: 1 1 240px; display: flex; flex-direction: column"><h2 style="margin: 0; font-size: 16px; font-weight: 600">Deine Daten sind gesichert</h2><span style="font-size: 13px; color: #5C5A55">Tägliche Sicherung · zuletzt heute um 08:02 · 14 Stände werden aufbewahrt</span></div>
+            <button style="height: 44px; padding: 0 16px; border: none; border-radius: 10px; background: #2456D6; color: #FFFFFF; font-weight: 600">Jetzt sichern</button>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 14px; border-top: 1px solid #ECEAE4">
+            <span style="font-size: 12px; font-weight: 600; color: #3A3935">Ordner für Sicherungen und Exporte</span>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+              <span style="flex: 1 1 280px; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; padding: 0 12px; border: 1px solid #C9C6BE; border-radius: 9px; background: #FBFAF8; font-size: 13px; overflow-wrap: anywhere">[EXPORTORDNER]/Sicherungen</span>
+              <button style="height: 44px; padding: 0 14px; border: 1px solid #C9C6BE; border-radius: 9px; background: #FFFFFF; color: #1C1B19; font-weight: 600">Ordner ändern</button>
+              <button style="height: 44px; padding: 0 14px; border: 1px solid #C9C6BE; border-radius: 9px; background: #FFFFFF; color: #1C1B19; font-weight: 600">Im Finder zeigen</button>
+            </div>
+            <span style="font-size: 12px; color: #5C5A55">Die tägliche Sicherung enthält keine Bank- und Steuerdaten. Der vollständige Export unten schon.</span>
+          </div>
+        </section>
+
+        <section aria-label="Letzte Sicherungen" style="display: flex; flex-direction: column; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+          <h2 style="margin: 0; padding: 14px 20px; font-size: 15px; font-weight: 600">Letzte Sicherungen</h2>
+          <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px 0 20px; border-top: 1px solid #ECEAE4"><span style="flex: 1; font-weight: 500">Heute, 08:02</span><span style="font-size: 13px; color: #5C5A55">automatisch</span><button style="height: 40px; padding: 0 12px; border: 1px solid #C9C6BE; border-radius: 8px; background: #FFFFFF; color: #1C1B19; font-size: 13px; font-weight: 600">Wiederherstellen</button></div>
+          <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px 0 20px; border-top: 1px solid #ECEAE4"><span style="flex: 1; font-weight: 500">Mittwoch, 11.11. · 08:15</span><span style="font-size: 13px; color: #5C5A55">automatisch</span><button style="height: 40px; padding: 0 12px; border: 1px solid #C9C6BE; border-radius: 8px; background: #FFFFFF; color: #1C1B19; font-size: 13px; font-weight: 600">Wiederherstellen</button></div>
+          <div style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px 0 20px; border-top: 1px solid #ECEAE4"><span style="flex: 1; font-weight: 500">Dienstag, 10.11. · 17:48</span><span style="font-size: 13px; color: #5C5A55">vor einem Import</span><button style="height: 40px; padding: 0 12px; border: 1px solid #C9C6BE; border-radius: 8px; background: #FFFFFF; color: #1C1B19; font-size: 13px; font-weight: 600">Wiederherstellen</button></div>
+          <button style="height: 44px; margin: 0 8px 8px; border: none; border-radius: 8px; background: transparent; color: #3A3935; font-weight: 500; text-align: left; padding: 0 12px">11 ältere anzeigen</button>
+        </section>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 16px">
+          <section aria-label="Export" style="display: flex; flex-direction: column; gap: 10px; padding: 20px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 600">Alles exportieren</h2>
+            <span style="font-size: 13px; color: #5C5A55">Eine JSON-Datei mit allen Daten dieses Arbeitsbereichs, inklusive Profil. Zum Umziehen auf einen anderen Rechner.</span>
+            <button style="align-self: flex-start; height: 44px; padding: 0 16px; border: 1px solid #C9C6BE; border-radius: 10px; background: #FFFFFF; color: #1C1B19; font-weight: 600">Export erstellen</button>
+          </section>
+          <section aria-label="Import" style="display: flex; flex-direction: column; gap: 10px; padding: 20px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 600">Aus Datei wiederherstellen</h2>
+            <span style="font-size: 13px; color: #5C5A55">Ersetzt die Daten dieses Arbeitsbereichs. Die Datei wird vorher geprüft, und der jetzige Stand wird zuerst gesichert.</span>
+            <button style="align-self: flex-start; height: 44px; padding: 0 16px; border: 1px solid #B42318; border-radius: 10px; background: #FFFFFF; color: #B42318; font-weight: 600">Datei auswählen …</button>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>eTasks – Tag abschließen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0}
+button{font:inherit;cursor:pointer}
+a{color:#2456D6}a:hover{color:#1A3FA3}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh; background: #F6F5F2; color: #1C1B19; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 1.45">
+  <dc-import name="Sidebar" active="heute" hint-size="232px,900px"></dc-import>
+
+  <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 20px 32px 16px">
+      <div style="display: flex; flex-direction: column; gap: 2px; flex: 1 1 280px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em">Donnerstag, 12. November</h1>
+        <span style="font-size: 13px; color: #5C5A55">KW 46 · 17:42 · kein Timer aktiv</span>
+      </div>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 0 32px 20px">
+      <div role="group" aria-label="Tagesablauf" style="display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: #ECEAE4">
+        <a href="Heute-Planen.dc.html" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 9px; color: #3A3935; font-weight: 500; text-decoration: none">
+          <span style="width: 20px; height: 20px; border-radius: 50%; background: #1F7A4D; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span>
+          <span>Planen</span>
+        </a>
+        <a href="Main.dc.html" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 9px; color: #3A3935; font-weight: 500; text-decoration: none">
+          <span style="width: 20px; height: 20px; border-radius: 50%; background: #1F7A4D; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span>
+          <span>Arbeiten</span>
+        </a>
+        <span aria-current="step" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 9px; background: #FFFFFF; color: #1C1B19; font-weight: 600; box-shadow: 0 1px 2px rgba(28, 27, 25, 0.12)">
+          <span style="width: 20px; height: 20px; border-radius: 50%; background: #2456D6; color: #FFFFFF; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center">3</span>
+          <span>Abschließen</span>
+        </span>
+      </div>
+      <span style="flex: 1 1 240px; font-size: 13px; color: #5C5A55">Offenes verschieben, Highlight notieren, Tag abschließen.</span>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 24px; padding: 0 32px 28px; align-items: flex-start">
+
+      <section aria-label="Tagesbilanz" style="flex: 1 1 360px; max-width: 440px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; padding: 24px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 600">Dein Tag</h2>
+        <div style="display: flex; align-items: center; gap: 20px">
+          <svg width="96" height="96" viewBox="0 0 36 36" role="img" aria-label="5 von 7 Aufgaben erledigt">
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#ECEAE4" stroke-width="3.2"></circle>
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#1F7A4D" stroke-width="3.2" stroke-dasharray="71 29" stroke-linecap="round" transform="rotate(-90 18 18)"></circle>
+            <text x="18" y="21" text-anchor="middle" font-size="9" font-weight="700" fill="#1C1B19" font-family="Inter, sans-serif">5/7</text>
+          </svg>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <span style="font-size: 20px; font-weight: 700">Guter Tag</span>
+            <span style="font-size: 13px; color: #5C5A55">5 von 7 Aufgaben erledigt, alle Top 3 geschafft.</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 24px; padding: 14px 0; border-top: 1px solid #ECEAE4; border-bottom: 1px solid #ECEAE4">
+          <span style="display: flex; flex-direction: column"><span style="font-size: 12px; color: #5C5A55">Erfasst</span><span style="font-size: 18px; font-weight: 600">6 h 05</span></span>
+          <span style="display: flex; flex-direction: column"><span style="font-size: 12px; color: #5C5A55">Geplant</span><span style="font-size: 18px; font-weight: 600">5 h 15</span></span>
+          <span style="display: flex; flex-direction: column"><span style="font-size: 12px; color: #5C5A55">Abrechenbar</span><span style="font-size: 18px; font-weight: 600">5 h 00</span></span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5C5A55">Zeit nach Projekt</span>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #2456D6"></span><span style="flex: 1">Website-Relaunch</span><span style="font-weight: 600; font-variant-numeric: tabular-nums">3 h 25</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #1F7A4D"></span><span style="flex: 1">Online-Terminbuchung</span><span style="font-weight: 600; font-variant-numeric: tabular-nums">1 h 05</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #A15C07"></span><span style="flex: 1">Akquise</span><span style="font-weight: 600; font-variant-numeric: tabular-nums">1 h 05</span></div>
+          <div style="display: flex; align-items: center; gap: 10px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #5B3FC4"></span><span style="flex: 1">Termin · Videocall Hansen</span><span style="font-weight: 600; font-variant-numeric: tabular-nums">0 h 30</span></div>
+        </div>
+        <a href="Zeiten.dc.html" style="font-size: 13px; font-weight: 600; text-decoration: none">Zeiteinträge von heute prüfen →</a>
+      </section>
+
+      <section aria-label="Abschluss" style="flex: 999 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; flex-direction: column; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+          <div style="display: flex; align-items: center; gap: 10px; padding: 16px 20px 12px">
+            <h2 style="margin: 0; flex: 1; font-size: 15px; font-weight: 600">Noch offen</h2>
+            <button style="height: 36px; padding: 0 12px; border: 1px solid #C9C6BE; border-radius: 8px; background: #FFFFFF; color: #3A3935; font-size: 13px; font-weight: 500">Alle auf morgen</button>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 60px; padding: 8px 20px; border-top: 1px solid #ECEAE4">
+            <span style="flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 600">Produktbilder optimieren</span><span style="font-size: 12px; color: #5C5A55">Website-Relaunch · 20 von 45 min erfasst</span></span>
+            <button style="height: 40px; padding: 0 14px; border: none; border-radius: 9px; background: #E6ECFB; color: #1A3FA3; font-weight: 600">Morgen</button>
+            <button style="height: 40px; padding: 0 14px; border: 1px solid #C9C6BE; border-radius: 9px; background: #FFFFFF; color: #3A3935; font-weight: 500">In den Pool</button>
+            <button style="height: 40px; padding: 0 14px; border: 1px solid #C9C6BE; border-radius: 9px; background: #FFFFFF; color: #3A3935; font-weight: 500">Erledigt</button>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 60px; padding: 8px 20px; border-top: 1px solid #ECEAE4">
+            <span style="flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 600">Rechnung RE-2026-041 schreiben</span><span style="font-size: 12px; color: #5C5A55">Ohne Projekt · 30 min</span></span>
+            <button style="height: 40px; padding: 0 14px; border: none; border-radius: 9px; background: #E6ECFB; color: #1A3FA3; font-weight: 600">Morgen</button>
+            <button style="height: 40px; padding: 0 14px; border: 1px solid #C9C6BE; border-radius: 9px; background: #FFFFFF; color: #3A3935; font-weight: 500">In den Pool</button>
+            <button style="height: 40px; padding: 0 14px; border: 1px solid #C9C6BE; border-radius: 9px; background: #FFFFFF; color: #3A3935; font-weight: 500">Erledigt</button>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px 20px 20px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+          <label for="highlight" style="font-size: 15px; font-weight: 600">Highlight des Tages</label>
+          <textarea id="highlight" rows="3" placeholder="Was war heute besonders gut?" style="box-sizing: border-box; width: 100%; padding: 12px; border: 1px solid #C9C6BE; border-radius: 10px; background: #FFFFFF; color: #1C1B19; font: inherit; resize: vertical">Startseite steht, Hansen war im Call sehr zufrieden.</textarea>
+          <span style="font-size: 12px; color: #5C5A55">Erscheint morgen früh oben in „Heute“.</span>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+          <a href="Main.dc.html" style="display: flex; align-items: center; height: 44px; padding: 0 16px; border: 1px solid #C9C6BE; border-radius: 10px; background: #FFFFFF; color: #1C1B19; font-weight: 600; text-decoration: none">← Zurück zum Arbeiten</a>
+          <span style="flex: 1"></span>
+          <a href="Uebersicht.dc.html" style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 20px; border-radius: 10px; background: #1F7A4D; color: #FFFFFF; font-weight: 600; text-decoration: none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>
+            <span>Tag abschließen</span>
+          </a>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

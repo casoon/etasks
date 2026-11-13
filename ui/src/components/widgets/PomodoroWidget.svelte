@@ -41,7 +41,7 @@
   }
 </script>
 
-<div class="bg-surface rounded-2xl shadow-card border border-border p-4 glass-card" use:pageReveal={{ delay: 0.04 }} use:hoverLift>
+<div class="bg-surface rounded-2xl shadow-card border border-border p-4" use:pageReveal={{ delay: 0.04 }} use:hoverLift>
   <!-- Header row: mode indicator + task selector -->
   <div class="flex items-center gap-3 mb-3">
     <span class="text-[11px] font-bold uppercase tracking-[0.07em] {mode === 'break' ? 'text-success' : 'text-muted'}">

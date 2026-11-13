@@ -1,0 +1,137 @@
+/*
+ * eTasks – Tokens zum Oberflächenstand „A · Tagesfluss“
+ *
+ * Zwei Blöcke:
+ *   1. --et-*   Die Werte, wie sie in design/screens/*.dc.html verwendet werden.
+ *   2. Host-Tokens   Dieselben Werte unter den Namen, die ui/src/styles/global.css
+ *                    bereits kennt (--surface-*, --text-*, --color-*). Diesen Block
+ *                    in global.css übernehmen, dann folgen --ws-* und die Tailwind-
+ *                    Utilities (bg-surface, text-primary, …) automatisch.
+ *
+ * Diese Datei wird noch nirgends importiert.
+ */
+
+:root {
+  /* Flächen */
+  --et-bg: #F6F5F2;              /* Seitengrund */
+  --et-surface: #FFFFFF;         /* Karten, Felder */
+  --et-surface-sunken: #FBFAF8;  /* Seitenleiste, Gruppenköpfe, Hover */
+  --et-track: #ECEAE4;           /* Umschalter-Schiene, Balkengrund, Board-Spalten */
+  --et-inverse: #1C1B19;         /* Timer-Leiste, aktive Chips */
+
+  /* Linien */
+  --et-border: #E4E2DC;          /* Kartenrand */
+  --et-border-subtle: #ECEAE4;   /* Trennlinien in Listen */
+  --et-border-strong: #C9C6BE;   /* Felder, Nebenknöpfe */
+  --et-border-control: #8A877F;  /* Checkbox, gestrichelte Hinweise */
+
+  /* Text (Kontrast auf Weiß mindestens 4,5:1) */
+  --et-text: #1C1B19;
+  --et-text-2: #3A3935;          /* Navigation, Nebenknöpfe */
+  --et-text-3: #5C5A55;          /* Metazeilen, Etiketten */
+  --et-text-inverse: #FFFFFF;
+
+  /* Akzent */
+  --et-accent: #2456D6;
+  --et-accent-strong: #1A3FA3;   /* Text auf heller Akzentfläche, Hover */
+  --et-accent-soft: #E6ECFB;     /* aktive Navigation, „läuft“, geplante Blöcke */
+
+  /* Bedeutung */
+  --et-success: #1F7A4D;
+  --et-success-text: #155C39;
+  --et-success-soft: #E3F3EA;
+  --et-warning: #B45309;         /* Stern Top 3 */
+  --et-warning-text: #8A4B06;
+  --et-warning-soft: #FBE9D7;
+  --et-danger: #B42318;
+  --et-danger-soft: #FBE4E1;
+  --et-now: #C2410C;             /* Jetzt-Linie im Tagesplan */
+  --et-appointment: #5B3FC4;     /* Termine */
+  --et-appointment-text: #48309E;
+  --et-appointment-soft: #EFE9FB;
+
+  /* Projektfarben der Beispieldaten; die Auswahl in PROJECT_COLORS bleibt bestehen.
+     Für Text auf getönter Projektfläche eine dunklere Stufe derselben Farbe verwenden. */
+  --et-project-blue: #2456D6;
+  --et-project-green: #1F7A4D;
+  --et-project-ochre: #A15C07;
+  --et-project-neutral: #8A877F;
+
+  /* Schrift */
+  --et-font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --et-text-xs: 11px;    /* Etikett „Arbeitsbereich“, Jetzt-Marke */
+  --et-text-sm: 12px;    /* Metazeilen, Marken, Versal-Etiketten (600, 0.04–0.06em) */
+  --et-text-md: 13px;    /* Kontextzeilen, Zeitangaben */
+  --et-text-base: 14px;  /* Fließtext, Navigation, Knöpfe */
+  --et-text-lg: 15px;    /* Kartenüberschriften, Top-3-Titel */
+  --et-text-xl: 18px;    /* Kennzahlen klein, Brutto-Summe */
+  --et-text-2xl: 24px;   /* Seitentitel (700, -0.01em), Kachelwerte */
+  --et-leading: 1.45;
+
+  /* Abstände (4er-Raster) */
+  --et-space-1: 4px;
+  --et-space-2: 8px;
+  --et-space-3: 12px;
+  --et-space-4: 16px;
+  --et-space-5: 20px;
+  --et-space-6: 24px;
+  --et-space-8: 32px;
+
+  /* Radien */
+  --et-radius-sm: 6px;    /* Marken */
+  --et-radius-md: 9px;    /* Navigation, Felder, Zeilenknöpfe */
+  --et-radius-lg: 10px;   /* Knöpfe */
+  --et-radius-xl: 12px;   /* Kacheln, Umschalter-Schiene */
+  --et-radius-2xl: 14px;  /* Karten */
+  --et-radius-pill: 999px;
+
+  /* Schatten: nur am aktiven Umschalter-Segment und an Überlagerungen */
+  --et-shadow-segment: 0 1px 2px rgba(28, 27, 25, 0.12);
+  --et-shadow-overlay: 0 8px 32px rgba(28, 27, 25, 0.16);
+
+  /* Maße */
+  --et-sidebar-width: 232px;
+  --et-control-height: 44px;
+  --et-control-height-sm: 36px;
+  --et-hour-height: 56px;        /* Tagesplan in „Arbeiten“; „Planen“ nutzt 48px */
+  --et-focus-ring: 0 0 0 2px var(--et-surface), 0 0 0 4px var(--et-accent);
+}
+
+/* ── Host-Tokens für ui/src/styles/global.css ─────────────────────────────── */
+:root {
+  --surface-1: #FFFFFF;
+  --surface-2: #FBFAF8;
+  --surface-3: #F6F5F2;
+
+  --text-1: #1C1B19;
+  --text-2: #3A3935;
+  --text-3: #5C5A55;
+  --text-4: #5C5A55;   /* bisher #a0a0a0: zu wenig Kontrast für Text */
+  --text-inverse: #FFFFFF;
+
+  --color-primary: #2456D6;
+  --color-primary-hover: #1A3FA3;
+  --color-primary-soft: #E6ECFB;
+  --color-primary-text: #FFFFFF;
+
+  --color-info: #2456D6;
+  --color-info-soft: #E6ECFB;
+
+  --color-border: #E4E2DC;
+  --color-border-strong: #C9C6BE;
+
+  --color-success: #1F7A4D;
+  --color-success-soft: #E3F3EA;
+  --color-warning: #B45309;
+  --color-warning-soft: #FBE9D7;
+  --color-danger: #B42318;
+  --color-danger-soft: #FBE4E1;
+
+  --shadow-sm: none;
+  --shadow-md: 0 1px 2px rgba(28, 27, 25, 0.12);
+  --shadow-lg: 0 8px 32px rgba(28, 27, 25, 0.16);
+
+  --sidebar-width: 232px;
+  --topbar-height: 0px;   /* TopBar entfällt */
+  --hour-height: 56px;
+}

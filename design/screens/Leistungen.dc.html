@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>eTasks – Leistungen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0}
+button{font:inherit;cursor:pointer}
+a{color:#2456D6}a:hover{color:#1A3FA3}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh; background: #F6F5F2; color: #1C1B19; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 1.45">
+  <dc-import name="Sidebar" active="leistungen" hint-size="232px,900px"></dc-import>
+
+  <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px; padding: 20px 32px 28px; box-sizing: border-box">
+
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+      <div style="flex: 1 1 280px; display: flex; flex-direction: column; gap: 2px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em">Leistungen</h1>
+        <span style="font-size: 13px; color: #5C5A55">Dein Katalog für Rechnungs- und Angebotspositionen · 5 Einträge</span>
+      </div>
+      <button style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border: none; border-radius: 10px; background: #2456D6; color: #FFFFFF; font-weight: 600">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+        <span>Neue Leistung</span>
+      </button>
+    </header>
+
+    <div style="overflow-x: auto; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+      <div style="min-width: 860px; display: flex; flex-direction: column">
+        <div style="display: grid; grid-template-columns: 1.4fr 2.6fr 0.8fr 0.9fr 0.6fr 96px; gap: 16px; align-items: center; padding: 10px 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #5C5A55">
+          <span>Bezeichnung</span><span>Rechnungstext</span><span>Einheit</span><span style="text-align: right">Preis netto</span><span style="text-align: right">MwSt.</span><span></span>
+        </div>
+
+        <div style="padding: 8px 20px; background: #FBFAF8; border-top: 1px solid #ECEAE4; font-size: 12px; font-weight: 600; color: #3A3935">Entwicklung</div>
+        <div style="display: grid; grid-template-columns: 1.4fr 2.6fr 0.8fr 0.9fr 0.6fr 96px; gap: 16px; align-items: center; min-height: 60px; padding: 0 12px 0 20px; border-top: 1px solid #ECEAE4">
+          <span style="font-weight: 600">Webentwicklung</span>
+          <span style="font-size: 13px; color: #3A3935">Umsetzung und Anpassung von Website-Funktionen nach Absprache</span>
+          <span>Stunde</span><span style="text-align: right; font-variant-numeric: tabular-nums">85,00 €</span><span style="text-align: right; font-variant-numeric: tabular-nums">19 %</span>
+          <span style="display: flex; gap: 4px">
+            <button aria-label="Webentwicklung bearbeiten" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: transparent; color: #3A3935; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg></button>
+            <button aria-label="Webentwicklung löschen" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: transparent; color: #3A3935; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg></button>
+          </span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1.4fr 2.6fr 0.8fr 0.9fr 0.6fr 96px; gap: 16px; align-items: center; min-height: 60px; padding: 0 12px 0 20px; border-top: 1px solid #ECEAE4">
+          <span style="font-weight: 600">Wartung und Updates</span>
+          <span style="font-size: 13px; color: #3A3935">Einspielen von Updates, Sicherung und Funktionsprüfung</span>
+          <span>Monat</span><span style="text-align: right; font-variant-numeric: tabular-nums">120,00 €</span><span style="text-align: right; font-variant-numeric: tabular-nums">19 %</span>
+          <span style="display: flex; gap: 4px">
+            <button aria-label="Wartung und Updates bearbeiten" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: transparent; color: #3A3935; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg></button>
+            <button aria-label="Wartung und Updates löschen" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: transparent; color: #3A3935; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg></button>
+          </span>
+        </div>
+
+        <div style="padding: 8px 20px; background: #FBFAF8; border-top: 1px solid #ECEAE4; font-size: 12px; font-weight: 600; color: #3A3935">Konzept und Beratung</div>
+        <div style="display: grid; grid-template-columns: 1.4fr 2.6fr 0.8fr 0.9fr 0.6fr 96px; gap: 16px; align-items: center; min-height: 60px; padding: 0 12px 0 20px; border-top: 1px solid #ECEAE4">
+          <span style="font-weight: 600">Konzeption</span>
+          <span style="font-size: 13px; color: #3A3935">Erarbeitung von Struktur, Seitenaufbau und Abläufen</span>
+          <span>Stunde</span><span style="text-align: right; font-variant-numeric: tabular-nums">95,00 €</span><span style="text-align: right; font-variant-numeric: tabular-nums">19 %</span>
+          <span style="display: flex; gap: 4px">
+            <button aria-label="Konzeption bearbeiten" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: transparent; color: #3A3935; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg></button>
+            <button aria-label="Konzeption löschen" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: transparent; color: #3A3935; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg></button>
+          </span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1.4fr 2.6fr 0.8fr 0.9fr 0.6fr 96px; gap: 16px; align-items: center; padding: 14px 12px 14px 20px; border-top: 1px solid #ECEAE4; background: #F3F6FD">
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #3A3935">Bezeichnung<input type="text" value="Workshop" style="height: 44px; box-sizing: border-box; padding: 0 10px; border: 1.5px solid #2456D6; border-radius: 8px; background: #FFFFFF; color: #1C1B19; font: inherit; font-size: 14px; font-weight: 400"></label>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #3A3935">Rechnungstext<input type="text" value="Workshop vor Ort inklusive Vor- und Nachbereitung" style="height: 44px; box-sizing: border-box; padding: 0 10px; border: 1px solid #C9C6BE; border-radius: 8px; background: #FFFFFF; color: #1C1B19; font: inherit; font-size: 14px; font-weight: 400"></label>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #3A3935">Einheit<input type="text" value="Tag" style="height: 44px; box-sizing: border-box; width: 100%; padding: 0 10px; border: 1px solid #C9C6BE; border-radius: 8px; background: #FFFFFF; color: #1C1B19; font: inherit; font-size: 14px; font-weight: 400"></label>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #3A3935">Preis netto<input type="text" value="680,00" style="height: 44px; box-sizing: border-box; width: 100%; padding: 0 10px; border: 1px solid #C9C6BE; border-radius: 8px; background: #FFFFFF; color: #1C1B19; font: inherit; font-size: 14px; font-weight: 400; text-align: right"></label>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #3A3935">MwSt.<input type="text" value="19" style="height: 44px; box-sizing: border-box; width: 100%; padding: 0 10px; border: 1px solid #C9C6BE; border-radius: 8px; background: #FFFFFF; color: #1C1B19; font: inherit; font-size: 14px; font-weight: 400; text-align: right"></label>
+          <span style="display: flex; flex-direction: column; gap: 4px; align-self: end">
+            <button style="height: 44px; border: none; border-radius: 8px; background: #2456D6; color: #FFFFFF; font-weight: 600">Sichern</button>
+          </span>
+        </div>
+
+        <div style="padding: 8px 20px; background: #FBFAF8; border-top: 1px solid #ECEAE4; font-size: 12px; font-weight: 600; color: #3A3935">Ohne Kategorie</div>
+        <div style="display: grid; grid-template-columns: 1.4fr 2.6fr 0.8fr 0.9fr 0.6fr 96px; gap: 16px; align-items: center; min-height: 60px; padding: 0 12px 0 20px; border-top: 1px solid #ECEAE4">
+          <span style="font-weight: 600">Hosting-Pauschale</span>
+          <span style="font-size: 13px; color: #3A3935">Bereitstellung von Webspace und Domain</span>
+          <span>Jahr</span><span style="text-align: right; font-variant-numeric: tabular-nums">180,00 €</span><span style="text-align: right; font-variant-numeric: tabular-nums">19 %</span>
+          <span style="display: flex; gap: 4px">
+            <button aria-label="Hosting-Pauschale bearbeiten" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: transparent; color: #3A3935; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg></button>
+            <button aria-label="Hosting-Pauschale löschen" style="width: 40px; height: 40px; border: none; border-radius: 8px; background: transparent; color: #3A3935; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg></button>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 20px; border-radius: 12px; border: 1px dashed #8A877F; color: #3A3935">
+      <span style="flex: 1 1 320px; font-size: 13px">Eine Position aus dem Katalog behält in bestehenden Rechnungen Text und Preis. Änderungen hier gelten nur für neue Positionen.</span>
+      <a href="Rechnungen.dc.html" style="font-size: 13px; font-weight: 600; text-decoration: none">Zu den Rechnungen →</a>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

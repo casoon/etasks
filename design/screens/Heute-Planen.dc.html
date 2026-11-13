@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>eTasks – Heute planen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0}
+button{font:inherit;cursor:pointer}
+a{color:#2456D6}a:hover{color:#1A3FA3}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh; background: #F6F5F2; color: #1C1B19; font-family: Inter, system-ui, sans-serif; font-size: 14px; line-height: 1.45">
+  <dc-import name="Sidebar" active="heute" hint-size="232px,900px"></dc-import>
+
+  <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 20px 32px 16px">
+      <div style="display: flex; flex-direction: column; gap: 2px; flex: 1 1 280px">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em">Donnerstag, 12. November</h1>
+        <span style="font-size: 13px; color: #5C5A55">KW 46 · 6 Aufgaben für heute ausgewählt</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 4px">
+        <button aria-label="Vorheriger Tag" style="width: 44px; height: 44px; border: 1px solid #E4E2DC; border-radius: 10px; background: #FFFFFF; color: #1C1B19; display: flex; align-items: center; justify-content: center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+        </button>
+        <button style="height: 44px; padding: 0 14px; border: 1px solid #E4E2DC; border-radius: 10px; background: #FFFFFF; color: #1C1B19; font-weight: 600">Heute</button>
+        <button aria-label="Nächster Tag" style="width: 44px; height: 44px; border: 1px solid #E4E2DC; border-radius: 10px; background: #FFFFFF; color: #1C1B19; display: flex; align-items: center; justify-content: center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 0 32px 20px">
+      <div role="group" aria-label="Tagesablauf" style="display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: #ECEAE4">
+        <span aria-current="step" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 9px; background: #FFFFFF; color: #1C1B19; font-weight: 600; box-shadow: 0 1px 2px rgba(28, 27, 25, 0.12)">
+          <span style="width: 20px; height: 20px; border-radius: 50%; background: #2456D6; color: #FFFFFF; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center">1</span>
+          <span>Planen</span>
+        </span>
+        <a href="Main.dc.html" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 9px; color: #3A3935; font-weight: 500; text-decoration: none">
+          <span style="width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid #8A877F; box-sizing: border-box; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center">2</span>
+          <span>Arbeiten</span>
+        </a>
+        <a href="Heute-Abschliessen.dc.html" style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 9px; color: #3A3935; font-weight: 500; text-decoration: none">
+          <span style="width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid #8A877F; box-sizing: border-box; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center">3</span>
+          <span>Abschließen</span>
+        </a>
+      </div>
+      <span style="flex: 1 1 240px; font-size: 13px; color: #5C5A55">Aufgaben aus dem Pool wählen, Top 3 markieren, in den Kalender ziehen.</span>
+      <a href="Main.dc.html" style="display: flex; align-items: center; height: 44px; padding: 0 18px; border-radius: 10px; background: #2456D6; color: #FFFFFF; font-weight: 600; text-decoration: none">Tag starten →</a>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 16px; padding: 0 32px 28px; align-items: flex-start">
+
+      <section aria-label="Aufgaben-Pool" style="flex: 1 1 300px; max-width: 340px; min-width: 0; display: flex; flex-direction: column; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px">
+          <h2 style="margin: 0; flex: 1; font-size: 15px; font-weight: 600">Pool</h2>
+          <span style="font-size: 12px; color: #5C5A55">7 offen</span>
+        </div>
+        <div style="display: flex; gap: 6px; padding: 0 16px 12px">
+          <button aria-pressed="true" style="height: 32px; padding: 0 12px; border: none; border-radius: 16px; background: #1C1B19; color: #FFFFFF; font-size: 13px; font-weight: 500">Fokus-Projekte</button>
+          <button style="height: 32px; padding: 0 12px; border: 1px solid #C9C6BE; border-radius: 16px; background: #FFFFFF; color: #3A3935; font-size: 13px; font-weight: 500">Alle</button>
+          <button style="height: 32px; padding: 0 12px; border: 1px solid #C9C6BE; border-radius: 16px; background: #FFFFFF; color: #3A3935; font-size: 13px; font-weight: 500">Wiederkehrend</button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #FBFAF8; border-top: 1px solid #ECEAE4; font-size: 12px; font-weight: 600; color: #3A3935"><span style="width: 8px; height: 8px; border-radius: 50%; background: #2456D6"></span><span style="flex: 1">Website-Relaunch</span><span style="font-weight: 500; color: #5C5A55">3</span></div>
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 8px 0 16px; border-top: 1px solid #ECEAE4">
+          <span style="flex: 1; min-width: 0">Kontaktformular einbauen</span><span style="font-size: 12px; color: #5C5A55">1 h</span>
+          <button aria-label="Kontaktformular einbauen heute einplanen" style="width: 36px; height: 36px; border: none; border-radius: 8px; background: #E6ECFB; color: #1A3FA3; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 8px 0 16px; border-top: 1px solid #ECEAE4">
+          <span style="flex: 1; min-width: 0">Impressum und Datenschutz</span><span style="font-size: 12px; color: #5C5A55">30 min</span>
+          <button aria-label="Impressum und Datenschutz heute einplanen" style="width: 36px; height: 36px; border: none; border-radius: 8px; background: #E6ECFB; color: #1A3FA3; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 8px 0 16px; border-top: 1px solid #ECEAE4">
+          <span style="flex: 1; min-width: 0">Lighthouse-Check</span><span style="font-size: 12px; font-weight: 600; color: #8A4B06">seit 9 Tagen</span><span style="font-size: 12px; color: #5C5A55">45 min</span>
+          <button aria-label="Lighthouse-Check heute einplanen" style="width: 36px; height: 36px; border: none; border-radius: 8px; background: #E6ECFB; color: #1A3FA3; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #FBFAF8; border-top: 1px solid #ECEAE4; font-size: 12px; font-weight: 600; color: #3A3935"><span style="width: 8px; height: 8px; border-radius: 50%; background: #1F7A4D"></span><span style="flex: 1">Online-Terminbuchung</span><span style="font-weight: 500; color: #5C5A55">2</span></div>
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 8px 0 16px; border-top: 1px solid #ECEAE4">
+          <span style="flex: 1; min-width: 0">Bestätigungs-E-Mail gestalten</span><span style="font-size: 12px; color: #5C5A55">1 h</span>
+          <button aria-label="Bestätigungs-E-Mail gestalten heute einplanen" style="width: 36px; height: 36px; border: none; border-radius: 8px; background: #E6ECFB; color: #1A3FA3; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 8px 0 16px; border-top: 1px solid #ECEAE4">
+          <span style="flex: 1; min-width: 0">Testbuchungen durchspielen</span><span style="font-size: 12px; color: #5C5A55">30 min</span>
+          <button aria-label="Testbuchungen durchspielen heute einplanen" style="width: 36px; height: 36px; border: none; border-radius: 8px; background: #E6ECFB; color: #1A3FA3; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #FBFAF8; border-top: 1px solid #ECEAE4; font-size: 12px; font-weight: 600; color: #3A3935"><span style="width: 8px; height: 8px; border-radius: 50%; background: #8A877F"></span><span style="flex: 1">Ohne Projekt</span><span style="font-weight: 500; color: #5C5A55">2</span></div>
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 8px 0 16px; border-top: 1px solid #ECEAE4">
+          <span style="flex: 1; min-width: 0">Belege für Oktober sortieren</span><span style="font-size: 12px; color: #5C5A55">30 min</span>
+          <button aria-label="Belege für Oktober sortieren heute einplanen" style="width: 36px; height: 36px; border: none; border-radius: 8px; background: #E6ECFB; color: #1A3FA3; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 8px 0 16px; border-top: 1px solid #ECEAE4">
+          <span style="flex: 1; min-width: 0">Portfolio-Text überarbeiten</span><span style="font-size: 12px; color: #5C5A55">1 h</span>
+          <button aria-label="Portfolio-Text überarbeiten heute einplanen" style="width: 36px; height: 36px; border: none; border-radius: 8px; background: #E6ECFB; color: #1A3FA3; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+        </div>
+        <label style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; border-top: 1px solid #E4E2DC">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5C5A55" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+          <input type="text" aria-label="Neue Aufgabe in den Pool" placeholder="Neue Aufgabe in den Pool …" style="flex: 1; min-width: 0; border: none; outline: none; background: transparent; font: inherit; color: #1C1B19">
+        </label>
+      </section>
+
+      <section aria-label="Heute" style="flex: 999 1 360px; min-width: 0; display: flex; flex-direction: column; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 14px 16px 6px">
+          <h2 style="margin: 0; flex: 1; font-size: 15px; font-weight: 600">Heute</h2>
+          <span style="font-size: 12px; color: #5C5A55">Top 3: 3 von 3</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; padding: 0 16px 14px">
+          <span style="height: 8px; border-radius: 4px; background: #ECEAE4; display: flex"><span style="width: 81%; border-radius: 4px; background: #1F7A4D"></span></span>
+          <span style="font-size: 12px; color: #5C5A55"><strong style="font-weight: 600; color: #1C1B19">5 h 15</strong> von 6 h 30 verplant · 30 min Termine · <strong style="font-weight: 600; color: #155C39">1 h 15 Puffer</strong></span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 12px; border-top: 1px solid #ECEAE4">
+          <button aria-label="Aus Top 3 entfernen" aria-pressed="true" style="width: 36px; height: 36px; border: none; border-radius: 8px; background: transparent; color: #B45309; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.8-4.5 4.300 1.1 6.100L12 16.900l-5.400 2.900 1.100-6.100L3.200 9.400l6.100-.8z"></path></svg></button>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 600">Startseite: Layout umsetzen</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5C5A55"><span style="width: 7px; height: 7px; border-radius: 50%; background: #2456D6"></span>Website-Relaunch</span></span>
+          <span style="font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: #E6ECFB; color: #1A3FA3">08:30</span>
+          <span style="width: 52px; font-size: 13px; color: #5C5A55; text-align: right">2 h</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 12px; border-top: 1px solid #ECEAE4">
+          <button aria-label="Aus Top 3 entfernen" aria-pressed="true" style="width: 36px; height: 36px; border: none; border-radius: 8px; background: transparent; color: #B45309; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.8-4.5 4.300 1.1 6.100L12 16.900l-5.400 2.900 1.100-6.100L3.200 9.400l6.100-.8z"></path></svg></button>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 600">Terminbuchung: Kalender-API anbinden</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5C5A55"><span style="width: 7px; height: 7px; border-radius: 50%; background: #1F7A4D"></span>Online-Terminbuchung</span></span>
+          <span style="font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: #E6ECFB; color: #1A3FA3">11:00</span>
+          <span style="width: 52px; font-size: 13px; color: #5C5A55; text-align: right">1 h</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 12px; border-top: 1px solid #ECEAE4">
+          <button aria-label="Aus Top 3 entfernen" aria-pressed="true" style="width: 36px; height: 36px; border: none; border-radius: 8px; background: transparent; color: #B45309; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.8-4.5 4.300 1.1 6.100L12 16.900l-5.400 2.900 1.100-6.100L3.200 9.400l6.100-.8z"></path></svg></button>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 600">Briefing-Notizen einarbeiten</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5C5A55"><span style="width: 7px; height: 7px; border-radius: 50%; background: #2456D6"></span>Website-Relaunch</span></span>
+          <span style="font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: #E6ECFB; color: #1A3FA3">08:00</span>
+          <span style="width: 52px; font-size: 13px; color: #5C5A55; text-align: right">30 min</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 12px; border-top: 1px solid #ECEAE4">
+          <button aria-label="Als Top 3 markieren" aria-pressed="false" style="width: 36px; height: 36px; border: none; border-radius: 8px; background: transparent; color: #8A877F; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.8-4.5 4.300 1.1 6.100L12 16.900l-5.400 2.900 1.100-6.100L3.200 9.400l6.100-.8z"></path></svg></button>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 600">Angebot Praxis Lindqvist ausarbeiten</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5C5A55"><span style="width: 7px; height: 7px; border-radius: 50%; background: #A15C07"></span>Akquise</span></span>
+          <span style="font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: #E6ECFB; color: #1A3FA3">13:00</span>
+          <span style="width: 52px; font-size: 13px; color: #5C5A55; text-align: right">1 h</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 12px; border-top: 1px solid #ECEAE4">
+          <button aria-label="Als Top 3 markieren" aria-pressed="false" style="width: 36px; height: 36px; border: none; border-radius: 8px; background: transparent; color: #8A877F; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.8-4.5 4.300 1.1 6.100L12 16.900l-5.400 2.900 1.100-6.100L3.200 9.400l6.100-.8z"></path></svg></button>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 600">Produktbilder optimieren</span><span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5C5A55"><span style="width: 7px; height: 7px; border-radius: 50%; background: #2456D6"></span>Website-Relaunch</span></span>
+          <span style="font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: #E6ECFB; color: #1A3FA3">14:00</span>
+          <span style="width: 52px; font-size: 13px; color: #5C5A55; text-align: right">45 min</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 12px; border-top: 1px solid #ECEAE4; background: #FDF6EC">
+          <button aria-label="Als Top 3 markieren" aria-pressed="false" style="width: 36px; height: 36px; border: none; border-radius: 8px; background: transparent; color: #8A877F; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.8-4.5 4.300 1.1 6.100L12 16.900l-5.400 2.900 1.100-6.100L3.200 9.400l6.100-.8z"></path></svg></button>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 600">Rechnung RE-2026-041 schreiben</span><span style="font-size: 12px; color: #5C5A55">Ohne Projekt</span></span>
+          <span style="font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: #FBE9D7; color: #8A4B06">ohne Zeitslot</span>
+          <span style="width: 52px; font-size: 13px; color: #5C5A55; text-align: right">30 min</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid #E4E2DC">
+          <span style="flex: 1 1 200px; font-size: 13px; color: #3A3935">1 Aufgabe hat noch keinen Zeitslot.</span>
+          <button style="height: 40px; padding: 0 14px; border: 1px solid #2456D6; border-radius: 10px; background: #FFFFFF; color: #1A3FA3; font-weight: 600">Automatisch einplanen</button>
+        </div>
+      </section>
+
+      <aside aria-label="Kalender" style="flex: 1 1 300px; max-width: 340px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 16px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E4E2DC">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <h2 style="margin: 0; flex: 1; font-size: 15px; font-weight: 600">Kalender</h2>
+          <button style="height: 36px; padding: 0 12px; border: 1px solid #C9C6BE; border-radius: 8px; background: #FFFFFF; color: #3A3935; font-size: 13px; font-weight: 500">+ Termin</button>
+        </div>
+        <div style="position: relative; height: 480px">
+          <sc-for list="{{hours}}" as="h" hint-placeholder-count="10">
+            <div style="position: absolute; left: 0; right: 0; top: {{h.top}}px; height: 48px; border-top: 1px solid #ECEAE4; font-size: 12px; color: #5C5A55; padding-top: 3px; box-sizing: border-box">{{h.label}}</div>
+          </sc-for>
+          <div style="position: absolute; left: 52px; right: 0; top: 1px; height: 22px; box-sizing: border-box; padding: 2px 8px; border-radius: 7px; background: #E6ECFB; border: 1px solid #2456D6; color: #1A3FA3; font-size: 12px; font-weight: 600; overflow: hidden; white-space: nowrap">Briefing-Notizen</div>
+          <div style="position: absolute; left: 52px; right: 0; top: 25px; height: 94px; box-sizing: border-box; padding: 5px 8px; border-radius: 7px; background: #E6ECFB; border: 1px solid #2456D6; color: #1A3FA3; font-size: 12px; font-weight: 600; overflow: hidden">Startseite: Layout umsetzen<br><span style="font-weight: 400">08:30 – 10:30</span></div>
+          <div style="position: absolute; left: 52px; right: 0; top: 121px; height: 22px; box-sizing: border-box; padding: 2px 8px; border-radius: 7px; background: #EFE9FB; border: 1px solid #5B3FC4; color: #48309E; font-size: 12px; font-weight: 600; overflow: hidden; white-space: nowrap">Termin · Videocall Hansen</div>
+          <div style="position: absolute; left: 52px; right: 0; top: 145px; height: 46px; box-sizing: border-box; padding: 5px 8px; border-radius: 7px; background: #E3F3EA; border: 1px solid #1F7A4D; color: #155C39; font-size: 12px; font-weight: 600; overflow: hidden">Kalender-API anbinden<br><span style="font-weight: 400">11:00 – 12:00</span></div>
+          <div style="position: absolute; left: 52px; right: 0; top: 241px; height: 46px; box-sizing: border-box; padding: 5px 8px; border-radius: 7px; background: #FBEFDD; border: 1px solid #A15C07; color: #7A4505; font-size: 12px; font-weight: 600; overflow: hidden">Angebot Lindqvist<br><span style="font-weight: 400">13:00 – 14:00</span></div>
+          <div style="position: absolute; left: 52px; right: 0; top: 289px; height: 34px; box-sizing: border-box; padding: 5px 8px; border-radius: 7px; background: #E6ECFB; border: 1px solid #2456D6; color: #1A3FA3; font-size: 12px; font-weight: 600; overflow: hidden; white-space: nowrap">Produktbilder optimieren</div>
+          <div style="position: absolute; left: 52px; right: 0; top: 337px; height: 22px; box-sizing: border-box; padding: 2px 8px; border-radius: 7px; background: #FFFFFF; border: 1.5px dashed #8A4B06; color: #8A4B06; font-size: 12px; font-weight: 600; overflow: hidden; white-space: nowrap">Vorschlag · Rechnung schreiben</div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+renderVals() {
+var hours = [];
+for (var i = 0; i < 10; i++) {
+var hh = 8 + i;
+hours.push({ top: i * 48, label: (hh < 10 ? '0' + hh : '' + hh) + ':00' });
+}
+return { hours: hours };
+}
+}
+</script>
+</body>
+</html>
