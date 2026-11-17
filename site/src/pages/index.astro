@@ -1,0 +1,318 @@
+---
+import config from 'virtual:casoon-pages/config';
+import {
+  AnchorGrid,
+  Badge,
+  Badges,
+  Button,
+  CallToAction,
+  CodeBlock,
+  Facts,
+  Faq,
+  Hero,
+  SectionIntro,
+  Spotlight,
+  Tradeoffs,
+} from '@casoon/pages-theme/components';
+import Base from '@casoon/pages-theme/layouts/Base.astro';
+import { url } from '@casoon/pages-theme/url';
+
+const repo = `https://github.com/${config.repo}`;
+
+// Real captures of the desktop app with invented sample data (13 Nov 2026).
+const screens = [
+  {
+    name: 'heute-planen',
+    alt: 'Heute, Schritt Planen: Aufgabenpool nach Projekten, die Aufgaben des Tages mit Uhrzeiten und ein Kalender mit Zeitblöcken',
+    caption: 'Heute · Planen – Pool, Tagesliste und Kalender.',
+  },
+  {
+    name: 'heute-arbeiten',
+    alt: 'Heute, Schritt Arbeiten: Intention des Tages, Top-3-Aufgaben mit laufendem Timer, weitere Aufgaben und ein Tagesplan mit geplanter und erfasster Zeit',
+    caption: 'Heute · Arbeiten – Top 3, Timer und Tagesplan.',
+  },
+  {
+    name: 'woche',
+    alt: 'Wochenansicht mit Wochenzielen, Fokus-Projekten, Balkendiagramm aus geplanter und erfasster Zeit und Zeit nach Projekt',
+    caption: 'Woche – Ziele, Fokus-Projekte und Zeitauswertung.',
+  },
+  {
+    name: 'projekt-board',
+    alt: 'Projekt Website-Relaunch als Kanban-Board mit den Spalten Backlog, In Arbeit, Review und Erledigt',
+    caption: 'Projekt – Board mit Fortschritt und erfasster Zeit.',
+  },
+  {
+    name: 'rechnung',
+    alt: 'Rechnungseditor mit Kopfdaten, zwei Positionen mit verknüpften Aufgaben, Summe und Prüfliste vor dem PDF',
+    caption: 'Rechnung – Positionen aus Aufgaben, Prüfliste, PDF.',
+  },
+  {
+    name: 'daten',
+    alt: 'Einstellungen, Daten und Sicherung: Status der täglichen Sicherung, Liste der letzten Sicherungen mit Wiederherstellen, Export und Import',
+    caption: 'Einstellungen · Daten – lokale Sicherung, Export, Import.',
+  },
+];
+
+const verify = `shasum -a 256 -c <datei>.sha256
+gh attestation verify <datei> --repo casoon/etasks`;
+---
+
+<Base>
+  <Hero
+    eyebrow="CASOON · Desktop-App · Alpha"
+    layout="editorial"
+    title="Planen, messen, abrechnen."
+    lead="eTasks plant den Tag, misst die Zeit und verwaltet Projekte, Kunden und Rechnungen in einem Datenbestand auf dem eigenen Rechner. Ohne Account, ohne Sync, ohne Telemetrie."
+  >
+    <div class="actions">
+      <Button href={url('docs/')} variant="primary">Dokumentation lesen</Button>
+      <Button href={repo} variant="secondary">Quellcode auf GitHub</Button>
+    </div>
+    <Badges>
+      <Badge>MIT</Badge>
+      <Badge>Alpha {config.version}</Badge>
+      <Badge>Tauri v2</Badge>
+      <Badge>macOS · Windows</Badge>
+    </Badges>
+    <p class="release-note">
+      Noch kein veröffentlichter Release: die Installer entstehen erst mit dem ersten Versions-Tag. Bis dahin
+      lässt sich die App <a href={url('docs/entwicklung/selbst-bauen/')}>aus dem Quellcode bauen</a>.
+    </p>
+    <img
+      slot="output"
+      class="shot"
+      src={url('screens/uebersicht.webp')}
+      srcset={`${url('screens/uebersicht-700.webp')} 700w, ${url('screens/uebersicht.webp')} 1400w`}
+      sizes="(min-width: 1100px) 1100px, 100vw"
+      width="1400"
+      height="875"
+      alt="Übersicht von eTasks mit Kacheln für Aufgaben, Zeit, Woche und offene Rechnungen, darunter Tagesliste, aktive Projekte und Abrechnung"
+      fetchpriority="high"
+    />
+  </Hero>
+
+  <AnchorGrid
+    items={[
+      {
+        label: 'Planen',
+        title: 'Den Tag in den Kalender legen',
+        body: 'Aufgaben mit Zeitschätzung auf Zeitblöcke ziehen. Die automatische Planung schlägt freie Fenster vor und bucht erst, wenn du übernimmst.',
+        href: url('docs/arbeiten-mit-etasks/funktionen/'),
+        tone: 'accent',
+      },
+      {
+        label: 'Messen',
+        title: 'Zeit je Aufgabe erfassen',
+        body: 'Ein Timer an jeder Aufgabe, Einträge zum Nachtragen und die Woche als Vergleich von geplanter und erfasster Zeit.',
+        href: url('docs/arbeiten-mit-etasks/funktionen/'),
+        tone: 'accent',
+      },
+      {
+        label: 'Abrechnen',
+        title: 'Von der Zeit zur Rechnung',
+        body: 'Stundensatz je Kunde, erfasste Zeit als Position übernehmen, Rechnung und Angebot als PDF erzeugen.',
+        href: url('docs/rechnungen-und-daten/rechnungen-und-angebote/'),
+        tone: 'brand',
+      },
+    ]}
+  />
+
+  <SectionIntro
+    eyebrow="Einordnung"
+    title="Drei getrennte Werkzeuge werden ein Datenbestand."
+    lead="Tagesplanung, Zeiterfassung und Projektverwaltung landen sonst in drei Programmen, die je eigene Daten halten. In eTasks trägt **eine Aufgabe** ihre Schätzung, ihren Platz im Kalender, ihre erfassten Zeiten und ihr Projekt – und aus denselben Daten entstehen am Ende die Rechnung und der Statusbericht."
+  />
+
+  <Spotlight
+    eyebrow="Ein Tag"
+    title="Planen, arbeiten, abschließen."
+    lead="Der Tag ist ein Ablauf auf einem Bildschirm: **Heute** führt in drei Schritten vom Pool über die Top 3 bis zum Tagesabschluss."
+    points={[
+      '**Planen:** der Pool nach Projekten, die Tagesliste mit Kapazitätsbalken und der Kalender.',
+      '**Arbeiten:** die Top 3, der laufende Timer und der Tagesplan mit geplanter und erfasster Zeit.',
+      '**Abschließen:** die Bilanz des Tages und die offenen Aufgaben, die du auf morgen verschiebst oder in den Pool zurückgibst.',
+    ]}
+    links={[{ label: 'Alle Funktionen', href: url('docs/arbeiten-mit-etasks/funktionen/') }]}
+  >
+    <img
+      class="shot"
+      src={url('screens/heute-planen.webp')}
+      srcset={`${url('screens/heute-planen-700.webp')} 700w, ${url('screens/heute-planen.webp')} 1400w`}
+      sizes="(min-width: 900px) 50vw, 100vw"
+      width="1400"
+      height="875"
+      alt="Heute, Schritt Planen: Aufgabenpool nach Projekten, die Aufgaben des Tages mit Uhrzeiten und ein Kalender mit Zeitblöcken"
+      loading="lazy"
+    />
+  </Spotlight>
+
+  <section class="gallery" aria-labelledby="ansicht">
+    <p class="cp-label">Ansicht</p>
+    <h2 class="cp-label" id="ansicht">Die App im Einsatz.</h2>
+    <p class="note">
+      Aufnahmen der Desktop-App mit erfundenen Beispieldaten, Stand 13.11.2026.
+    </p>
+    <ul>
+      {
+        screens.map((s) => (
+          <li>
+            <figure>
+              <img
+                class="shot"
+                src={url(`screens/${s.name}.webp`)}
+                srcset={`${url(`screens/${s.name}-700.webp`)} 700w, ${url(`screens/${s.name}.webp`)} 1400w`}
+                sizes="(min-width: 900px) 45vw, 100vw"
+                width="1400"
+                height="875"
+                alt={s.alt}
+                loading="lazy"
+              />
+              <figcaption>{s.caption}</figcaption>
+            </figure>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <Facts
+    label="Kennzahlen, Stand 17.11.2026 (0.1.0-alpha.1)"
+    items={[
+      { value: '0', label: 'Accounts, Server und Sync-Dienste' },
+      { value: '3', label: 'Bereiche in der Seitenleiste: Planen, Arbeiten, Abrechnen' },
+      { value: '14', label: 'lokale Sicherungen je Arbeitsbereich bleiben erhalten' },
+      { value: 'MIT', label: 'Lizenz, Quellcode öffentlich' },
+    ]}
+  />
+
+  <Facts
+    layout="list"
+    label="Technik"
+    items={[
+      { label: 'Desktop-Hülle', value: 'Tauri v2 (Rust)' },
+      { label: 'Oberfläche', value: 'Astro 6 und Svelte 4, Zustand mit nanostores' },
+      { label: 'Speicher', value: 'SQLite je Arbeitsbereich (rusqlite), localStorage nur als UI-Cache' },
+      { label: 'PDF', value: 'renderreport (Rust und Typst), lokal erzeugt' },
+      { label: 'Tests', value: 'vitest' },
+      { label: 'Plattformen', value: 'macOS (Apple Silicon) und Windows vorgesehen, siehe Installation' },
+    ]}
+  />
+
+  <Tradeoffs
+    eyebrow="Grenzen"
+    title="Eine frühe Alpha, mit klaren Grenzen"
+    lead="Was eTasks heute nicht kann, steht vorn und nicht im Kleingedruckten."
+    items={[
+      'Alpha: Funktionen, Datenformat und Oberfläche können sich noch ändern.',
+      'Kein Sync und keine Zusammenarbeit: ein Gerät, eine Person. Ein zweiter Rechner bekommt die Daten über Export und Import.',
+      'Kein fertiger Linux-Build und noch kein veröffentlichter Release.',
+      'Keine Buchhaltung: Rechnungen und Angebote entstehen als PDF, Zahlungsabgleich und Steuer bleiben im Buchhaltungswerkzeug.',
+    ]}
+  />
+
+  <section class="verify" aria-labelledby="verifizieren">
+    <p class="cp-label">Download verifizieren</p>
+    <h2 class="cp-label" id="verifizieren">Installer kommen nur von GitHub Releases.</h2>
+    <p>
+      Offizielle Installer entstehen im Release-Workflow von
+      <a href={`${repo}/releases`}>casoon/etasks</a>, nie auf einem Entwicklerrechner. Zu jeder Datei gehört
+      eine <code>.sha256</code>-Datei und eine signierte Build-Provenance-Attestation. Prüfen lässt sich beides
+      so, sobald ein Release vorliegt:
+    </p>
+    <CodeBlock code={verify} lang="sh" title="Terminal" label="Shell" />
+  </section>
+
+  <Faq
+    items={[
+      {
+        q: 'Wo liegen meine Daten?',
+        a: 'In einer SQLite-Datenbank je Arbeitsbereich auf dem eigenen Rechner. Es gibt keinen Account, keinen Server und keine Telemetrie. Der Browser-Speicher (localStorage) dient nur als Cache der Oberfläche.',
+      },
+      {
+        q: 'Kann ich auf zwei Geräten arbeiten?',
+        a: 'Nicht über einen Sync. Der Weg auf einen zweiten Rechner führt über den vollständigen JSON-Export und den Import dort.',
+      },
+      {
+        q: 'Gibt es schon einen Download?',
+        a: 'Noch nicht: es existiert bisher kein Release. Die App lässt sich aus dem Quellcode bauen, siehe „Selbst bauen“ in der Dokumentation.',
+      },
+      {
+        q: 'Was kostet eTasks?',
+        a: 'Nichts. Die App ist MIT-lizenziert, der Quellcode liegt öffentlich auf GitHub.',
+      },
+    ]}
+  />
+
+  <CallToAction
+    title="Mit dem Überblick beginnen."
+    href={url('docs/erste-schritte/installation/')}
+    label="Zur Installation"
+  />
+</Base>
+
+<style>
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 28px 0 20px;
+  }
+  .release-note {
+    margin: 16px 0 0;
+    max-width: 52ch;
+    font-size: 0.9375rem;
+    color: var(--muted);
+  }
+  .shot {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  .gallery,
+  .verify {
+    box-sizing: border-box;
+    max-width: var(--max, 1200px);
+    margin: 0 auto 96px;
+    padding-inline: 24px;
+  }
+  .gallery h2 {
+    margin-bottom: 16px;
+  }
+  .note {
+    margin: 0 0 32px;
+    color: var(--muted);
+  }
+  .verify h2 {
+    margin-bottom: 24px;
+  }
+  .gallery ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px 28px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  @media (max-width: 760px) {
+    .gallery ul {
+      grid-template-columns: 1fr;
+    }
+  }
+  .gallery figure {
+    margin: 0;
+  }
+  .gallery figcaption {
+    margin-top: 10px;
+    font-size: 0.9375rem;
+  }
+  .verify p {
+    max-width: 68ch;
+  }
+  .release-note a,
+  .verify p a {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+</style>
