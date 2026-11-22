@@ -25,7 +25,7 @@ All notable changes to eTasks are listed here. eTasks follows
 
 ### Changed
 
-- **Pages:** the project site uses the current shared theme (0.16.3).
+- **Pages:** the project site uses the current shared theme (0.16.4).
 - **Dialogs:** Neue Aufgabe, the forgotten-timer dialog, the energy check, the template picker, the toasts, the Pomodoro buttons, the empty state, the setup wizard and the startup problem screens use the new tokens and shared buttons and fields; emoji and Unicode symbols are SVG icons, fields have labels and buttons are at least 44 px.
 - **Window:** the minimum window width is 1100 px.
 - **Einstellungen:** a sub-navigation (Profil, Rechnungen und Angebote, Tagesablauf, Arbeitsbereiche, Daten und Sicherung) with a state line per entry such as "IBAN fehlt"; all existing fields are kept, now in the form style of the invoice head. "Daten und Sicherung" shows the backup status with "Jetzt sichern", the folder, the last backups with "Wiederherstellen" (Desktop app), the full export and the import from a file.
